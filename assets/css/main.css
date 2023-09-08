@@ -3049,6 +3049,7 @@ input, select, textarea {
 			justify-content: center;
 			width: 50em;
 			-ms-flex: 1;
+			flex: 1;
 		}
 
 			.spotlights > section > .content > .inner {
@@ -3761,7 +3762,7 @@ input, select, textarea {
 			}
 
 			#sidebar nav a:before {
-				background: #3c2c62;
+				background: #0000ff;
 			}
 
 			#sidebar nav a:after {
@@ -3857,7 +3858,7 @@ input, select, textarea {
 
 						#sidebar nav a:after {
 							background-image: none;
-							background-color: #b74e91;
+							background-color: #ff0000;
 						}
 
 		}

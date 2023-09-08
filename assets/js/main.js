@@ -8,8 +8,8 @@
 
 	const carouselText = [
 		{text: "Devkumar.", color: "blue"},
-		{text: "a student.", color: "blue"},
-		{text: "a developer.", color: "blue"}
+		{text: "a student.", color: "red"},
+		{text: "a developer.", color: "yellow"}
 	  ]
 	  
 	  $( document ).ready(async function() {
