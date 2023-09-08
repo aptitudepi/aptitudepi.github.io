@@ -3984,8 +3984,10 @@ body.is-preload #sidebar nav ul li {
 	}
 
 	#sidebar nav a:after {
-		background-image: none;
-		background-color: #ff0000;
+		background-image: -moz-linear-gradient(to right, #ff0000, #0000ff);
+		background-image: -webkit-linear-gradient(to right, #ff0000, #0000ff);
+		background-image: -ms-linear-gradient(to right, #ff0000, #0000ff);
+		background-image: linear-gradient(to right, #ff0000, #0000ff);
 	}
 
 }
