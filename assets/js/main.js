@@ -7,9 +7,9 @@
 (function ($) {
 
 	const carouselText = [
-		{ text: "Devkumar.", color: "blue" },
-		{ text: "a student.", color: "red" },
-		{ text: "a developer.", color: "yellow" }
+		{ text: "Devkumar!", color: "blue" },
+		{ text: "a student!", color: "red" },
+		{ text: "a developer!", color: "yellow" }
 	]
 
 	$(document).ready(async function () {
