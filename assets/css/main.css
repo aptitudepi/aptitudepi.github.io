@@ -187,7 +187,7 @@ html {
 }
 
 body {
-  background: #312450;
+  background: #000000;
 }
 
 body.is-preload *,
@@ -3318,23 +3318,23 @@ table.alt tfoot {
 }
 
 .wrapper.style1-alt {
-  background-color: #493382;
+  background-color: #000000;
 }
 
 .wrapper.style2 {
-  background-color: #5052b5;
+  background-color: #000000;
 }
 
 .wrapper.style2-alt {
-  background-color: #3e4094;
+  background-color: #000000;
 }
 
 .wrapper.style3 {
-  background-color: #b74e91;
+  background-color: #000000;
 }
 
 .wrapper.style3-alt {
-  background-color: #953d75;
+  background-color: #000000;
 }
 
 .wrapper.fullscreen {
