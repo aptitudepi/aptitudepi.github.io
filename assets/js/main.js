@@ -5,6 +5,82 @@
 */
 
 (function ($) {
+  const world = Globe()(document.getElementById("globe"))
+    .backgroundColor("rgba(0,0,0,0)")
+    .showGlobe(false)
+    .showAtmosphere(false);
+
+  const interpolateColor = (startColor, endColor, interpolation) => {
+    const startRGB = new THREE.Color(startColor);
+    const endRGB = new THREE.Color(endColor);
+    const resultRGB = new THREE.Color().lerpColors(
+      startRGB,
+      endRGB,
+      interpolation
+    );
+    return resultRGB.getStyle();
+  };
+
+  const updateGlobeColor = (time) => {
+    const red = "red";
+    const blue = "blue";
+    const yellow = "yellow";
+
+    let interpolatedColor;
+    if (time < 0.3333) {
+      // Transition from red to blue
+      const interpolation = time * 3; // Scale time to [0, 1]
+      interpolatedColor = interpolateColor(red, blue, interpolation);
+    } else if (time < 0.6666) {
+      // Transition from blue to yellow
+      const interpolation = (time - 0.3333) * 3; // Scale time to [0, 1]
+      interpolatedColor = interpolateColor(blue, yellow, interpolation);
+    } else {
+      // Transition from yellow back to red
+      const interpolation = (time - 0.6666) * 3; // Scale time to [0, 1]
+      interpolatedColor = interpolateColor(yellow, red, interpolation);
+    }
+
+    world.polygonCapMaterial(
+      new THREE.MeshLambertMaterial({
+        color: interpolatedColor,
+        side: THREE.DoubleSide,
+      })
+    );
+  };
+
+  const animate = () => {
+    let startTime = null;
+    const timeScaleFactor = 3; // Adjust this factor to control the animation speed
+    const duration = 15000; // Animation duration in milliseconds
+
+    const animateStep = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+
+      const elapsed = (timestamp - startTime) * timeScaleFactor;
+      const progress = (elapsed / duration) % 1; // Use modulo to loop the animation
+
+      updateGlobeColor(progress);
+
+      requestAnimationFrame(animateStep);
+    };
+
+    requestAnimationFrame(animateStep);
+  };
+
+  fetch("//unpkg.com/world-atlas/land-110m.json")
+    .then((res) => res.json())
+    .then((landTopo) => {
+      world
+        .polygonsData(
+          topojson.feature(landTopo, landTopo.objects.land).features
+        )
+        .polygonSideColor(() => "rgba(0,0,0,0)");
+
+      animate(); // Start the animation
+      world.controls().autoRotate = true;
+      world.controls().autoRotateSpeed = 1.8;
+    });
   const carouselText = [
     { text: "Devkumar!", color: "blue" },
     { text: "a student!", color: "red" },

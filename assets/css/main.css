@@ -131,6 +131,9 @@ q:after {
   content: none;
 }
 
+.column {
+  flex: 50%;
+}
 table {
   border-collapse: collapse;
   border-spacing: 0;

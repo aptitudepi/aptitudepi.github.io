@@ -9,6 +9,9 @@
 	<noscript>
 		<link rel="stylesheet" href="assets/css/noscript.css" />
 	</noscript>
+	<script src="//unpkg.com/three"></script>
+	<script src="//unpkg.com/topojson-client"></script>
+	<script src="//unpkg.com/globe.gl"></script>
 </head>
 
 <body class="is-preload">
@@ -34,11 +37,12 @@
 		<section id="intro" class="wrapper style1 fullscreen fade-up">
 			<div class="inner">
 				<h1>
-					<div class="typing-container">
+					<div class="typing-container column">
 						<span id="sentence" class="sentence">Hello, I'm </span>
 						<span id="feature-text"></span>
 						<span class="input-cursor"></span>
 					</div>
+					<div id = "globe" class="column"></div>
 				</h1>
 				<li><a href="#one" class="button scrolly">About</a></li>
 				</ul>
