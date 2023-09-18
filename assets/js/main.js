@@ -5,6 +5,7 @@
 */
 
 (function ($) {
+  $('#globe').css({marginTop: '-100px'});
   const world = Globe()(document.getElementById("globe"))
     .backgroundColor("rgba(0,0,0,0)")
     .showGlobe(false)
@@ -80,6 +81,7 @@
       animate(); // Start the animation
       world.controls().autoRotate = true;
       world.controls().autoRotateSpeed = 1.8;
+      world.controls().enableZoom = false;
     });
   const carouselText = [
     { text: "Devkumar!", color: "blue" },
