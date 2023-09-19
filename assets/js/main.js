@@ -5,6 +5,7 @@
 */
 
 (function ($) {
+  // Three.js WebGL Globe
   $('#globe').css({marginTop: '-100px'});
   const world = Globe()(document.getElementById("globe"))
     .backgroundColor("rgba(0,0,0,0)")
@@ -69,7 +70,7 @@
     requestAnimationFrame(animateStep);
   };
 
-  fetch("//unpkg.com/world-atlas/land-110m.json")
+  fetch("assets/land-110m.json")
     .then((res) => res.json())
     .then((landTopo) => {
       world
@@ -83,6 +84,9 @@
       world.controls().autoRotateSpeed = 1.8;
       world.controls().enableZoom = false;
     });
+
+  // Typing Carousel Effect
+
   const carouselText = [
     { text: "Devkumar!", color: "blue" },
     { text: "a student!", color: "red" },
