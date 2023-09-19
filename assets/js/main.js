@@ -4,7 +4,7 @@
 	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
 */
 
-(function ($) {
+window.onload = (function ($) {
   $('#globe').css({marginTop: '-100px'});
   const world = Globe()(document.getElementById("globe"))
     .backgroundColor("rgba(0,0,0,0)")
