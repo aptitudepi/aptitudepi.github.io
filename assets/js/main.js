@@ -6,11 +6,11 @@
 
 (function ($) {
   // Three.js WebGL Globe
-  $('#globe').css({marginTop: '-100px'});
+  $("#globe").css({ marginTop: "-200px" });
   const world = Globe()(document.getElementById("globe"))
     .backgroundColor("rgba(0,0,0,0)")
     .showGlobe(false)
-    .showAtmosphere(false);
+    .showAtmosphere(false)
 
   const interpolateColor = (startColor, endColor, interpolation) => {
     const startRGB = new THREE.Color(startColor);

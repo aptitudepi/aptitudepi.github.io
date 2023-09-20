@@ -3283,6 +3283,7 @@ table.alt tfoot {
 
 .wrapper {
   position: relative;
+  overflow: hidden;
 }
 
 .wrapper > .inner {
