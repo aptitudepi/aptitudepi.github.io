@@ -3286,6 +3286,8 @@ table.alt tfoot {
 .wrapper {
   position: relative;
   overflow: hidden;
+  display: block;
+
 }
 
 .wrapper > .inner {
