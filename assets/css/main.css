@@ -114,6 +114,12 @@ body {
   display: block;
 }
 
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 ol,
 ul {
   list-style: none;
