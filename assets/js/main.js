@@ -4,6 +4,8 @@
 	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
 */
 
+import THREE from './three.module.js';
+
 (function ($) {
   // Three.js WebGL Globe
   $("#globe").css({ marginTop: "-200px" });
