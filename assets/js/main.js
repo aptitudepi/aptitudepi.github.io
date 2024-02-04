@@ -43,12 +43,7 @@
       interpolatedColor = interpolateColor(yellow, red, interpolation);
     }
 
-    world.polygonCapMaterial(
-      new THREE.MeshLambertMaterial({
-        color: interpolatedColor,
-        side: THREE.DoubleSide,
-      })
-    );
+    world.globeMaterial().emissive = interpolatedColor;
   };
 
   const animate = () => {
