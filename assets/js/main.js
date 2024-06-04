@@ -9,7 +9,7 @@
   $("#globe").css({ marginTop: "-200px" });
   const world = Globe()(document.getElementById("globe"))
     .backgroundColor("rgba(0,0,0,0)")
-    .showGlobe(false)
+    .showGlobe(true)
     .showAtmosphere(false)
     .pointColor('blue')
 
