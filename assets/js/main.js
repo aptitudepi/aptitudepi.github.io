@@ -12,7 +12,7 @@
     .showGlobe(false)
     .showAtmosphere(false)
 
-  world.globeMaterial().emissive = interpolatedColor;
+  world.globeMaterial().emissive = "blue";
 
   const animate = () => {
     let startTime = null;
