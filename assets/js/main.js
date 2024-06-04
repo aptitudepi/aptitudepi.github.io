@@ -11,9 +11,8 @@
     .backgroundColor("rgba(0,0,0,0)")
     .showGlobe(false)
     .showAtmosphere(false)
+    .pointColor('blue')
 
-  world.emissive.setRGB(1,0,0);
-  world.color.setRGB(1,0,0);
 
   const animate = () => {
     let startTime = null;
