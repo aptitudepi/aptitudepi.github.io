@@ -11,7 +11,6 @@
     .backgroundColor("rgba(0,0,0,0)")
     .showGlobe(true)
     .showAtmosphere(false)
-    .pointColor('blue')
 
 
   const animate = () => {
@@ -38,7 +37,8 @@
         .polygonsData(
           topojson.feature(landTopo, landTopo.objects.land).features
         )
-        .polygonSideColor(() => "rgba(0,0,0,0)");
+        .polygonSideColor(() => "rgba(0,0,0,0)")
+        .polygonCapColor(() => "rgba(255,0,0,1)");
 
       animate(); // Start the animation
       world.controls().autoRotate = true;
