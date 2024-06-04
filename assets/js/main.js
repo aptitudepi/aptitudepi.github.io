@@ -12,8 +12,8 @@
     .showGlobe(false)
     .showAtmosphere(false)
 
-  world.globeMaterial().emissive.setRGB(255,0,0);
-  world.globeMaterial().color.setRGB(255,0,0);
+  world.globeMaterial().emissive.setRGB(1,0,0);
+  world.globeMaterial().color.setRGB(1,0,0);
 
   const animate = () => {
     let startTime = null;
