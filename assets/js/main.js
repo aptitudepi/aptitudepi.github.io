@@ -12,7 +12,7 @@
     .showGlobe(false)
     .showAtmosphere(false)
 
-  world.globeMaterial().emissive = new THREE.Color("blue");
+  world.globeMaterial().emissive = new THREE.Color("blue").getStyle();
 
   const animate = () => {
     let startTime = null;
