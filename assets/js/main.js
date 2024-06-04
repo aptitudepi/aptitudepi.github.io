@@ -12,39 +12,7 @@
     .showGlobe(false)
     .showAtmosphere(false)
 
-  const interpolateColor = (startColor, endColor, interpolation) => {
-    const startRGB = new THREE.Color(startColor);
-    const endRGB = new THREE.Color(endColor);
-    const resultRGB = new THREE.Color().lerpColors(
-      startRGB,
-      endRGB,
-      interpolation
-    );
-    return resultRGB.getStyle();
-  };
-
-  const updateGlobeColor = (time) => {
-    const red = "red";
-    const blue = "blue";
-    const yellow = "yellow";
-
-    let interpolatedColor;
-    if (time < 0.3333) {
-      // Transition from red to blue
-      const interpolation = time * 3; // Scale time to [0, 1]
-      interpolatedColor = interpolateColor(red, blue, interpolation);
-    } else if (time < 0.6666) {
-      // Transition from blue to yellow
-      const interpolation = (time - 0.3333) * 3; // Scale time to [0, 1]
-      interpolatedColor = interpolateColor(blue, yellow, interpolation);
-    } else {
-      // Transition from yellow back to red
-      const interpolation = (time - 0.6666) * 3; // Scale time to [0, 1]
-      interpolatedColor = interpolateColor(yellow, red, interpolation);
-    }
-
-    world.globeMaterial().emissive = interpolatedColor;
-  };
+  world.globeMaterial().emissive = interpolatedColor;
 
   const animate = () => {
     let startTime = null;
@@ -56,8 +24,6 @@
 
       const elapsed = (timestamp - startTime) * timeScaleFactor;
       const progress = (elapsed / duration) % 1; // Use modulo to loop the animation
-
-      updateGlobeColor(progress);
 
       requestAnimationFrame(animateStep);
     };
