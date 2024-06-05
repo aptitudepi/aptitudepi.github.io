@@ -38,7 +38,8 @@
           topojson.feature(landTopo, landTopo.objects.land).features
         )
         .polygonSideColor(() => "rgba(0,0,0,0)")
-        .polygonCapColor(() => "rgba(255,0,0,1)");
+        .polygonCapColor(() => "rgba(0,0,255,1)")
+        .globeMaterial().emissive = "rgba(0,0,255,1)";
 
       animate(); // Start the animation
       world.controls().autoRotate = true;
