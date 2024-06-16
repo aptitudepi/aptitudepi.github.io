@@ -50,9 +50,10 @@
   // Typing Carousel Effect
 
   const carouselText = [
-    { text: "Devkumar!", color: "blue" },
-    { text: "a student!", color: "red" },
-    { text: "a developer!", color: "yellow" },
+    { text: "Happy ", color: "red" },
+    { text: "Father's ", color: "green" },
+    { text: "Day ", color: "blue" },
+    { text: "Baba! ", color: "yellow"},
   ];
 
   $(document).ready(async function () {
@@ -82,17 +83,18 @@
   }
 
   async function carousel(carouselList, eleRef) {
-    var i = 0;
     while (true) {
-      updateFontColor(eleRef, carouselList[i].color);
-      await typeSentence(carouselList[i].text, eleRef);
+      updateFontColor(eleRef, carouselList[0].color);
+      await typeSentence(carouselList[0].text, eleRef);
+      updateFontColor(eleRef, carouselList[1].color);
+      await typeSentence(carouselList[1].text, eleRef);
+      updateFontColor(eleRef, carouselList[2].color);
+      await typeSentence(carouselList[2].text, eleRef);
+      updateFontColor(eleRef, carouselList[3].color);
+      await typeSentence(carouselList[3].text, eleRef);
       await waitForMs(1500);
       await deleteSentence(eleRef);
       await waitForMs(500);
-      i++;
-      if (i >= carouselList.length) {
-        i = 0;
-      }
     }
   }
 
