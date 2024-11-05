@@ -1,0 +1,63 @@
+==================================================================
+https://keybase.io/dvkb
+--------------------------------------------------------------------
+
+I hereby claim:
+
+  * I am an admin of https://0xdb.tech
+  * I am dvkb (https://keybase.io/dvkb) on keybase.
+  * I have a public key with fingerprint 7301 FA8F 5D53 3EF7 9406  95FC DFC7 2721 BE0B DDE2
+
+To do so, I am signing this object:
+
+{
+  "body": {
+    "key": {
+      "eldest_kid": "01169a1068963bcc9de8372e6b2cd6e310e52c7b074ea0553e33f1e8f0eefb57e4690a",
+      "fingerprint": "7301fa8f5d533ef7940695fcdfc72721be0bdde2",
+      "host": "keybase.io",
+      "key_id": "dfc72721be0bdde2",
+      "kid": "01169a1068963bcc9de8372e6b2cd6e310e52c7b074ea0553e33f1e8f0eefb57e4690a",
+      "uid": "579efa55d8649ddf4bce384247389d19",
+      "username": "dvkb"
+    },
+    "service": {
+      "hostname": "0xdb.tech",
+      "protocol": "https:"
+    },
+    "type": "web_service_binding",
+    "version": 1
+  },
+  "ctime": 1730782581,
+  "expire_in": 157680000,
+  "prev": "668cac1e5395a951b71e594600633fd5febda7266a52c32357d5095af47045f1",
+  "seqno": 3,
+  "tag": "signature"
+}
+
+which yields the signature:
+
+-----BEGIN PGP MESSAGE-----
+Version: Keybase OpenPGP v2.1.13
+Comment: https://keybase.io/crypto
+
+yMFDAnicrVK/axRBGN3zV/AkIioHgiCOiAQvYWZnZ2bnWkEstbB1mR/f3C137l52
+987EJKROFysLQdKIIJZB0CKiCApWVlYStLARBP8CnTliZ+k0M/PNe2/e9/jezR+O
+2p3991cu7p348q318c32JOovPJmsIV3aVdRbQ0OYbTCyUDfZMLeohzAhXCqCeSo5
+1cZICykVMXAdG8uBEgwsNkJjkYDCjFGg1BFIHQZwmglIuMQKdZHLiz5U4yovGi8r
+KCZOpY5ZRik4IRPMJXPGOiNiERMNWFsLsScOyjowvDmtaljKS1/zl2xm7x/4/+x7
+MpNjQoJTjNmUJ9Jal2gDNE3iRNBUWiIDsIaqUHchuJoONdroIl+Z5gZCqKGLg1e8
+YvVSA2bgSeOqbEpTjnx50DTjuhdozeo44O6Bzg4UMp0X1gfoGVOo6rwsUI94pGny
+IEl8nCKNWUq6CFbGeQVZHhBM8BT7Ff6BqZfkPDXKEGBUMiUZ0cKfZcIx5r59yxxo
+q0TMufLh0JgyYRn2UJcInDBHUOhpuShRj3qbqu8l67xfqGZSAdp4e+dI1GlHx44e
+CnMVtY+f+jttMm5FnQtX537sf3324fyv+6Mbv7cfvTx7eevz4oPF73tPT/88M2xF
+Lz69frUzkFm1fvvSzsmFx4Pd3a3nD2+dmxtuzl+/eS36AwbU3Cw=
+=Sn48
+-----END PGP MESSAGE-----
+
+And finally, I am proving ownership of this host by posting or
+appending to this document.
+
+View my publicly-auditable identity here: https://keybase.io/dvkb
+
+==================================================================
