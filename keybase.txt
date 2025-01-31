@@ -4,7 +4,7 @@ https://keybase.io/dvkb
 
 I hereby claim:
 
-  * I am an admin of https://0xdb.tech
+  * I am an admin of https://dvkb.tech
   * I am dvkb (https://keybase.io/dvkb) on keybase.
   * I have a public key with fingerprint 7301 FA8F 5D53 3EF7 9406  95FC DFC7 2721 BE0B DDE2
 
@@ -21,17 +21,27 @@ To do so, I am signing this object:
       "uid": "579efa55d8649ddf4bce384247389d19",
       "username": "dvkb"
     },
+    "merkle_root": {
+      "ctime": 1738284390,
+      "hash_meta": "ed59411aa416d6651328dd2229f56930e4832d15850d86a6dce97ecb7d700662",
+      "seqno": 26505091
+    },
+    "revoke": {
+      "sig_ids": [
+        "1a73a9e11cb84277c4d08a75fa8111ddc194076410f3d4dc73d12d557ab3e1dd0f"
+      ]
+    },
     "service": {
-      "hostname": "0xdb.tech",
+      "hostname": "dvkb.tech",
       "protocol": "https:"
     },
     "type": "web_service_binding",
     "version": 1
   },
-  "ctime": 1730782581,
+  "ctime": 1738284439,
   "expire_in": 157680000,
-  "prev": "668cac1e5395a951b71e594600633fd5febda7266a52c32357d5095af47045f1",
-  "seqno": 3,
+  "prev": "4defb3bf40314309307e306e1a42895fccc8b0326bbb3f36fd3249857953a4c8",
+  "seqno": 7,
   "tag": "signature"
 }
 
@@ -41,18 +51,21 @@ which yields the signature:
 Version: Keybase OpenPGP v2.1.13
 Comment: https://keybase.io/crypto
 
-yMFDAnicrVK/axRBGN3zV/AkIioHgiCOiAQvYWZnZ2bnWkEstbB1mR/f3C137l52
-987EJKROFysLQdKIIJZB0CKiCApWVlYStLARBP8CnTliZ+k0M/PNe2/e9/jezR+O
-2p3991cu7p348q318c32JOovPJmsIV3aVdRbQ0OYbTCyUDfZMLeohzAhXCqCeSo5
-1cZICykVMXAdG8uBEgwsNkJjkYDCjFGg1BFIHQZwmglIuMQKdZHLiz5U4yovGi8r
-KCZOpY5ZRik4IRPMJXPGOiNiERMNWFsLsScOyjowvDmtaljKS1/zl2xm7x/4/+x7
-MpNjQoJTjNmUJ9Jal2gDNE3iRNBUWiIDsIaqUHchuJoONdroIl+Z5gZCqKGLg1e8
-YvVSA2bgSeOqbEpTjnx50DTjuhdozeo44O6Bzg4UMp0X1gfoGVOo6rwsUI94pGny
-IEl8nCKNWUq6CFbGeQVZHhBM8BT7Ff6BqZfkPDXKEGBUMiUZ0cKfZcIx5r59yxxo
-q0TMufLh0JgyYRn2UJcInDBHUOhpuShRj3qbqu8l67xfqGZSAdp4e+dI1GlHx44e
-CnMVtY+f+jttMm5FnQtX537sf3324fyv+6Mbv7cfvTx7eevz4oPF73tPT/88M2xF
-Lz69frUzkFm1fvvSzsmFx4Pd3a3nD2+dmxtuzl+/eS36AwbU3Cw=
-=Sn48
+yMHHAnicrVM7axRRGJ01PjAiiMViI5IBEWUJ9/3YykqL9FpoHO7ju7vDJjubmclq
+iGntbBQfoCIoKBj8AUZQCEKQ/ANBItpa2QgW4p1FUcHSaS5z7/nOd75z7n1zcCqZ
+bu9snZh5deD9x9b2ZrGc9O4fvbOa2sKvpN3VdACTBRY8VHU2yH3aTRHGQhuMhNKC
+Wue0B0UlAWGJ8wIoRsCJkxZJBgZxToHSgEEFBBAsl8CERibtpCEf9qAclfmwjrSS
+IhyMCtxzSiFIzZDQPDgfnCSSYAvIeg8kFvaLqqmI4qypYDYv4l78ySby/oH/z7qX
+J3RcagiGc68E094HZh1QxQiTVGmPdQOsoByaRWhUjQc2Xeuki1AOFiAri6JujHV1
+3hzjWEMUoxrF4UzVzxahNrEKPNcMY2MYFl4IjilR3hNCdOBCUwRMUeIxVxxFGUZ4
+B1qCs9JLhIRoZq9gaVikXSI44kjjKKGEcTGApnuV96JnVdq9kGIjqdGAsbNxBikd
+80gZyWMiGGPvHY55SMEwCtQz7yT1mHjOpbEU4jkK6fxa060c525C3oT0x/CzNbh+
+1DMqi7pwxULc7tf1qOo2rtQrowZ3GWz2kyGz+dDH+xErxlBWeTGMLkXk34ZFxzop
+XBnlJWR5g+BSKBS/pg+MIyXzMTtqA0MUM4qiZxIoEoANI6q5Xs4piygR1loaqAie
+EqZVDJdTw5z67aCMMk0vUkbXhqZeLiFd27y0O2lPJ3v37GqeTTK9/9Cvx/Tpbiv5
+2v78+Mzpb0/Pf3gx6sz5bOrcjUfP26NjGzvrM7fOfrnYSp48W9+4t730du7qzc78
+tdtHHn46fPz7qesn9209eFm+ftf6Aew5H6o=
+=fqcp
 -----END PGP MESSAGE-----
 
 And finally, I am proving ownership of this host by posting or
