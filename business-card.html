@@ -1,139 +1,289 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <title>Devkumar | Links</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#2e3141" />
+  <meta name="theme-color" content="#000000" />
   <meta name="description" content="Devkumar — virtual business card and links." />
   <style>
-    :root{
-      --bg:#2e3141;          /* dark slate, similar to site look */
-      --panel:#3b4055;       /* card background */
-      --text:#ffffff;
-      --muted:#b9c0d0;
-      --accent:#f56a6a;      /* HTML5 UP-like accent */
-      --accent-2:#6fc3df;
-      --ring:rgba(255,255,255,.08);
-      --radius:14px;
-      --shadow:0 10px 24px rgba(0,0,0,.25);
-      --shadow-sm:0 4px 12px rgba(0,0,0,.18);
-      --gap:14px;
-      --maxw:720px;
+    :root {
+      --bg: #000000;
+      /* Black, matching index.html */
+      --panel: #1a1a1a;
+      /* Dark grey for contrast */
+      --text: #ffffff;
+      --muted: rgba(255, 255, 255, 0.55);
+      /* Matching index.html muted text */
+      --accent: #b74e91;
+      /* Pink from index.html gradient */
+      --accent-2: #5e42a6;
+      /* Purple from index.html gradient */
+      --ring: rgba(255, 255, 255, .08);
+      --radius: 14px;
+      --shadow: 0 10px 24px rgba(0, 0, 0, .25);
+      --shadow-sm: 0 4px 12px rgba(0, 0, 0, .18);
+      --gap: 14px;
+      --maxw: 720px;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      background:linear-gradient(180deg, var(--bg) 0%, #242736 100%);
-      color:var(--text);
-      font:16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
-      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+
+    * {
+      box-sizing: border-box
     }
-    .wrap{
-      max-width:var(--maxw);
-      margin:0 auto;
-      padding:48px 18px 72px;
+
+    html,
+    body {
+      height: 100%
     }
-    header.card{
-      background:linear-gradient(135deg, rgba(245,106,106,.16), rgba(111,195,223,.12)) , var(--panel);
-      border:1px solid var(--ring);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      padding:28px 24px;
-      display:flex; gap:18px; align-items:center;
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, var(--bg) 0%, #111111 100%), url("images/intro.svg");
+      background-attachment: fixed;
+      background-position: top right;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      color: var(--text);
+      font: 16px/1.55 Arial, Helvetica, sans-serif;
+      /* Matching index.html font */
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
-    .avatar{
-      width:64px;height:64px;border-radius:50%;
-      background:linear-gradient(135deg, var(--accent), var(--accent-2));
-      display:inline-grid; place-items:center; color:#fff; font-weight:800; letter-spacing:.5px;
-      box-shadow:var(--shadow-sm); user-select:none;
+
+    .wrap {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 48px 18px 72px;
     }
-    h1{font-size:1.5rem; margin:0 0 4px}
-    .muted{color:var(--muted); font-size:.95rem; margin:2px 0 0}
-    .links{
-      margin-top:22px; display:flex; flex-direction:column; gap:var(--gap);
+
+    header.card {
+      background: linear-gradient(135deg, rgba(183, 78, 145, .16), rgba(94, 66, 166, .12)), var(--panel);
+      border: 1px solid var(--ring);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 24px;
+      display: flex;
+      gap: 18px;
+      align-items: center;
     }
-    a.link{
-      display:flex; align-items:center; gap:14px;
-      text-decoration:none; color:var(--text);
-      background:var(--panel);
-      border-radius:var(--radius);
-      padding:16px 18px;
-      border:1px solid var(--ring);
-      box-shadow:var(--shadow-sm);
-      transition:transform .06s ease, border-color .15s ease, background .15s ease;
-      will-change:transform;
+
+    .avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: inline-grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: .5px;
+      box-shadow: var(--shadow-sm);
+      user-select: none;
+      overflow: hidden;
+      /* Ensure image stays within circle */
     }
-    a.link:hover{ transform:translateY(-1px); border-color:rgba(245,106,106,.45) }
-    a.link:active{ transform:translateY(0) scale(.99) }
-    .icon{
-      width:22px;height:22px; flex:0 0 22px; display:inline-block;
-      color:var(--accent);
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
-    .label{font-weight:600}
-    .sub{margin-left:auto; color:var(--muted); font-size:.92rem}
-    .chip{
-      display:inline-block; background:rgba(111,195,223,.18); color:#e7f8ff;
-      border:1px solid rgba(111,195,223,.35); border-radius:999px; padding:2px 8px; font-size:.75rem; margin-left:10px;
+
+    h1 {
+      font-size: 1.5rem;
+      margin: 0 0 4px
     }
-    footer{
-      margin-top:28px; color:var(--muted); font-size:.9rem; text-align:center;
+
+    .muted {
+      color: var(--muted);
+      font-size: .95rem;
+      margin: 2px 0 0
     }
-    .row{display:flex; gap:var(--gap); flex-wrap:wrap; margin-top:var(--gap)}
-    .pill{
-      flex:1 1 180px; background:var(--panel); border:1px solid var(--ring);
-      border-radius:999px; padding:10px 14px; display:flex; gap:10px; align-items:center; justify-content:center;
+
+    .links {
+      margin-top: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap);
     }
-    button.copy{ all:unset; cursor:pointer; color:var(--accent-2); font-weight:700 }
-    @media (prefers-color-scheme:light){
-      :root{ --bg:#f4f5f8; --panel:#ffffff; --text:#1b2430; --muted:#5a6577; --ring:rgba(18,24,40,.1) }
+
+    a.link {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      color: var(--text);
+      background: var(--panel);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      border: 1px solid var(--ring);
+      box-shadow: var(--shadow-sm);
+      transition: transform .06s ease, border-color .15s ease, background .15s ease;
+      will-change: transform;
+    }
+
+    a.link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(183, 78, 145, .45)
+    }
+
+    a.link:active {
+      transform: translateY(0) scale(.99)
+    }
+
+    .icon {
+      width: 22px;
+      height: 22px;
+      flex: 0 0 22px;
+      display: inline-block;
+      color: var(--accent);
+    }
+
+    .label {
+      font-weight: 600
+    }
+
+    .sub {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: .92rem
+    }
+
+    .chip {
+      display: inline-block;
+      background: rgba(94, 66, 166, .18);
+      color: #e7f8ff;
+      border: 1px solid rgba(94, 66, 166, .35);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: .75rem;
+      margin-left: 10px;
+    }
+
+    footer {
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: .9rem;
+      text-align: center;
+    }
+
+    .row {
+      display: flex;
+      gap: var(--gap);
+      flex-wrap: wrap;
+      margin-top: var(--gap)
+    }
+
+    .pill {
+      flex: 1 1 180px;
+      background: var(--panel);
+      border: 1px solid var(--ring);
+      border-radius: 999px;
+      padding: 10px 14px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button.copy {
+      all: unset;
+      cursor: pointer;
+      color: var(--accent-2);
+      font-weight: 700
+    }
+
+    @media (prefers-color-scheme:light) {
+      /* Keeping dark theme as default since index.html is dark, but providing light overrides just in case, 
+         though user requested index.html theme which is dark. I will comment out light mode to enforce dark theme 
+         consistent with index.html */
+      /* :root{ --bg:#f4f5f8; --panel:#ffffff; --text:#1b2430; --muted:#5a6577; --ring:rgba(18,24,40,.1) }
       body{ background:linear-gradient(180deg,#f7f8fb 0%,#eceff6 100%) }
-      .avatar{ color:#0b1220 }
+      .avatar{ color:#0b1220 } */
     }
   </style>
 </head>
+
 <body>
   <main class="wrap" aria-labelledby="name">
     <header class="card">
-      <div class="avatar" aria-hidden="true">DB</div>
+      <div class="avatar" aria-hidden="true">
+        <img src="images/Headshot-FINAL.jpg" alt="Devkumar Banerjee">
+      </div>
       <div>
         <h1 id="name">Devkumar Banerjee</h1>
         <p class="muted">Virtual business card • quick links</p>
       </div>
+      <div id="mini-globe" style="width: 80px; height: 80px; margin-left: auto;"></div>
     </header>
 
     <section class="links" id="links" aria-label="Links"></section>
 
     <section class="row" aria-label="Actions">
       <div class="pill" title="Copy email to clipboard">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16v16H4z" stroke-width="1.2"/><path d="M4 7l8 6 8-6" stroke-width="1.2"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M4 4h16v16H4z" stroke-width="1.2" />
+          <path d="M4 7l8 6 8-6" stroke-width="1.2" />
+        </svg>
         <button class="copy" data-copy="mailto:dkbanerjee314@gmail.com">Copy email</button>
       </div>
       <div class="pill" title="Download vCard">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="16" rx="2" stroke-width="1.2"/><path d="M7 8h10M7 12h10M7 16h6" stroke-width="1.2"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <rect x="3" y="4" width="18" height="16" rx="2" stroke-width="1.2" />
+          <path d="M7 8h10M7 12h10M7 16h6" stroke-width="1.2" />
+        </svg>
         <a id="vcfLink" class="copy" href="#" download>Download vCard</a>
         <span class="chip">add .vcf later</span>
       </div>
     </section>
 
     <footer>
-      <span>Built as a single self‑contained file. Add, remove, or reorder items by editing the links[] array below.</span>
+      <span>Built as a single self‑contained file. Add, remove, or reorder items by editing the links[] array
+        below.</span>
     </footer>
   </main>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://unpkg.com/topojson-client"></script>
+  <script src="assets/js/globe.gl.min.js"></script>
   <script>
+    // Mini Globe Initialization
+    (function () {
+      const globeContainer = document.getElementById('mini-globe');
+      const world = Globe()(globeContainer)
+        .backgroundColor("rgba(0,0,0,0)")
+        .showGlobe(true)
+        .showAtmosphere(false)
+        .width(80)
+        .height(80);
+
+      fetch("assets/land-110m.json")
+        .then((res) => res.json())
+        .then((landTopo) => {
+          world
+            .polygonsData(topojson.feature(landTopo, landTopo.objects.land).features)
+            .polygonSideColor(() => "rgba(0,0,0,0)")
+            .polygonCapColor(() => "rgba(0,0,255,1)")
+            .globeMaterial().emissive = "rgba(0,0,255,1)";
+
+          world.controls().autoRotate = true;
+          world.controls().autoRotateSpeed = 3.0; // Faster rotation for mini globe
+          world.controls().enableZoom = false;
+        });
+    })();
+
     // 1) Edit this array to customize your Linktree-style page.
     //    Each entry supports: label, href, sub (small right text), rel, newTab, icon.
     //    Icons: globe, github, linkedin, mail, keybase, gpg, card.
     const links = [
-      { label: "Website",   href: "https://dvkb.tech",                         sub: "dvkb.tech",             rel: "me",     newTab: true,  icon: "globe" },
-      { label: "GitHub",    href: "https://github.com/aptitudepi",             sub: "@aptitudepi",           rel: "me",     newTab: true,  icon: "github" },
-      { label: "LinkedIn",  href: "https://www.linkedin.com/in/dvkb",          sub: "/in/dvkb",              rel: "me",     newTab: true,  icon: "linkedin" },
-      { label: "Email",     href: "mailto:dkbanerjee314@gmail.com",            sub: "dkbanerjee314@gmail.com",               newTab: false, icon: "mail" },
-      { label: "Keybase",   href: "https://keybase.io/USERNAME",               sub: "username TBD",          rel: "me",     newTab: true,  icon: "keybase" },
-      { label: "GPG Key",   href: "#",                                         sub: "add key URL later",                      newTab: true,  icon: "gpg" },
-      { label: "vCard (.vcf)", href: "#",                                      sub: "add file later",                         newTab: false, icon: "card" }
+      { label: "Website", href: "https://dvkb.tech", sub: "dvkb.tech", rel: "me", newTab: true, icon: "globe" },
+      { label: "GitHub", href: "https://github.com/aptitudepi", sub: "@aptitudepi", rel: "me", newTab: true, icon: "github" },
+      { label: "LinkedIn", href: "https://www.linkedin.com/in/dvkb", sub: "/in/dvkb", rel: "me", newTab: true, icon: "linkedin" },
+      { label: "Email", href: "mailto:dkbanerjee314@gmail.com", sub: "dkbanerjee314@gmail.com", newTab: false, icon: "mail" },
+      { label: "Keybase", href: "https://keybase.io/dvkb", sub: "dvkb", rel: "me", newTab: true, icon: "keybase" },
+      { label: "GPG Key", href: "https://github.com/aptitudepi.gpg", sub: "aptitudepi.gpg", newTab: true, icon: "gpg" },
+      { label: "vCard (.vcf)", href: "#", sub: "add file later", newTab: false, icon: "card" }
     ];
 
     // 2) Optional: set the vCard link (can also be edited directly in links[]).
@@ -147,26 +297,26 @@
                 <ellipse cx="12" cy="12" rx="4.2" ry="9" stroke-width="1.2"/>
                 <path d="M3 12h18M12 3v18" stroke-width="1.2"/>
               </svg>`,
-      github:`<svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+      github: `<svg class="icon" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 .7a11.3 11.3 0 0 0-3.57 22.05c.56.1.77-.24.77-.54 0-.27-.01-1.15-.02-2.08-3.14.68-3.8-1.35-3.8-1.35-.51-1.28-1.26-1.62-1.26-1.62-1.03-.71.08-.7.08-.7 1.14.08 1.74 1.17 1.74 1.17 1.01 1.73 2.66 1.23 3.31.94.1-.75.4-1.23.73-1.51-2.51-.28-5.15-1.25-5.15-5.57 0-1.23.44-2.23 1.16-3.02-.12-.29-.5-1.45.11-3.02 0 0 .95-.31 3.12 1.15.9-.25 1.86-.37 2.82-.38.96.01 1.92.13 2.82.38 2.17-1.46 3.12-1.15 3.12-1.15.61 1.57.23 2.73.11 3.02.72.79 1.16 1.79 1.16 3.02 0 4.33-2.65 5.28-5.18 5.56.41.36.77 1.08.77 2.18 0 1.57-.01 2.83-.01 3.22 0 .3.2.65.78.54A11.3 11.3 0 0 0 12 .7z"/>
               </svg>`,
-      linkedin:`<svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+      linkedin: `<svg class="icon" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M4.98 3.5C4.98 4.88 3.86 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.5 8.5h4V23h-4V8.5zM8.5 8.5h3.8v2h.06c.53-1 1.83-2.06 3.78-2.06 4.04 0 4.79 2.66 4.79 6.12V23h-4v-5.9c0-1.41-.02-3.22-1.96-3.22-1.97 0-2.27 1.54-2.27 3.12V23h-4V8.5z"/>
                 </svg>`,
-      mail:`<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      mail: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <rect x="3" y="4" width="18" height="16" rx="2" stroke-width="1.2"/>
               <path d="M3 7l9 7 9-7" stroke-width="1.2"/>
             </svg>`,
-      keybase:`<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      keybase: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                  <circle cx="12" cy="12" r="9" stroke-width="1.3"/>
                  <path d="M8 14.5c1.2 1.1 3 .9 4-.4 1 1.4 2.8 1.5 4 .4M7.5 9.5l2 2m5-2l2 2" stroke-width="1.2" />
                </svg>`,
-      gpg:`<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      gpg: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke-width="1.2"/>
               <rect x="5" y="11" width="14" height="9" rx="2" stroke-width="1.2"/>
               <circle cx="12" cy="15" r="1.5" fill="currentColor"/>
             </svg>`,
-      card:`<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      card: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="1.2"/>
               <path d="M7 9h7M7 13h10" stroke-width="1.2"/>
             </svg>`
@@ -174,7 +324,7 @@
 
     const list = document.getElementById('links');
     list.innerHTML = links.map(item => `
-      <a class="link" href="${item.href}" ${item.newTab ? 'target="_blank" rel="noopener '+(item.rel||'')+'"' : (item.rel?`rel="${item.rel}"`:'')}>
+      <a class="link" href="${item.href}" ${item.newTab ? 'target="_blank" rel="noopener ' + (item.rel || '') + '"' : (item.rel ? `rel="${item.rel}"` : '')}>
         ${icons[item.icon] || icons.globe}
         <span class="label">${item.label}</span>
         ${item.sub ? `<span class="sub">${item.sub}</span>` : ""}
@@ -182,12 +332,12 @@
     `).join("");
 
     // Copy helpers
-    for (const el of document.querySelectorAll('[data-copy]')){
+    for (const el of document.querySelectorAll('[data-copy]')) {
       el.addEventListener('click', () => {
         const text = el.getAttribute('data-copy');
-        navigator.clipboard.writeText(text).then(()=>{
+        navigator.clipboard.writeText(text).then(() => {
           el.textContent = 'Copied!';
-          setTimeout(()=> el.textContent = 'Copy email', 1200);
+          setTimeout(() => el.textContent = 'Copy email', 1200);
         });
       });
     }
@@ -196,4 +346,5 @@
     // document.getElementById('name').textContent = 'Devkumar B.';
   </script>
 </body>
+
 </html>
