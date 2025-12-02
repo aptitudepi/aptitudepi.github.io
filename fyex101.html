@@ -1,226 +1,584 @@
-<!DOCTYPE HTML>
-<!--
-	Hyperspace by HTML5 UP
-	html5up.net | @ajlkn
-	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
--->
-<html>
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>First Semester Experience - Devkumar Banerjee</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-    <link rel="stylesheet" href="assets/css/main.css" />
-    <noscript>
-        <link rel="stylesheet" href="assets/css/noscript.css" />
-    </noscript>
+    <meta name="description"
+        content="My first semester journey at Texas A&M, captured through moments of learning, tradition, and growth." />
+    <meta name="author" content="Devkumar Banerjee" />
+    <meta property="og:title" content="First Semester Experience - Devkumar Banerjee" />
+    <meta property="og:description"
+        content="From Diwali celebrations to Midnight Yell, explore my first semester at Texas A&M through a collection of meaningful experiences." />
+    <meta property="og:type" content="website" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
     <style>
-        .spotlights>section {
-            flex-direction: row !important;
+        /* Reset & Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        .spotlights>section>.image,
-        .spotlights>section>.content {
-            order: 0 !important;
+        :root {
+            /* Colors (HSL) */
+            --background: 42 40% 97%;
+            --foreground: 220 40% 12%;
+            --card: 0 0% 100%;
+            --card-foreground: 220 40% 12%;
+            --primary: 28 85% 55%;
+            --primary-foreground: 0 0% 100%;
+            --muted-foreground: 220 15% 45%;
+            --border: 42 20% 88%;
+
+            /* Gradients */
+            --gradient-warm: linear-gradient(135deg, hsl(28 85% 55%), hsl(35 92% 62%));
+            --gradient-subtle: linear-gradient(180deg, hsl(42 40% 97%), hsl(42 30% 92%));
+
+            /* Shadows */
+            --shadow-soft: 0 4px 20px -4px hsl(28 85% 55% / 0.15);
+            --shadow-medium: 0 8px 30px -6px hsl(28 85% 55% / 0.2);
+
+            /* Transitions */
+            --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .spotlights>section>.image img {
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--gradient-subtle);
+            color: hsl(var(--foreground));
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5rem 1.5rem;
+            overflow: hidden;
+        }
+
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            background-image: url('/images/fyex101/IMG20251006232650.jpg');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.1;
+            z-index: 0;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            max-width: 56rem;
+            text-align: center;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--gradient-warm);
+            color: hsl(var(--primary-foreground));
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-soft);
+            animation: scaleIn 0.6s ease-out 0.2s both;
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 8vw, 5.5rem);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 0.8s ease-out 0.3s both;
+        }
+
+        .hero .gradient-text {
+            background: var(--gradient-warm);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: clamp(1.125rem, 2vw, 1.5rem);
+            color: hsl(var(--muted-foreground));
+            max-width: 42rem;
+            margin: 0 auto 1rem;
+            line-height: 1.7;
+        }
+
+        .hero p:first-of-type {
+            animation: fadeIn 0.8s ease-out 0.5s both;
+        }
+
+        .hero p:last-of-type {
+            font-size: clamp(1rem, 1.5vw, 1.125rem);
+            animation: fadeIn 0.8s ease-out 0.7s both;
+        }
+
+        .hero-author {
+            margin-top: 3rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: hsl(var(--muted-foreground));
+            animation: fadeInUp 0.6s ease-out 0.9s both;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        .scroll-indicator-inner {
+            width: 1.5rem;
+            height: 3rem;
+            border: 2px solid hsl(var(--primary));
+            border-radius: 9999px;
+            padding: 0.25rem;
+        }
+
+        .scroll-indicator-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            background: hsl(var(--primary));
+            border-radius: 9999px;
+            animation: scrollDot 2s ease-in-out infinite;
+        }
+
+        /* Experiences Section */
+        .experiences {
+            position: relative;
+            padding: 6rem 1.5rem;
+            max-width: 90rem;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .section-header h2 {
+            font-size: clamp(3rem, 6vw, 4rem);
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            font-size: 1.125rem;
+            color: hsl(var(--muted-foreground));
+            max-width: 42rem;
+            margin: 0 auto;
+        }
+
+        .experiences-grid {
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 768px) {
+            .experiences-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Experience Card */
+        .experience-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+            background: hsl(var(--card));
+            box-shadow: var(--shadow-soft);
+            transition: var(--transition-smooth);
+            opacity: 0;
+            transform: translateY(40px);
+        }
+
+        .experience-card.visible {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        .experience-card:hover {
+            box-shadow: var(--shadow-medium);
+            transform: translateY(-0.25rem);
+        }
+
+        .card-image-wrapper {
+            position: relative;
+            height: 20rem;
+            overflow: hidden;
+        }
+
+        .card-image {
             width: 100%;
-            height: auto;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.7s ease;
+        }
+
+        .experience-card:hover .card-image {
+            transform: scale(1.1);
+        }
+
+        .card-gradient {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, hsl(var(--card) / 0.95), hsl(var(--card) / 0.4), transparent);
+        }
+
+        .card-content {
+            position: relative;
+            margin-top: -8rem;
+            padding: 2rem;
+        }
+
+        .card-content h3 {
+            font-size: 1.875rem;
+            margin-bottom: 1rem;
+            color: hsl(var(--card-foreground));
+        }
+
+        .card-content p {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: hsl(var(--muted-foreground));
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid hsl(var(--border));
+            background: hsl(var(--card));
+            padding: 3rem 1.5rem;
+            text-align: center;
+        }
+
+        footer p {
+            font-size: 0.875rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translate(-50%, 0);
+            }
+
+            50% {
+                transform: translate(-50%, 10px);
+            }
+        }
+
+        @keyframes scrollDot {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(16px);
+            }
         }
     </style>
 </head>
 
-<body class="is-preload">
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-bg"></div>
 
-    <!-- Header -->
-    <header id="header">
-        <a href="index.html" class="title">Devkumar Banerjee</a>
-        <nav>
-            <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="fyex101.html" class="active">FYEX 101</a></li>
-            </ul>
-        </nav>
-    </header>
+        <div class="hero-content">
+            <div class="badge">FYEX 101 Portfolio</div>
 
-    <!-- Wrapper -->
-    <div id="wrapper">
+            <h1>
+                First Semester<br>
+                <span class="gradient-text">Experience</span>
+            </h1>
 
-        <!-- Main -->
-        <section id="main" class="wrapper style2 spotlights">
+            <p>
+                My first semester at Texas A&amp;M has been a mix of late-night traditions,
+                intense labs, spontaneous adventures, and moments that felt like home away from home.
+            </p>
 
-            <!-- Chess -->
-            <section>
-                <a href="#" class="image"><img
-                        src="images/fyex101/Screenshot_2025-10-03-21-17-01-61_4cac46ecbbfb7f8aa1c94b1ec321eb15.jpg"
-                        alt="Chess Game" data-position="center center" /></a>
-                <div class="content">
-                    <div class="inner">
-                        <h2 align="center">Chess Strategy</h2>
-                        <p align="justify">Getting a brilliant move on chess.com. It's always satisfying when a plan
-                            comes together on
-                            the board.</p>
-                    </div>
+            <p>
+                From Diwali lights to Midnight Yell, each memory here captures a different part
+                of how college life has shaped my routine, friendships, and goals.
+            </p>
+
+            <div class="hero-author">Devkumar Banerjee</div>
+        </div>
+
+        <div class="scroll-indicator">
+            <div class="scroll-indicator-inner">
+                <div class="scroll-indicator-dot"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Experiences Section -->
+    <section class="experiences">
+        <div class="section-header">
+            <h2>Moments That Mattered</h2>
+            <p>A collection of experiences that defined my first semester</p>
+        </div>
+
+        <div class="experiences-grid">
+            <!-- Chess Strategy -->
+            <div class="experience-card">
+                <div class="card-image-wrapper">
+                    <img src="images/fyex101/Screenshot_2025-10-03-21-17-01-61_4cac46ecbbfb7f8aa1c94b1ec321eb15.jpg"
+                        alt="Chess brilliant move" class="card-image">
+                    <div class="card-gradient"></div>
                 </div>
-            </section>
+                <div class="card-content">
+                    <h3>Chess Strategy</h3>
+                    <p>Getting a brilliant move on chess.com is one of those quiet but deeply satisfying victories,
+                        where careful planning finally pays off on the board.</p>
+                </div>
+            </div>
 
             <!-- Lab Activity -->
-            <section>
-                <a href="#" class="image"><img src="images/fyex101/IMG20251113202201.jpg" alt="Lab Activity"
-                        data-position="center center" /></a>
-                <div class="content">
-                    <div class="inner">
-                        <h2 align="center">Lab Activity</h2>
-                        <p align="justify">Engaging in a hands-on lab activity. Applying theoretical knowledge to
-                            practical experiments
-                            is a highlight of the semester.</p>
-                    </div>
+            <div class="experience-card">
+                <div class="card-image-wrapper">
+                    <img src="images/fyex101/IMG20251113202201.jpg" alt="Hands-on lab activity" class="card-image">
+                    <div class="card-gradient"></div>
                 </div>
-            </section>
+                <div class="card-content">
+                    <h3>Lab Activity</h3>
+                    <p>Engaging in a hands-on lab activity turned theory into something real, making concepts click in a
+                        way that lectures alone never could.</p>
+                </div>
+            </div>
 
-            <!-- Microcontroller -->
-            <section>
-                <a href="#" class="image"><img src="images/fyex101/ccede15a-19b7-47b7-9330-945de0433168.jpg"
-                        alt="Microcontroller Programming" data-position="center center" /></a>
-                <div class="content">
-                    <div class="inner">
-                        <h2 align="center">Microcontroller Programming</h2>
-                        <p align="justify">Working on microcontroller programming. Diving deep into embedded systems and
-                            making hardware
-                            come to life with code.</p>
-                    </div>
+            <!-- Microcontroller Programming -->
+            <div class="experience-card">
+                <div class="card-image-wrapper">
+                    <img src="images/fyex101/ccede15a-19b7-47b7-9330-945de0433168.jpg" alt="Microcontroller programming"
+                        class="card-image">
+                    <div class="card-gradient"></div>
                 </div>
-            </section>
+                <div class="card-content">
+                    <h3>Microcontroller Programming</h3>
+                    <p>Working on microcontroller programming let hardware and code come together, showing how embedded
+                        systems can bring even small ideas to life.</p>
+                </div>
+            </div>
 
-            <!-- Riddles -->
-            <section>
-                <a href="#" class="image"><img src="images/fyex101/IMG20250903210534.jpg" alt="Whiteboard Riddles"
-                        data-position="center center" /></a>
-                <div class="content">
-                    <div class="inner">
-                        <h2 align="center">Dorm Life Fun</h2>
-                        <p align="justify">Drawing riddles on a roommate's whiteboard outside their door. Small moments
-                            like these make
-                            dorm life memorable.</p>
-                    </div>
+            <!-- Dorm Life Fun -->
+            <div class="experience-card">
+                <div class="card-image-wrapper">
+                    <img src="images/fyex101/IMG20250903210534.jpg" alt="Whiteboard riddles in the dorm"
+                        class="card-image">
+                    <div class="card-gradient"></div>
                 </div>
-            </section>
+                <div class="card-content">
+                    <h3>Dorm Life Fun</h3>
+                    <p>Drawing riddles on a roommate's whiteboard outside their door added small moments of fun that
+                        made dorm life feel more like a community.</p>
+                </div>
+            </div>
 
-            <!-- Evacuation -->
-            <section>
-                <a href="#" class="image"><img src="images/fyex101/IMG20250903221910.jpg" alt="Evacuation"
-                        data-position="center center" /></a>
-                <div class="content">
-                    <div class="inner">
-                        <h2 align="center">Unexpected Events</h2>
-                        <p align="justify">Having to evacuate due to Mosher hall inhabitants being unable to make
-                            popcorn in the
-                            microwave. A chaotic but funny memory.</p>
-                    </div>
+            <!-- Unexpected Events -->
+            <div class="experience-card">
+                <div class="card-image-wrapper">
+                    <img src="images/fyex101/IMG20250903221910.jpg" alt="Evacuation from Mosher Hall"
+                        class="card-image">
+                    <div class="card-gradient"></div>
                 </div>
-            </section>
+                <div class="card-content">
+                    <h3>Unexpected Events</h3>
+                    <p>Having to evacuate because someone in Mosher Hall could not make popcorn in the microwave was
+                        chaotic, but it quickly turned into one of those stories everyone remembers and laughs about
+                        later.</p>
+                </div>
+            </div>
 
-            <!-- Midnight Yell 1 -->
-            <section>
-                <a href="#" class="image"><img src="images/fyex101/IMG20250905235958.jpg" alt="Midnight Yell"
-                        data-position="center center" /></a>
-                <div class="content">
-                    <div class="inner">
-                        <h2 align="center">Midnight Yell</h2>
-                        <p align="justify">Attending Midnight Yell. The energy and tradition are unmatched.</p>
-                    </div>
+            <!-- Midnight Yell -->
+            <div class="experience-card">
+                <div class="card-image-wrapper">
+                    <img src="images/fyex101/IMG20250905235958.jpg" alt="Midnight Yell at Kyle Field"
+                        class="card-image">
+                    <div class="card-gradient"></div>
                 </div>
-            </section>
+                <div class="card-content">
+                    <h3>Midnight Yell</h3>
+                    <p>Attending Midnight Yell for the first time showed how powerful Aggie traditions are, with the
+                        entire stadium echoing with energy and spirit.</p>
+                </div>
+            </div>
 
-            <!-- Midnight Yell 2 -->
-            <section>
-                <a href="#" class="image"><img src="images/fyex101/IMG20250905234345.jpg" alt="Midnight Yell Crowd"
-                        data-position="center center" /></a>
-                <div class="content">
-                    <div class="inner">
-                        <h2 align="center">Aggie Spirit</h2>
-                        <p align="justify">Another view from Midnight Yell, capturing the spirit of the 12th Man.</p>
-                    </div>
+            <!-- Aggie Spirit -->
+            <div class="experience-card">
+                <div class="card-image-wrapper">
+                    <img src="images/fyex101/IMG20250905234345.jpg" alt="Midnight Yell crowd" class="card-image">
+                    <div class="card-gradient"></div>
                 </div>
-            </section>
+                <div class="card-content">
+                    <h3>Aggie Spirit</h3>
+                    <p>Another view from Midnight Yell captures the 12th Man in full force, reminding me what it feels
+                        like to be part of something bigger than myself.</p>
+                </div>
+            </div>
 
             <!-- Cybersecurity Conference -->
-            <section>
-                <a href="#" class="image"><img src="images/fyex101/IMG20250929205608.jpg" alt="Cybersecurity Conference"
-                        data-position="center center" /></a>
-                <div class="content">
-                    <div class="inner">
-                        <h2 align="center">Cybersecurity Conference</h2>
-                        <p align="justify">Going to a cybersecurity conference. Learning from experts and networking
-                            with professionals
-                            in the field.</p>
-                    </div>
+            <div class="experience-card">
+                <div class="card-image-wrapper">
+                    <img src="images/fyex101/IMG20250929205608.jpg" alt="Cybersecurity conference" class="card-image">
+                    <div class="card-gradient"></div>
                 </div>
-            </section>
-
-            <!-- Diwali -->
-            <section>
-                <a href="#" class="image"><img src="images/fyex101/IMG20251006232650.jpg" alt="Diwali Celebration"
-                        data-position="center center" /></a>
-                <div class="content">
-                    <div class="inner">
-                        <h2 align="center">Celebrating Diwali</h2>
-                        <p align="justify">Celebrating Diwali with friends. Bringing a piece of home and culture to
-                            campus.</p>
-                    </div>
+                <div class="card-content">
+                    <h3>Cybersecurity Conference</h3>
+                    <p>Going to a cybersecurity conference offered a preview of the field beyond the classroom, from
+                        talks by experts to conversations with professionals and peers.</p>
                 </div>
-            </section>
+            </div>
 
-            <!-- Water Tower -->
-            <section>
-                <a href="#" class="image"><img src="images/fyex101/IMG20251104180044.jpg" alt="Water Tower"
-                        data-position="center center" /></a>
-                <div class="content">
-                    <div class="inner">
-                        <h2 align="center">Campus Views</h2>
-                        <p align="justify">Taking random pictures of a water tower. Appreciating the everyday scenery
-                            around campus.</p>
-                    </div>
+            <!-- Celebrating Diwali -->
+            <div class="experience-card">
+                <div class="card-image-wrapper">
+                    <img src="images/fyex101/IMG20251006232650.jpg" alt="Diwali with friends" class="card-image">
+                    <div class="card-gradient"></div>
                 </div>
-            </section>
-
-            <!-- Wedding -->
-            <section>
-                <a href="#" class="image"><img src="images/fyex101/IMG-20251125-WA0031.jpg" alt="Wedding"
-                        data-position="center center" /></a>
-                <div class="content">
-                    <div class="inner">
-                        <h2 align="center">Family Time</h2>
-                        <p align="justify">Going to a wedding with my twin sister. A wonderful break to celebrate with
-                            family.</p>
-                    </div>
+                <div class="card-content">
+                    <h3>Celebrating Diwali</h3>
+                    <p>Celebrating Diwali with friends brought a piece of home and culture onto campus, turning an
+                        ordinary evening into something bright, familiar, and meaningful.</p>
                 </div>
-            </section>
+            </div>
 
-        </section>
+            <!-- Campus Views -->
+            <div class="experience-card">
+                <div class="card-image-wrapper">
+                    <img src="images/fyex101/IMG20251104180044.jpg" alt="Water tower on campus" class="card-image">
+                    <div class="card-gradient"></div>
+                </div>
+                <div class="card-content">
+                    <h3>Campus Views</h3>
+                    <p>Taking random pictures of a water tower might seem simple, but it reflects how everyday scenes on
+                        campus slowly become part of what feels like home.</p>
+                </div>
+            </div>
 
-    </div>
+            <!-- Family Moments -->
+            <div class="experience-card">
+                <div class="card-image-wrapper">
+                    <img src="images/fyex101/IMG-20251125-WA0031.jpg" alt="Wedding with twin sister" class="card-image">
+                    <div class="card-gradient"></div>
+                </div>
+                <div class="card-content">
+                    <h3>Family Moments</h3>
+                    <p>Going to a wedding with my twin sister during the semester was a refreshing break, reconnecting
+                        with family and returning to campus with new energy.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Footer -->
-    <footer id="footer" class="wrapper alt">
-        <div class="inner">
-            <ul class="menu">
-                <li>&copy; Devkumar Banerjee. All rights reserved.</li>
-                <li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
-            </ul>
-        </div>
+    <footer>
+        <p>&copy; <span id="year"></span> Devkumar Banerjee. All rights reserved.</p>
     </footer>
 
-    <!-- Scripts -->
-    <script src="assets/js/jquery.min.js"></script>
-    <script src="assets/js/jquery.scrollex.min.js"></script>
-    <script src="assets/js/jquery.scrolly.min.js"></script>
-    <script src="assets/js/browser.min.js"></script>
-    <script src="assets/js/breakpoints.min.js"></script>
-    <script src="assets/js/util.js"></script>
-    <script src="assets/js/main.js"></script>
+    <script>
+        // Set current year
+        document.getElementById('year').textContent = new Date().getFullYear();
 
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    // Stagger the animation based on index
+                    setTimeout(() => {
+                        entry.target.classList.add('visible');
+                    }, index * 100);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        // Observe all experience cards
+        document.querySelectorAll('.experience-card').forEach((card) => {
+            observer.observe(card);
+        });
+
+        // Observe section header
+        const sectionHeader = document.querySelector('.section-header');
+        if (sectionHeader) {
+            observer.observe(sectionHeader);
+        }
+    </script>
 </body>
 
 </html>
