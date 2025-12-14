@@ -4,7 +4,7 @@ https://keybase.io/dvkb
 
 I hereby claim:
 
-  * I am an admin of https://dvkb.tech
+  * I am an admin of https://dvxb.io
   * I am dvkb (https://keybase.io/dvkb) on keybase.
   * I have a public key with fingerprint 7301 FA8F 5D53 3EF7 9406  95FC DFC7 2721 BE0B DDE2
 
@@ -22,50 +22,50 @@ To do so, I am signing this object:
       "username": "dvkb"
     },
     "merkle_root": {
-      "ctime": 1738284390,
-      "hash_meta": "ed59411aa416d6651328dd2229f56930e4832d15850d86a6dce97ecb7d700662",
-      "seqno": 26505091
+      "ctime": 1765728360,
+      "hash_meta": "4cfd7d7a8b52b0388924ff5016aecd98c869fd12e90355129f25260bb722fbe1",
+      "seqno": 27290953
     },
     "revoke": {
       "sig_ids": [
-        "1a73a9e11cb84277c4d08a75fa8111ddc194076410f3d4dc73d12d557ab3e1dd0f"
+        "dba0461507357fa17341a2edc02ba4deff11e8fdf045c73ec05c957718e5b07e0f"
       ]
     },
     "service": {
-      "hostname": "dvkb.tech",
+      "hostname": "dvxb.io",
       "protocol": "https:"
     },
     "type": "web_service_binding",
     "version": 1
   },
-  "ctime": 1738284439,
+  "ctime": 1765728391,
   "expire_in": 157680000,
-  "prev": "4defb3bf40314309307e306e1a42895fccc8b0326bbb3f36fd3249857953a4c8",
-  "seqno": 7,
+  "prev": "816de119de924eed0cbb6cd45ac40e775e0b324750fabb132ec848fd7e67cb7a",
+  "seqno": 8,
   "tag": "signature"
 }
 
 which yields the signature:
 
 -----BEGIN PGP MESSAGE-----
-Version: Keybase OpenPGP v2.1.13
+Version: Keybase OpenPGP v2.1.17
 Comment: https://keybase.io/crypto
 
-yMHHAnicrVM7axRRGJ01PjAiiMViI5IBEWUJ9/3YykqL9FpoHO7ju7vDJjubmclq
-iGntbBQfoCIoKBj8AUZQCEKQ/ANBItpa2QgW4p1FUcHSaS5z7/nOd75z7n1zcCqZ
-bu9snZh5deD9x9b2ZrGc9O4fvbOa2sKvpN3VdACTBRY8VHU2yH3aTRHGQhuMhNKC
-Wue0B0UlAWGJ8wIoRsCJkxZJBgZxToHSgEEFBBAsl8CERibtpCEf9qAclfmwjrSS
-IhyMCtxzSiFIzZDQPDgfnCSSYAvIeg8kFvaLqqmI4qypYDYv4l78ySby/oH/z7qX
-J3RcagiGc68E094HZh1QxQiTVGmPdQOsoByaRWhUjQc2Xeuki1AOFiAri6JujHV1
-3hzjWEMUoxrF4UzVzxahNrEKPNcMY2MYFl4IjilR3hNCdOBCUwRMUeIxVxxFGUZ4
-B1qCs9JLhIRoZq9gaVikXSI44kjjKKGEcTGApnuV96JnVdq9kGIjqdGAsbNxBikd
-80gZyWMiGGPvHY55SMEwCtQz7yT1mHjOpbEU4jkK6fxa060c525C3oT0x/CzNbh+
-1DMqi7pwxULc7tf1qOo2rtQrowZ3GWz2kyGz+dDH+xErxlBWeTGMLkXk34ZFxzop
-XBnlJWR5g+BSKBS/pg+MIyXzMTtqA0MUM4qiZxIoEoANI6q5Xs4piygR1loaqAie
-EqZVDJdTw5z67aCMMk0vUkbXhqZeLiFd27y0O2lPJ3v37GqeTTK9/9Cvx/Tpbiv5
-2v78+Mzpb0/Pf3gx6sz5bOrcjUfP26NjGzvrM7fOfrnYSp48W9+4t730du7qzc78
-tdtHHn46fPz7qesn9209eFm+ftf6Aew5H6o=
-=fqcp
+yMHDAnicrZM7aBVBFIbv9QVGBC1MECunsQlh3o8rWFhZCmoV4jKPM8myuXevu5ub
+hJjGFClsBVtBtNJasAgSRIWgIIhgQJQUFjaWVoKz1xeIpdMsM3vOf/7znZmnR/d3
+JiY/PD9zeuvI+73uznZ/qZOf+7i5hlwZVlFvDRUw/sBigLrJijygHsKESGMJltpI
+5rw3ATRTFKSjPkhgBIOgXjmsOFgsBAPGIgEdMUB0QgGXBls0jWI+mIdqWOWDJskq
+hkm0OoogGIOoDMfSiOhD9IoqShxgFwLQlLhQ1m1GMudsDTN5mc7SJhvb+0f8f/a9
+NJYTykC0QgQtuQkhcueBaU65YtoEYtrAGqqB7UPralQ4tD6N+lAVi5BVZdm0YH2T
+t7+JkkJRzSROzdl6IetDY1MW9zGooKx2gjrMtDaUxygwkRZ8MNpraWIgFAxmQhBq
+IhVUYucUpdEBSR5quDYoUS8RMdgIlixUMCoLaKvX+XxiVqPeLArOYi6JwIoJFS1R
+jBNLIXhMneUBYiQtihAxF14x8Fh4I5QiGkQiBjiiufW2WjXK/Vi8HdLv5lfcjykN
+q7IpfbmYDheaZlj3WibN6rCNWgaX/czPXD4I6XakjBFUdV4OEqMU+RcuQ6YRrAzz
+CrK8jRBKapxWWwdGSVITGYCQNOkEDiBg75z0gQvrOQalRLojLE1M4GidI4yC1zx1
+qUAq75T9w08nm3Y+SSZmA9ssVYDWt68e6ExOdA4d3Nc+ms7E4WO/nlK91e1MfXl7
+/NGr15cvmKmvT05uPFt5U1y/+/KOuLj7aePTpXuz3c6LB5/PzpDl8yduvruy922n
+e+Pxw8ndrLp9azO/P1ec6n4H9MIi0w==
+=xCm+
 -----END PGP MESSAGE-----
 
 And finally, I am proving ownership of this host by posting or
