@@ -358,16 +358,19 @@ void main(){
   function probeGPU() {
     try {
       const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-      const ext = gl.getExtension('WEBGL_debug_renderer_info');
-      if (ext) {
-        const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL).toLowerCase();
-        if (/rtx|rx 6|rx 7|m1|m2|m3|a100|4090|3090|3080|radeon pro/i.test(renderer)) {
-          applyQuality(2);
-        } else if (/intel|hd graphics|uhd|mali|adreno 5|adreno 6/i.test(renderer)) {
-          applyQuality(0);
-        } else {
-          applyQuality(1);
-        }
+      let renderer = '';
+      try {
+        renderer = gl.getParameter(gl.RENDERER).toLowerCase();
+      } catch (_) {
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        if (ext) renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL).toLowerCase();
+      }
+      if (/rtx|rx 6|rx 7|m1|m2|m3|a100|4090|3090|3080|radeon pro/i.test(renderer)) {
+        applyQuality(2);
+      } else if (/intel|hd graphics|uhd|mali|adreno 5|adreno 6/i.test(renderer)) {
+        applyQuality(0);
+      } else {
+        applyQuality(1);
       }
     } catch (_) { applyQuality(1); }
   }
