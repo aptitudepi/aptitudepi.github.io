@@ -6,6 +6,7 @@ let mode = 'local';
 let inputBuffer = '';
 let bootDone = false;
 let v86InputHandler = null;
+let v86ExitBuffer = '';
 
 function detectOS() {
   const ua = navigator.userAgent;
@@ -29,12 +30,11 @@ function applyOSTheme(os) {
 
 function handleInput(data) {
   if (mode === 'v86') {
-    // Ctrl+Z to exit VM
-    for (const char of data) {
-      if (char === '\x1a') {
-        if (typeof window.exitVM === 'function') window.exitVM();
-        return;
-      }
+    v86ExitBuffer = (v86ExitBuffer + data.toLowerCase()).slice(-30);
+    if (data === '\x1a' || v86ExitBuffer.includes('exit\r') || v86ExitBuffer.includes('exit\n')) {
+      v86ExitBuffer = '';
+      if (typeof window.exitVM === 'function') window.exitVM();
+      return;
     }
     if (v86InputHandler) v86InputHandler(data);
     return;
@@ -121,6 +121,7 @@ function startBoot() {
 
 function setV86InputHandler(handler) {
   v86InputHandler = handler;
+  if (handler) v86ExitBuffer = '';
 }
 
 function setMode(m) { mode = m; }

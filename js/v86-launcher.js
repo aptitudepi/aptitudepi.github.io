@@ -33,6 +33,7 @@ async function bootVM(term) {
     term.writeln('\x1b[38;2;100;200;100mv86 loaded.\x1b[0m');
     term.writeln('\x1b[38;2;100;140;200mBooting Buildroot Linux...\x1b[0m');
     term.writeln('\x1b[38;2;80;80;90m(This may take 5-15 seconds)\x1b[0m');
+    term.writeln('\x1b[38;2;80;80;90m(Type exit + Enter or press Ctrl+Z to return to shell)\x1b[0m');
 
     const container = document.getElementById('terminal-container');
 
