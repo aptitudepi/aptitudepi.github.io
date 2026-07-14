@@ -1,7 +1,5 @@
 #app {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0 var(--space-6);
+  width: 100%;
   position: relative;
   z-index: 1;
   min-height: 100vh;
@@ -13,6 +11,20 @@ section {
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+
+section:not(#hero-target) {
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: var(--space-10) var(--space-12);
+}
+
+section:not(#hero-target) > * {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
 #hero-target {
