@@ -1,0 +1,66 @@
+@property --hue {
+  syntax: '<number>';
+  initial-value: 0;
+  inherits: false;
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, oklch(0.7 0.3 var(--hue)), oklch(0.7 0.3 calc(var(--hue) + 60)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: hueCycle 6s linear infinite;
+}
+
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--gradient-border);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.section-header {
+  text-align: center;
+  padding: var(--space-12) 0 var(--space-8);
+}
+.section-header h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  background: linear-gradient(90deg, oklch(0.7 0.3 var(--hue)), oklch(0.7 0.3 calc(var(--hue) + 60)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: hueCycle 6s linear infinite;
+}
+
+@keyframes hueCycle {
+  0%   { --hue: 0; }
+  100% { --hue: 360; }
+}
+
+.terminal-256 {
+  color: oklch(0.65 0.03 260);
+  font-family: var(--font-mono);
+}
+
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: var(--gradient-hero);
+  z-index: 99;
+  transform-origin: left;
+  scale: 0 1;
+  will-change: scale;
+}

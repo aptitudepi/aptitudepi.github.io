@@ -1,0 +1,101 @@
+#app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+section {
+  padding: var(--space-10) 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#hero-target {
+  height: 100vh;
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+}
+
+.hero-shell {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+  border: none;
+  background: var(--color-terminal-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+.section-header {
+  text-align: center;
+  padding: var(--space-12) 0 var(--space-8);
+}
+
+.section-header h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-8) var(--space-10);
+  align-items: start;
+  padding: var(--space-8) 0;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.about-image {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.about-image .frame {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+.about-image .frame::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--angle, 0deg), var(--color-primary), var(--color-accent), var(--color-blue), var(--color-primary));
+  animation: spinGradient 4s linear infinite;
+  z-index: -1;
+}
+@keyframes spinGradient {
+  to { --angle: 360deg; }
+}
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.about-image img {
+  border-radius: var(--radius-lg);
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.about-text {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
+.about-text p + p {
+  margin-top: var(--space-4);
+}

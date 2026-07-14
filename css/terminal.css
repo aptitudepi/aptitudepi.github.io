@@ -1,0 +1,170 @@
+/* ── Terminal Window Frame ─────────────────── */
+
+/* macOS style (default) */
+.terminal-window {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--color-terminal-header);
+  border-bottom: 1px solid var(--color-terminal-border);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.terminal-dots {
+  display: flex;
+  gap: 8px;
+}
+.terminal-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.terminal-dot.red { background: #ff5f57; }
+.terminal-dot.yellow { background: #febc2e; }
+.terminal-dot.green { background: #28c840; }
+
+.terminal-title {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  color: #888;
+  font-family: var(--font-mono);
+}
+
+/* Windows style */
+.terminal-window.windows .terminal-header {
+  background: #1a1a1a;
+  border-bottom-color: #333;
+  padding: 6px 12px;
+}
+.terminal-window.windows .terminal-dots { display: none; }
+.terminal-window.windows .terminal-title {
+  text-align: left;
+  margin-left: 8px;
+  color: #ccc;
+}
+.terminal-window.windows .win-buttons {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.terminal-window.windows .win-btn {
+  width: 36px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #999;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+.terminal-window.windows .win-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+.terminal-window.windows .win-btn.close:hover {
+  background: #e81123;
+  color: #fff;
+}
+
+/* Linux style */
+.terminal-window.linux .terminal-header {
+  background: #2d2d2d;
+  border-bottom-color: #444;
+  padding: 6px 12px;
+  gap: 6px;
+}
+.terminal-window.linux .terminal-dots { display: none; }
+.terminal-window.linux .linux-menu {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: #aaa;
+}
+.terminal-window.linux .linux-menu span:hover,
+.terminal-window.linux .linux-menu span.active { color: #fff; cursor: pointer; }
+.terminal-window.linux .terminal-title {
+  text-align: left;
+  margin-left: 8px;
+  color: #888;
+}
+.terminal-window.linux .linux-close {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+}
+.terminal-window.linux .linux-close:hover { color: #fff; }
+
+/* Default: no OS buttons shown */
+.win-buttons, .linux-menu, .linux-close { display: none; }
+.terminal-window.windows .win-buttons { display: flex; }
+.terminal-window.linux .linux-menu,
+.terminal-window.linux .linux-close { display: flex; }
+.nav-links { display: flex; gap: 16px; font-size: 11px; color: #aaa; margin-left: auto; }
+.nav-links span:hover,
+.nav-links span.active { color: #fff; cursor: pointer; }
+
+/* Terminal body */
+.terminal-body {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+.terminal-body .xterm {
+  height: 100%;
+  padding: 8px;
+  width: 100%;
+  background: transparent !important;
+}
+.terminal-body .xterm-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-terminal-border) transparent;
+  background: transparent !important;
+}
+.terminal-body .xterm-screen {
+  width: 100% !important;
+  background: transparent !important;
+}
+.terminal-body .xterm canvas,
+.terminal-body .xterm-screen canvas {
+  background: transparent !important;
+}
+
+/* Loading overlay for v86 */
+.terminal-loading {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: var(--color-terminal-bg);
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 16px;
+  white-space: pre;
+  z-index: 2;
+}
+.terminal-loading.active {
+  display: block;
+}
+
+/* OS detection helper (set by JS) */
+body[data-os="macos"] .terminal-window { --os-theme: macos; }
+body[data-os="windows"] .terminal-window { --os-theme: windows; }
+body[data-os="linux"] .terminal-window { --os-theme: linux; }

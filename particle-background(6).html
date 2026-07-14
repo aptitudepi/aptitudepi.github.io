@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Particle Field</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:#000;overflow:hidden}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js"}}</script>
+<script type="module">
+import * as T from 'three';
+
+// ── Adaptive quality detection ────────────────────────────
+// Probe GPU tier via renderer info after first render
+// Detect screen refresh rate via requestAnimationFrame timing
+const PR_raw = window.devicePixelRatio;
+let PR = Math.min(PR_raw, 2);
+
+// Screen Hz detection — sample 10 frames, use median interval
+function detectHz(cb){
+  const samples=[];let last=0;
+  function tick(t){
+    if(last){samples.push(t-last);}
+    last=t;
+    if(samples.length<10)requestAnimationFrame(tick);
+    else{
+      samples.sort((a,b)=>a-b);
+      const med=samples[Math.floor(samples.length/2)];
+      cb(Math.round(1000/med));
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+const W=()=>window.innerWidth, H=()=>window.innerHeight;
+const canvas=document.getElementById('c');
+const R=new T.WebGLRenderer({canvas,antialias:false,alpha:false,powerPreference:'high-performance'});
+R.setPixelRatio(PR); R.setSize(W(),H()); R.autoClear=false;
+
+// ── Adaptive config (set after Hz detection + GPU probe) ──
+let SZ=256;       // GPGPU side (256²=65k particles)
+let targetFPS=60; // updated after hz detection
+let frameInterval=1000/60;
+let lastFrameTime=0;
+
+// GPU tier: probe after first draw
+let gpuTier=1; // 0=low,1=mid,2=high
+
+function applyQuality(tier){
+  gpuTier=tier;
+  if(tier===0){SZ=128;PR=Math.min(PR_raw,1);}
+  else if(tier===1){SZ=192;PR=Math.min(PR_raw,1.5);}
+  else{SZ=256;PR=Math.min(PR_raw,2);}
+  R.setPixelRatio(PR);
+}
+
+const scene=new T.Scene();
+const camMain=new T.PerspectiveCamera(50,W()/H(),.01,10);
+camMain.position.z=2.8;
+const flatCam=new T.OrthographicCamera(-1,1,1,-1,0,1);
+
+const mkGPU=(sz)=>new T.WebGLRenderTarget(sz,sz,{
+  format:T.RGBAFormat,type:T.FloatType,
+  minFilter:T.NearestFilter,magFilter:T.NearestFilter,
+  depthBuffer:false,stencilBuffer:false});
+const mkFull=()=>new T.WebGLRenderTarget(W()*PR|0,H()*PR|0,{
+  format:T.RGBAFormat,type:T.HalfFloatType,
+  minFilter:T.LinearFilter,magFilter:T.LinearFilter,
+  depthBuffer:false,stencilBuffer:false});
+
+let rA=mkGPU(256),rB=mkGPU(256),trailA=mkFull(),trailB=mkFull(),outRT=mkFull();
+let iW=W()*PR|0,iH=H()*PR|0;
+
+const posData=new Float32Array(256*256*4);
+for(let i=0;i<256*256;i++){
+  let x,y;do{x=Math.random()*2-1;y=Math.random()*2-1;}while(x*x+y*y>1);
+  posData[i*4]=x;posData[i*4+1]=y;posData[i*4+2]=Math.random();posData[i*4+3]=Math.random();
+}
+const posTex=new T.DataTexture(posData,256,256,T.RGBAFormat,T.FloatType);
+posTex.needsUpdate=true;
+
+// ── Bitangent divergence-free curl noise (Bærentzen 2025) ─
+const CURL=`
+vec4 _p(vec4 x){return mod(((x*34.)+1.)*x,289.);}
+vec4 _t(vec4 r){return 1.7928429-.8537347*r;}
+vec4 sg3(vec3 v){
+  const vec2 C=vec2(1./6.,1./3.);
+  vec3 i=floor(v+dot(v,C.yyy));
+  vec3 x0=v-i+dot(i,C.xxx);
+  vec3 g=step(x0.yzx,x0.xyz),l=1.-g;
+  vec3 i1=min(g.xyz,l.zxy),i2=max(g.xyz,l.zxy);
+  vec3 x1=x0-i1+C.xxx,x2=x0-i2+2.*C.xxx,x3=x0-1.+3.*C.xxx;
+  i=mod(i,289.);
+  vec4 pp=_p(_p(_p(i.z+vec4(0.,i1.z,i2.z,1.))+i.y+vec4(0.,i1.y,i2.y,1.))+i.x+vec4(0.,i1.x,i2.x,1.));
+  vec4 j=pp-49.*floor(pp*(1./49.));
+  vec4 x_=floor(j*(1./7.)),y_=floor(j-7.*x_);
+  vec4 xs=x_*(2./7.)-1.,ys=y_*(2./7.)-1.;
+  vec4 h=1.-abs(xs)-abs(ys);
+  vec4 b0=vec4(xs.xy,ys.xy),b1=vec4(xs.zw,ys.zw);
+  vec4 s0=floor(b0)*2.+1.,s1=floor(b1)*2.+1.;
+  vec4 sh=-step(h,vec4(0.));
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy,a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 p0=vec3(a0.xy,h.x),p1=vec3(a0.zw,h.y),p2=vec3(a1.xy,h.z),p3=vec3(a1.zw,h.w);
+  vec4 nm=_t(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+  p0*=nm.x;p1*=nm.y;p2*=nm.z;p3*=nm.w;
+  vec4 mx=max(.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);
+  vec4 mx2=mx*mx,mx4=mx2*mx2;
+  vec4 pd=vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3));
+  float n=42.*dot(mx4,pd);
+  vec4 tmp=-8.*mx2*mx*pd;
+  vec3 grad=42.*(tmp.x*x0+tmp.y*x1+tmp.z*x2+tmp.w*x3+mx4.x*p0+mx4.y*p1+mx4.z*p2+mx4.w*p3);
+  return vec4(n,grad);
+}
+vec2 curl2(vec3 p){
+  vec4 dA=sg3(p),dB=sg3(p+vec3(31.416,-47.853,12.679));
+  return cross(dA.yzw,dB.yzw).xy;
+}
+vec2 curlFlow(vec3 p){
+  return curl2(p)*.55+curl2(p*2.1+17.)*.22+curl2(p*5.2+31.)*.08;
+}
+`;
+
+// ── Black-Scholes PDE heat-map ────────────────────────────
+// ∂V/∂t + ½σ²S²·∂²V/∂S² + rS·∂V/∂S − rV = 0
+// Analytical solution: European call V(S,t) = S·N(d₁) − K·e^{−r(T−t)}·N(d₂)
+// We evaluate this on the particle's position → encodes V as particle color intensity.
+// S = radial position mapped to [0.5, 2.5], t = simulation time
+// Parameters: K=1 (at-the-money normalised), r=0.05, σ=0.25, T=8s cycle
+// The BS value field is used as an additive luminance layer on top of the palette.
+const BS_GLSL=`
+float bsNorm(float x){
+  // Abramowitz & Stegun rational approx to Φ(x), max error 7.5e-8
+  float t=1./(1.+.2316419*abs(x));
+  float p=t*(.319381530+t*(-.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));
+  float pdf=exp(-.5*x*x)*.3989422803;
+  float cdf=1.-pdf*p;
+  return x>=0.?cdf:1.-cdf;
+}
+// Returns normalised BS call value [0,1] for a particle at world position pos
+// S = length(pos) remapped to [0.4,2.5], T-t cycles with uTime
+float blackScholes(vec2 pos, float uTime){
+  float S=length(pos)*1.05+0.4;  // moneyness: centre=ATM
+  float K=1.0;
+  float r=0.05, sigma=0.28;
+  float Tt=mod(uTime*0.12,6.)+0.05; // T-t cycles from 0.05→6.05 (theta burn)
+  float d1=(log(S/K)+(r+.5*sigma*sigma)*Tt)/(sigma*sqrt(Tt));
+  float d2=d1-sigma*sqrt(Tt);
+  float V=S*bsNorm(d1)-K*exp(-r*Tt)*bsNorm(d2);
+  // Delta = ∂V/∂S = N(d1) — used to tint by sensitivity
+  float delta=bsNorm(d1);
+  // Combine: V normalised by S, modulated by delta for visual depth
+  return clamp(V/S,0.,1.)*(.5+delta*.5);
+}
+`;
+
+// ── GPGPU sim shader ──────────────────────────────────────
+const simScene=new T.Scene();
+const simMat=new T.ShaderMaterial({
+  uniforms:{
+    uPos:{value:posTex},uSZ:{value:256},
+    uMouse:{value:new T.Vector2()},uMouseR:{value:0.18},
+    uTime:{value:0},uDt:{value:.016},uHover:{value:0},
+    uModeW:{value:new T.Vector4(1,0,0,0)}
+  },
+  vertexShader:`void main(){gl_Position=vec4(position,1.);}`,
+  fragmentShader:`precision highp float;
+uniform sampler2D uPos;
+uniform float uSZ,uTime,uDt,uHover,uMouseR;
+uniform vec2 uMouse;
+uniform vec4 uModeW;
+${CURL}
+float h1(float p){p=fract(p*.1031);p*=p+33.33;p*=p+p;return fract(p);}
+void main(){
+  vec2 uv=gl_FragCoord.xy/uSZ;
+  vec4 pf=texture2D(uPos,uv);
+  vec2 pos=pf.xy; float scale=pf.z,age=pf.w;
+  float seed=h1(uv.x*71.+uv.y*137.),seed2=h1(seed*211.+uv.y*97.);
+  age=mod(age+uDt/(2.5+seed*2.),1.);
+  if(age<uDt/(2.5+seed*2.)){
+    float ang=seed*6.2832+uTime*.3;
+    pos=vec2(cos(ang),sin(ang))*sqrt(seed2*.9+.05); scale=0.;
+  }
+  vec3 p3=vec3(pos*1.4,uTime*.18);
+  vec2 v=curlFlow(p3);
+  // Mode forces — all computed, blended by weights
+  vec2 rv=normalize(pos+1e-4);
+  vec2 vortex=vec2(-rv.y,rv.x)*(.5-length(pos)*.3);
+  float dp=length(pos);
+  vec2 pulsar=normalize(pos+1e-4)*sin(dp*8.-uTime*3.)*.04+vec2(-pos.y,pos.x)*(1./(dp+.5))*.04;
+  vec2 aurora=vec2(sin(pos.y*4.+uTime)*.05,cos(pos.x*3.+uTime*.7)*.04);
+  v+=vortex*uModeW.y+pulsar*uModeW.z+aurora*uModeW.w;
+  // ── Local aversion: smooth repulsion field around cursor ──
+  // Uses the curl of a Gaussian bump: ∇⊥G(r) = radial force
+  // This is divergence-free by construction so it doesn't break flow
+  vec2 dm=pos-uMouse;
+  float md=length(dm);
+  float gaussR=uMouseR;
+  // Radial repulsion (push away) scaled by Gaussian falloff
+  float radial=exp(-md*md/(2.*gaussR*gaussR))*uHover;
+  v+=normalize(dm+1e-5)*radial*0.055;
+  // Tangential swirl around cursor edge (adds local tessellation feel)
+  vec2 tang=vec2(-dm.y,dm.x)/(md+.01);
+  float tangMask=smoothstep(gaussR*2.2,gaussR*.4,md)*uHover;
+  v+=tang*tangMask*0.018;
+  pos+=v*uDt*28.;
+  if(dot(pos,pos)>1.04)pos*=.984;
+  float env=smoothstep(0.,.12,age)*smoothstep(1.,.8,age);
+  scale+=(env*(.5+seed*.5)-scale)*.12;
+  gl_FragColor=vec4(pos,scale,age);
+}`
+});
+simScene.add(new T.Mesh(new T.PlaneGeometry(2,2),simMat));
+
+// ── Tessellation: each particle spawns a micro-triangle ──
+// Instead of gl.POINTS (square sprites), we use instanced triangles.
+// Each instance = one equilateral triangle scaled by gl_PointSize equivalent.
+// This gives crisp tessellated geometry that auto-fills gaps visually.
+// Triangle verts in local space (unit equilateral, inscribed in radius 1)
+const triVerts=new Float32Array([
+   0.0,  1.0, 0.0,
+  -0.866,-0.5, 0.0,
+   0.866,-0.5, 0.0
+]);
+const triGeo=new T.InstancedBufferGeometry();
+triGeo.setAttribute('position',new T.BufferAttribute(triVerts,3));
+
+const N=256*256;
+const uvA=new Float32Array(N*2),sdA=new Float32Array(N*4);
+for(let i=0;i<N;i++){
+  uvA[i*2]=(i%256)/256; uvA[i*2+1]=Math.floor(i/256)/256;
+  sdA[i*4]=Math.random();sdA[i*4+1]=Math.random();
+  sdA[i*4+2]=Math.random();sdA[i*4+3]=Math.random();
+}
+triGeo.setAttribute('iUV', new T.InstancedBufferAttribute(uvA,2));
+triGeo.setAttribute('seeds',new T.InstancedBufferAttribute(sdA,4));
+triGeo.instanceCount=N;
+
+const pMat=new T.ShaderMaterial({
+  uniforms:{
+    uPos:{value:posTex},uTime:{value:0},uHover:{value:0},
+    uRez:{value:new T.Vector2(W(),H())},
+    uPS:{value:W()/(PR*2000)*.65},uPR:{value:PR},
+    uModeW:{value:new T.Vector4(1,0,0,0)}
+  },
+  vertexShader:`precision highp float;
+attribute vec2 iUV;
+attribute vec4 seeds;
+uniform sampler2D uPos;
+uniform float uTime,uPS,uPR,uHover;
+uniform vec2 uRez;
+varying float vAge,vScale,vSeed,vBS;
+${CURL}
+${BS_GLSL}
+void main(){
+  vec4 pf=texture2D(uPos,iUV);
+  vec2 pos=pf.xy; float scale=pf.z,age=pf.w;
+  // Micro-drift via curl (cosmetic, cheap)
+  vec2 md2=curl2(vec3(pos*6.,uTime*.22+seeds.z*10.))*.006;
+  pos+=md2*(1.+mix(0.,smoothstep(0.,.9,age),uHover)*3.);
+  vAge=age; vScale=scale; vSeed=seeds.x;
+  vBS=blackScholes(pos,uTime);
+  // Triangle size in world space: scale gl_Position offset by particle size
+  float sz=scale*0.012*uPS+0.0004;
+  // Slightly rotate each triangle by seed + time for local tessellation variety
+  float ang=seeds.y*6.2832+uTime*.08+seeds.w*3.14;
+  mat2 rot=mat2(cos(ang),-sin(ang),sin(ang),cos(ang));
+  vec2 localPos=rot*position.xy*sz;
+  vec4 vp=modelViewMatrix*vec4(pos+localPos,0.,1.);
+  gl_Position=projectionMatrix*vp;
+}`,
+  fragmentShader:`precision highp float;
+varying float vAge,vScale,vSeed,vBS;
+uniform vec4 uModeW;
+uniform float uTime;
+// Design system: red oklch(0.58,0.22,25), blue oklch(0.62,0.22,240), violet oklch(0.55,0.24,290)
+// All 4 modes share the same red→violet→blue gradient, just with different phase/speed
+// so transitions stay on-brand always
+vec3 designPal(float t){
+  // Cosine palette anchored to: red(0.85,0.12,0.18), violet(0.40,0.08,0.82), blue(0.03,0.20,0.95)
+  vec3 a=vec3(.44,.10,.57);  // midpoint
+  vec3 b=vec3(.41,.06,.38);  // amplitude
+  vec3 cc=vec3(1.,1.,1.);    // frequency
+  vec3 d=vec3(.0,.35,.65);   // phase: 0=red, 0.5=blue
+  return clamp(a+b*cos(6.28318*(cc*t+d)),0.,1.);
+}
+void main(){
+  float a=smoothstep(.05,.2,vScale);
+  if(a<.005)discard;
+  // t-parameter: age shifted by seed + mode-dependent phase rotation
+  // Each mode just shifts the phase of the same palette — stays on-brand
+  float phaseShift=uModeW.y*.18+uModeW.z*.36+uModeW.w*.52;
+  float t=vAge+vSeed*.3+phaseShift;
+  vec3 col=designPal(t);
+  // Black-Scholes luminance layer: BS value brightens particles near option value peaks
+  // High BS value (deep ITM) → brighter, warmer; low BS (OTM) → dimmer, cooler
+  float bsLum=vBS*0.55;
+  col+=vec3(bsLum*.4, bsLum*.15, bsLum*.05); // warm orange-white bloom at BS peaks
+  col*=.85+vBS*.3;
+  gl_FragColor=vec4(clamp(col,0.,1.),a*(.6+vBS*.4));
+}`,
+  transparent:true,depthTest:false,depthWrite:false,blending:T.AdditiveBlending,
+  side:T.DoubleSide
+});
+const mesh=new T.Mesh(triGeo,pMat);
+mesh.scale.set(2,-2,2);
+scene.add(mesh);
+
+// ── Trail accumulation (semi-Lagrangian advection) ────────
+const trailScene=new T.Scene();
+const buildTrailFrag=(w,h)=>`precision highp float;
+uniform sampler2D uPrev,uParts;
+uniform float uTime,uDecay;
+uniform vec4 uModeW;
+${CURL}
+void main(){
+  vec2 uv=gl_FragCoord.xy/vec2(${w}.,${h}.);
+  vec3 fp=vec3(uv*2.-1.,uTime*.12);
+  vec2 vel=curlFlow(fp)*.0012+curl2(fp*3.)*.0004;
+  vel*=mix(vec2(1.),vec2(-1.,1.),uModeW.y);
+  vec2 src=clamp(uv-vel,.001,.999);
+  vec4 prev=texture2D(uPrev,src)*uDecay;
+  vec4 parts=texture2D(uParts,uv);
+  gl_FragColor=max(prev,parts*1.25);
+}`;
+const trailMat=new T.ShaderMaterial({
+  uniforms:{uPrev:{value:trailA.texture},uParts:{value:outRT.texture},
+    uTime:{value:0},uDecay:{value:.91},uModeW:{value:new T.Vector4(1,0,0,0)}},
+  vertexShader:`void main(){gl_Position=vec4(position,1.);}`,
+  fragmentShader:buildTrailFrag(iW,iH)
+});
+trailScene.add(new T.Mesh(new T.PlaneGeometry(2,2),trailMat));
+
+// ── Post: chromatic aberration + ACES tonemap + vignette ──
+const postScene=new T.Scene();
+const postMat=new T.ShaderMaterial({
+  uniforms:{uTex:{value:trailB.texture},uRez:{value:new T.Vector2(iW,iH)},uTime:{value:0}},
+  vertexShader:`void main(){gl_Position=vec4(position,1.);}`,
+  fragmentShader:`precision highp float;
+uniform sampler2D uTex;
+uniform vec2 uRez;
+uniform float uTime;
+vec3 aces(vec3 x){float a=2.51,b=.03,c=2.43,e=.59,f=.14;return clamp((x*(a*x+b))/(x*(c*x+e)+f),0.,1.);}
+void main(){
+  vec2 uv=gl_FragCoord.xy/uRez;
+  vec2 cen=uv-.5;
+  float ca=dot(cen,cen)*.009;
+  float rv=texture2D(uTex,uv+cen*ca*1.3).r;
+  float gv=texture2D(uTex,uv).g;
+  float bv=texture2D(uTex,uv-cen*ca*.9).b;
+  vec3 col=aces(vec3(rv,gv,bv)*1.35);
+  col*=1.-dot(cen,cen)*1.1;
+  col*=sin(gl_FragCoord.y*1.5)*.011+1.;
+  gl_FragColor=vec4(col,1.);
+}`
+});
+postScene.add(new T.Mesh(new T.PlaneGeometry(2,2),postMat));
+
+// ── Mouse ─────────────────────────────────────────────────
+const mouse={x:0,y:0,active:false};
+let hP=0;
+const mv=(x,y)=>{mouse.x=(x/W())*2-1;mouse.y=-(y/H())*2+1;mouse.active=true;};
+window.addEventListener('mousemove',e=>mv(e.clientX,e.clientY));
+window.addEventListener('mouseout',()=>{mouse.active=false;});
+window.addEventListener('touchmove',e=>{e.preventDefault();mv(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
+window.addEventListener('touchend',()=>{mouse.active=false;});
+
+// ── Mode buttons ──────────────────────────────────────────
+// Auto-cycling mode weights: each mode holds ~8s, blends over ~3s
+// modeW is the live blended vec4; driven entirely by time in the render loop
+const modeW=new T.Vector4(1,0,0,0);
+const HOLD=8.0;   // seconds per mode
+const BLEND=3.0;  // seconds to cross-fade between modes
+
+// ── Resize ────────────────────────────────────────────────
+function onResize(){
+  R.setSize(W(),H());
+  camMain.aspect=W()/H(); camMain.updateProjectionMatrix();
+  pMat.uniforms.uRez.value.set(W(),H());
+  pMat.uniforms.uPS.value=W()/(PR*2000)*.65;
+  iW=W()*PR|0; iH=H()*PR|0;
+  [trailA,trailB,outRT].forEach(r=>r.dispose());
+  trailA=mkFull();trailB=mkFull();outRT=mkFull();
+  postMat.uniforms.uRez.value.set(iW,iH);
+  trailMat.fragmentShader=buildTrailFrag(iW,iH);
+  trailMat.needsUpdate=true;
+}
+window.addEventListener('resize',onResize);
+
+// ── GPU tier probe ─────────────────────────────────────────
+function probeGPU(){
+  const info=R.info;
+  // After first frame: check if we have a high-end GPU via renderer string
+  try{
+    const gl=canvas.getContext('webgl2')||canvas.getContext('webgl');
+    const ext=gl.getExtension('WEBGL_debug_renderer_info');
+    if(ext){
+      const renderer=gl.getParameter(ext.UNMASKED_RENDERER_WEBGL).toLowerCase();
+      if(/rtx|rx 6|rx 7|m1|m2|m3|a100|4090|3090|3080|radeon pro/i.test(renderer)){
+        applyQuality(2);
+      } else if(/intel|hd graphics|uhd|mali|adreno 5|adreno 6/i.test(renderer)){
+        applyQuality(0);
+      } else {
+        applyQuality(1);
+      }
+    }
+  }catch(e){applyQuality(1);}
+}
+
+// ── Adaptive frame throttle (target screen Hz) ────────────
+// Uses requestAnimationFrame but skips render if ahead of target interval
+// This respects the display's native Hz while not overshooting
+let targetInterval=1000/60; // updated after hz probe
+
+// ── Render loop ───────────────────────────────────────────
+const clock=new T.Clock();
+let prevT=0,ever=false,gpuProbed=false,hzProbed=false;
+
+function frame(ts){
+  requestAnimationFrame(frame);
+
+  // Hz-adaptive throttle: skip frame if too early
+  if(ts-lastFrameTime < targetInterval-1) return;
+  lastFrameTime=ts;
+
+  const t=clock.getElapsedTime();
+  const dt=Math.min(t-prevT,.05); prevT=t;
+
+  // Probe GPU once after first frame
+  if(!gpuProbed && ever){gpuProbed=true; probeGPU();}
+
+  const kH=1.-Math.pow(.94,dt*60);
+  hP+=((mouse.active?1:0)-hP)*kH;
+  // Auto-cycle: compute target weights from time-based schedule
+  // Cycle period = 4*(HOLD+BLEND), each mode gets (HOLD+BLEND) seconds
+  const period=4*(HOLD+BLEND);
+  const phase=t%period;                        // [0, period)
+  const slot=Math.floor(phase/(HOLD+BLEND));   // which mode is "on"  [0..3]
+  const slotT=phase%(HOLD+BLEND);              // time within this slot
+  // blend factor: 0=fully in current mode, 1=fully in next mode
+  const blend=slotT<HOLD ? 0.0 : (slotT-HOLD)/BLEND;
+  const next=(slot+1)%4;
+  // Target weights: lerp between one-hot(slot) and one-hot(next)
+  const tw=[0,0,0,0]; tw[slot]=1-blend; tw[next]+=blend;
+  // Smooth the target with a slow exponential so there's no mathematical discontinuity
+  const kM=1.-Math.pow(.97,dt*60);
+  modeW.x+=(tw[0]-modeW.x)*kM; modeW.y+=(tw[1]-modeW.y)*kM;
+  modeW.z+=(tw[2]-modeW.z)*kM; modeW.w+=(tw[3]-modeW.w)*kM;
+  [simMat,pMat,trailMat].forEach(m=>m.uniforms.uModeW.value.copy(modeW));
+
+  const mxw=mouse.x*Math.tan(25*Math.PI/180)*2.8*.36;
+  const myw=mouse.y*Math.tan(25*Math.PI/180)*2.8*.36;
+
+  // 1. GPGPU sim
+  simMat.uniforms.uPos.value=ever?rA.texture:posTex;
+  simMat.uniforms.uTime.value=t; simMat.uniforms.uDt.value=dt;
+  simMat.uniforms.uHover.value=hP; simMat.uniforms.uMouse.value.set(mxw,myw);
+  simMat.uniforms.uMouseR.value=0.18+hP*.04;
+  R.setRenderTarget(rB); R.clear(); R.render(simScene,flatCam);
+
+  // 2. Triangles → outRT
+  pMat.uniforms.uPos.value=rB.texture;
+  pMat.uniforms.uTime.value=t; pMat.uniforms.uHover.value=hP;
+  R.setRenderTarget(outRT); R.clearColor(); R.render(scene,camMain);
+
+  // 3. Trail
+  trailMat.uniforms.uPrev.value=trailA.texture;
+  trailMat.uniforms.uParts.value=outRT.texture;
+  trailMat.uniforms.uTime.value=t;
+  trailMat.uniforms.uDecay.value=.91-hP*.04;
+  R.setRenderTarget(trailB); R.clear(); R.render(trailScene,flatCam);
+
+  // 4. Post → screen
+  postMat.uniforms.uTex.value=trailB.texture;
+  postMat.uniforms.uTime.value=t;
+  R.setRenderTarget(null); R.clear(); R.render(postScene,flatCam);
+
+  let tmp=rA;rA=rB;rB=tmp;
+  tmp=trailA;trailA=trailB;trailB=tmp;
+  ever=true;
+}
+
+// Start: detect Hz first, then begin loop
+detectHz(hz=>{
+  // Clamp to known display Hz: 60, 90, 120, 144, 165, 240
+  const knownHz=[60,90,120,144,165,240];
+  const snapped=knownHz.reduce((a,b)=>Math.abs(b-hz)<Math.abs(a-hz)?b:a);
+  targetFPS=snapped;
+  targetInterval=1000/snapped;
+  hzProbed=true;
+  requestAnimationFrame(frame);
+});
+</script>
+</body>
+</html>
