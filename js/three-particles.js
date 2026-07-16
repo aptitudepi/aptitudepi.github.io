@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+let uRainbow = 0;
 
 function detectHz(cb) {
   const samples = []; let last = 0;
@@ -107,6 +108,9 @@ function initParticles() {
   let frameInterval = 1000 / 60;
   let lastFrameTime = 0;
   let gpuTier = 1;
+  let scrollOffset = 0;
+
+  window.addEventListener('scroll', () => { scrollOffset = window.scrollY; }, { passive: true });
 
   function applyQuality(tier) {
     gpuTier = tier;
@@ -235,7 +239,8 @@ void main(){
       uPos: { value: posTex }, uTime: { value: 0 }, uHover: { value: 0 },
       uRez: { value: new THREE.Vector2(W(), H()) },
       uPS: { value: W() / (PR * 2000) * 0.65 }, uPR: { value: PR },
-      uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
+      uModeW: { value: new THREE.Vector4(1, 0, 0, 0) },
+      uRainbow: { value: 0 }
     },
     vertexShader: `precision highp float;
 attribute vec2 iUV;
@@ -263,7 +268,7 @@ void main(){
     fragmentShader: `precision highp float;
 varying float vAge,vScale,vSeed,vBS;
 uniform vec4 uModeW;
-uniform float uTime;
+uniform float uTime,uRainbow;
 vec3 designPal(float t){
   vec3 a=vec3(.44,.10,.57);
   vec3 b=vec3(.41,.06,.38);
@@ -276,7 +281,12 @@ void main(){
   if(a<.005)discard;
   float phaseShift=uModeW.y*.18+uModeW.z*.36+uModeW.w*.52;
   float t=vAge+vSeed*.3+phaseShift;
-  vec3 col=designPal(t);
+  vec3 col;
+  if (uRainbow > 0.5) {
+    col = 0.5 + 0.5 * cos(6.28318 * (vec3(t * 0.8 + vSeed) + vec3(0.0, 0.33, 0.67)));
+  } else {
+    col = designPal(t);
+  }
   float bsLum=vBS*0.55;
   col+=vec3(bsLum*.4, bsLum*.15, bsLum*.05);
   col*=.85+vBS*.3;
@@ -424,6 +434,7 @@ void main(){
     pMat.uniforms.uPos.value = rB.texture;
     pMat.uniforms.uTime.value = t;
     pMat.uniforms.uHover.value = hP;
+    pMat.uniforms.uRainbow.value = uRainbow;
     R.setRenderTarget(outRT);
     R.clearColor();
     R.render(scene, camMain);
@@ -446,6 +457,8 @@ void main(){
     tmp = trailA; trailA = trailB; trailB = tmp;
     ever = true;
 
+    canvas.style.transform = `translateY(${-scrollOffset * 0.025}px)`;
+
     requestAnimationFrame(frame);
   }
 
@@ -458,4 +471,8 @@ void main(){
   });
 }
 
-export { initParticles };
+function setKonami(active) {
+  uRainbow = active ? 1 : 0;
+}
+
+export { initParticles, setKonami };

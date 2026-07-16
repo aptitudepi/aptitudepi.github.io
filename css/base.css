@@ -64,3 +64,14 @@
   scale: 0 1;
   will-change: scale;
 }
+
+#matrix-rain {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: auto;
+  display: none;
+}
+#matrix-rain.active {
+  display: block;
+}

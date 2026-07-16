@@ -366,6 +366,13 @@
 
 .certs-section, .resume-section { content-visibility: auto; contain-intrinsic-size: 1px; }
 
+/* ── Terminal Scrollbar ────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-terminal-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-primary-dim); }
+html { scrollbar-width: thin; scrollbar-color: var(--color-terminal-border) transparent; }
+
 /* ── Scroll Reveal ──────────────────────────── */
 .reveal { opacity: 0; transform: translateY(20px); transition: opacity 600ms var(--ease-out-expo), transform 600ms var(--ease-out-expo); }
 .reveal.visible { opacity: 1; transform: translateY(0); }

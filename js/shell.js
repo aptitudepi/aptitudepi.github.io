@@ -78,9 +78,227 @@ const RESUME = {
   User: 'db',
 };
 
+const FORTUNES = [
+  'Technology is anything that wasn\'t around when you were born — Alan Kay',
+  'Any sufficiently advanced technology is equivalent to magic — Arthur C. Clarke',
+  'All of the biggest technological inventions created by man - the airplane, the automobile, the computer - says little about his intelligence, but speaks volumes about his laziness — Mark Kennedy',
+  'Just because something doesn\'t do what you planned it to do doesn\'t mean it\'s useless — Thomas Edison',
+  'It has become appallingly obvious that our technology has exceeded our humanity — Albert Einstein',
+  'One machine can do the work of fifty ordinary men.  No machine can do the work of one extraordinary man — Elbert Hubbard',
+  'Technology is a word that describes something that doesn\'t work yet — Douglas Adams',
+  'Humanity is acquiring all the right technology for all the wrong reasons — R. Buckminster Fuller',
+  'I think that novels that leave out technology misrepresent life as badly as Victorians misrepresented life by leaving out sex — Kurt Vonnegut',
+  'The human spirit must prevail over technology — Albert Einstein',
+  'The great myth of our times is that technology is communication — Libby Larsen',
+  'You cannot endow even the best machine with initiative; the jolliest steamroller will not plant flowers — Walter Lippmann',
+  'We are stuck with technology when what we really want is just stuff that works — Douglas Adams',
+  'Technology made large populations possible; large populations now make technology indispensable — Joseph Krutch',
+  'This is the whole point of technology.  It creates an appetite for immortality on the one hand.  It threatens universal extinction on the other. Technology is lust removed from nature — Don DeLillo',
+  'The real danger is not that computers will begin to think like men, but that men will begin to think like computers — Sydney Harris',
+  'If we continue to develop our technology without wisdom or prudence, our servant may prove to be our executioner — Omar Bradley',
+  'The art challenges the technology, and the technology inspires the art — John Lasseter',
+  'Science and technology revolutionize our lives, but memory, tradition and myth frame our response — Arthur Schlesinger',
+  'The science of today is the technology of tomorrow — Edward Teller',
+  'Imagination is the Discovering Faculty, pre-eminently. It is that which penetrates into the unseen worlds around us, the worlds of Science — Ada Lovelace',
+  'Software is like sex: It\'s better when it\'s free — Linus Torvalds',
+  'Good programmers use their brains, but good guidelines save us having to think out every case — Francis Glassborow',
+  'First learn computer science and all the theory.  Next develop a programming style.  Then forget all that and just hack — George Carrette',
+  'There are two ways to write error-free programs; only the third one works — Alan J. Perlis',
+  'That\'s been one of my mantras — focus and simplicity. Simple can be harder than complex; you have to work hard to get your thinking clean to make it simple — Steve Jobs',
+  'The function of good software is to make the complex appear to be simple — Grady Booch',
+  'I do not fear computers. I fear lack of them — Isaac Asimov',
+  'Standards are always out of date.  That\'s what makes them standards — Alan Bennett',
+  'To iterate is human, to recurse divine — L. Peter Deutsch',
+  'Computers are good at following instructions, but not at reading your mind — Donald Knuth',
+  'Never underestimate the bandwidth of a station wagon full of tapes hurtling down the highway — Andrew S. Tanenbaum',
+  'Errors using inadequate data are much less than those using no data at all — Charles Babbage',
+  'Technology is just a tool. In terms of getting the kids working together and motivating them, the teacher is the most important — Bill Gates',
+  'Programs must be written for people to read, and only incidentally for machines to execute — Gerald Jay Sussman',
+  'Code generation, like drinking alcohol, is good in moderation — Alex Lowe',
+  'Never trust a computer you can\'t throw out a window — Steve Wozniak',
+  'The best way to predict the future is to implement it — David Heinemeier Hansson',
+  'UNIX is simple.  It just takes a genius to understand its simplicity — Dennis Ritchie',
+  'Should array indices start at 0 or 1?  My compromise of 0.5 was rejected without, I thought, proper consideration — Stan Kelly-Bootle',
+  'I think computer viruses should count as life.  I think it says something about human nature that the only form of life we have created so far is purely destructive.  We\'ve created life in our own image — Stephen Hawking',
+  'It would appear that we have reached the limits of what it is possible to achieve with computer technology, although one should be careful with such statements, as they tend to sound pretty silly in 5 years — John Von Neumann',
+  'Companies spend millions of dollars on firewalls, encryption and secure access devices, and it\'s money wasted, because none of these measures address the weakest link in the security chain — Kevin Mitnick',
+  'A computer would deserve to be called intelligent if it could deceive a human into believing that it was human — Alan Turing',
+  'Technology feeds on itself. Technology makes more technology possible — Alvin Toffler',
+  'To err is human, but to really foul things up you need a computer — Paul Ehrlich',
+  'The difference between theory and practice is that in theory, there is no difference between theory and practice — Richard Moore',
+  'Computers are useless.  They can only give you answers — Pablo Picasso',
+  'Computers are like Old Testament gods; lots of rules and no mercy — Joseph Campbell',
+  'In C++ it\'s harder to shoot yourself in the foot, but when you do, you blow off your whole leg — Bjarne Stroustrup',
+  'It\'s still magic even if you know how it\'s done — Terry Pratchett',
+  'The use of COBOL cripples the mind; its teaching should therefore be regarded as a criminal offense — E.W. Dijkstra',
+  'It\'s supposed to be automatic, but actually you have to push this button — John Brunner',
+  'Technology is best when it brings people together — Matt Mullenweg',
+  'The Web as I envisaged it, we have not seen it yet. The future is still so much bigger than the past — Tim Berners-Lee',
+  'It\'s not a faith in technology. It\'s faith in people — Steve Jobs',
+  'Technology is a useful servant but a dangerous master — Christian Lous Lange',
+  'Programming is the art of algorithm design and the craft of debugging errant code — Ellen Ullman',
+  'If we want users to like our software, we should design it to behave like a likable person — Alan Cooper',
+  'Everybody should learn to program a computer because it teaches you how to think — Steve Jobs',
+  'Software and cathedrals are much the same — first we build them, then we pray — Sam Redwine',
+  'Most good programmers do programming not because they expect to get paid or get adulation by the public, but because it is fun to program — Linus Torvalds',
+  'You might not think that programmers are artists, but programming is an extremely creative profession. It’s logic-based creativity — John Romero',
+  'Programming is learned by writing programs — Brian Kernighan',
+  'The most important property of a program is whether it accomplishes the intention of its user — C.A.R. Hoare',
+  'The best error message is the one that never shows up — Thomas Fuchs',
+  'There is always one more bug to fix — Ellen Ullman',
+  'Sometimes it pays to stay in bed on Monday, rather than spending the rest of the week debugging Monday\'s code — Dan Salomon',
+  'If, at first, you do not succeed, call it version 1.0 — Khayri R.R. Woulfe',
+  'The best performance improvement is the transition from the nonworking state to the working state — J. Osterhout',
+  'The most important single aspect of software development is to be clear about what you are trying to build — Bjarne Stroustrup',
+  'Perfection is achieved not when there is nothing more to add, but rather when there is nothing more to take away. — Antoine de Saint-Exupery',
+  'When to use iterative development? You should use iterative development only on projects that you want to succeed — Martin Fowler',
+  'The best way to predict the future is to invent it — Alan Kay',
+  'The most disastrous thing that you can ever learn is your first programming language — Alan Kay',
+  'Make it work, make it right, make it fast — Kent Beck',
+  'Java is to JavaScript what car is to Carpet — Chris Heilmann',
+  'Experience is the name everyone gives to their mistakes — Oscar Wilde',
+  'First, solve the problem. Then, write the code — John Johnson',
+  'Optimism is an occupational hazard of programming: feedback is the treatment — Kent Beck',
+  'Simple things should be simple, complex things should be POSSIBLE — Alan Kay',
+  'Always code as if the guy who ends up maintaining your code will be a violent psychopath who knows where you live. — Martin Golding',
+  'Programming is not about typing, it\'s about thinking — Rich Hickey',
+  'Any fool can write code that a computer can understand. Good programmers write code that humans can understand — Martin Fowler',
+  'Talk is cheap. Show me the code — Linus Torvalds',
+  'The computer was born to solve problems that did not exist before — Bill Gates',
+  'The amateur software engineer is always in search of magic — Grady Booch',
+  'The best designers will use many design patterns that dovetail and intertwine to produce a greater whole — Erich Gamma',
+  'If it\'s not tested, it\'s broken — Bruce Eckel',
+  'Give users what they actually want, not what they say they want — Kathy Sierra',
+  'Debugging is like being the detective in a crime movie where you are also the murderer — Filipe Fortes',
+  'Computing is kind of a mess. Your computer doesn\'t know where you are. It doesn\'t know what you\'re doing. It doesn\'t know what you know — Larry Page',
+  'JavaScript is the world\'s most misunderstood programming language — Douglas Crockford',
+  'The cleaner and nicer the program, the faster it\'s going to run. And if it doesn\'t, it\'ll be easy to make it fast — Joshua Bloch',
+  'Often, the most striking and innovative solutions come from realizing that your concept of the problem was wrong — Eric S. Raymond',
+  'It is often easier to ask for forgiveness than to ask for permission — Grace Hopper',
+  'You can divide our industry into two kinds of people: those who want to go work for a company to make it successful, and those who want to go work for a successful company — Jamie Zawinski',
+  'A language that doesn\'t affect the way you think about programming is not worth knowing — Alan Perlis',
+  'In the practical world of computing, it is rather uncommon that a program, once it performs correctly and satisfactorily, remains unchanged forever — Niklaus Wirth',
+  'Much of my work has come from being lazy — John Backus',
+  'For much of the Internet, the shortest path between two points doesn\'t exist — Kevin Poulsen',
+  'Creativity comes from applying things you learn in other fields to the field you work in — Aaron Swartz',
+  'In JavaScript, there is a beautiful, elegant, highly expressive language that is buried under a steaming pile of good intentions and blunders — Douglas Crockford',
+  'This is why I loved technology: if you used it right, it could give you power and privacy — Cory Doctorow',
+  'Fools ignore complexity. Pragmatists suffer it. Some can avoid it. Geniuses remove it. — Alan Perlis',
+  'If you can\'t understand the spec for a new technology, don\'t worry: nobody else will understand it either, and the technology won\'t be that important — Joel Spolsky',
+  'Just because something is a standard doesn\'t mean it is the right choice for every application. Like XML, for example — Douglas Crockford',
+  'To solve an interesting problem, start by finding a problem that is interesting to you — Eric S. Raymond',
+  'If you\'re not doing some things that are crazy, then you\'re doing the wrong things — Larry Page',
+  'We have to stop optimizing for programmers and start optimizing for users — Jeff Atwood',
+  'Prolific programmers contribute to certain disaster — Niklaus Wirth',
+  'Any application that can be written in JavaScript, will eventually be written in JavaScript — Jeff Atwood',
+  'Software is getting slower more rapidly than hardware becomes faster — Niklaus Wirth',
+  'Unix was not designed to stop you from doing stupid things, because that would also stop you from doing clever things — Douglas Gwyn',
+  'The most damaging phrase in the language is: \"It\'s always been done that way\" — Grace Hopper',
+  'Peers can be the best teachers, because they\'re the ones that remember what it\'s like to not understand — Peter Norvig',
+  'From then on, when anything went wrong with a computer, we said it had bugs in it — Grace Hopper',
+  'Many people tend to look at programming styles and languages like religions: if you belong to one, you cannot belong to others. But this analogy is another fallacy — Niklaus Wirth',
+  'It is hard to write even the smallest piece of code correctly — Joshua Bloch',
+  'It isn\'t enough to think outside the box. Thinking is passive. Get used to acting outside the box — Tim Ferriss',
+  'Once you get to naming your laptop, you know that you\'re really having a deep relationship with it — Cory Doctorow',
+  'Common programmer thought pattern: there are only three numbers: 0, 1, and n — Joel Spolsky',
+  'There\'s a good part of Computer Science that\'s like magic. Unfortunately there\'s a bad part of Computer Science that\'s like religion — Hal Abelson',
+  'Smart data structures and dumb code works a lot better than the other way around — Eric S. Raymond',
+  'No computer is ever going to ask a new, reasonable question. It takes trained people to do that — Grace Hopper',
+  'Start out by making 100 users really happy, rather than a lot more users only a little happy — Paul Buchheit',
+  'What is the most important thing you could be working on in the world right now? ... And if you\'re not working on that, why aren\'t you? — Aaron Swartz',
+  'Teaching peers is one of the best ways to develop mastery — Jeff Atwood',
+  'No one should do a job he can do in his sleep — Cory Doctorow',
+  'Nobody is going to pour truth into your brain. It\'s something you have to find out for yourself — Noam Chomsky',
+  'The computer revolution is a revolution in the way we think and in the way we express what we think — Hal Abelson',
+  'When you choose a language, you\'re choosing more than a set of technical trade-offs, you\'re choosing a community — Joshua Bloch',
+  'JavaScript is the only language that I\'m aware of that people feel they don\'t need to learn before they start using it — Douglas Crockford',
+  'Almost everyone who has had an idea that\'s somewhat revolutionary or wildly successful was first told they\'re insane — Larry Page',
+  'One can steal ideas, but no one can steal execution or passion — Tim Ferriss',
+  'If everything you do works, then you\'re not taking many risks and probably aren\'t innovating either — Paul Buchheit',
+  'It turns out the Internet is this amazing resource for everyone who has access to it — Alexis Ohanian',
+  'Being a young programmer today must be awful—you can choose 20 different programming languages, dozens of framework and operating systemsand you\'re paralyzed by choice — Joe Armstrong',
+  'In some ways, programming is like painting. You start with a blank canvas and certain basic raw materials. You use a combination of science, art, and craft to determine what to do with them — Andrew Hunt',
+  'Testing leads to failure, and failure leads to understanding — Burt Rutan',
+  'Programming isn\'t about what you know; it\'s about what you can figure out — Chris Pine',
+  'If you optimize everything, you will always be unhappy — Donald Knuth',
+  'If debugging is the process of removing bugs, then programming must be the process of putting them in — E.W. Dijkstra',
+  'Coding isn\'t the poor handmaiden of design or analysis. Coding is where your fuzzy ideas awaken in the harsh dawn of reality — Kent Beck',
+  'Inside every well-written large program is a well-written small program — C.A.R. Hoare',
+  'So much complexity in software comes from trying to make one thing do two things — Ryan Singer',
+  'Code is like humor. When you have to explain it, it\'s bad — Cory House',
+  'The more I study, the more insatiable do I feel my genius for it to be — Ada Lovelace',
+  'There are only two hard things in Computer Science: cache invalidation and naming things — Phil Karlton',
+  'All programming languages are shit. But the good ones fertilize your mind — Reginald Braithwaite',
+  'The question of whether Machines Can Think... is about as relevant as the question of whether Submarines Can Swim — E.W. Dijkstra',
+  'Computer science education cannot make anybody an expert programmer any more than studying brushes and pigment can make somebody an expert painter — Eric S. Raymond',
+  'Programming languages, like pizza, come in only two sizes: too big and too small — Eric S. Raymond',
+  'Computer Science is no more about computers than astronomy is about telescopes — Richard E. Pattis',
+  'Languages that try to disallow idiocy become themselves idiotic — Rob Pike',
+  'Perl: The only language that looks the same before and after RSA encryption — Keith Bostic',
+  'Not everything I say is correct. It\'s correct modulo the little details you\'re going to have to worry about — John Hopcroft',
+  'There is nothing in the programming field more despicable than an undocumented program — Edward Yourdon',
+  'Beware of bugs in the above code; I have only proved it correct, not tried it — Donald Knuth',
+  'Good programmers don\'t just write programs. They build a working vocabulary — Guy Steele',
+  'In carpentry, you measure twice and cut once. In software development, you never measure and make cuts until you run out of time — Adam Morse',
+  'Hofstadter\'s Law: It always takes longer than you expect, even when you take into account Hofstadter\'s Law — Douglas Hofstadter',
+  'What we have to learn to do, we learn by doing — Aristotle',
+  'One day, you\'ll turn off the feature that emails you every time someone buys your software. That\'s a huge milestone — Joel Spolsky',
+  'Somebody finds the problem, and somebody else understands it. And I\'ll go on record as saying that finding it is the bigger challenge — Linus Torvalds',
+  'Within a computer natural language is unnatural — Alan Perlis',
+  'I love deadlines. I like the whooshing sound they make as they fly by — Douglas Adams',
+  'When I am working on a problem, I never think about beauty. I think only of how to solve the problem. But when I have finished, if the solution is not beautiful, I know it is wrong — R. Buckminster Fuller',
+  'Design and programming are human activities; forget that and all is lost — Bjarne Stroustrup',
+  'Most of the biggest problems in software are problems of misconception — Rich Hickey',
+  'After more than 30 years of programming, we ought to know that the design of complex software is inherently difficult — Niklaus Wirth',
+  'If we wish to count lines of code, we should not regard them as \"lines produced\" but as \"lines spent\" — E.W. Dijkstra',
+  'Working ten hour days allows you to fall behind twice as fast as you could working five hour days — Isaac Asimov',
+  'Measuring programming progress by lines of code is like measuring aircraft building progress by weight — Bill Gates',
+  'The designer of a new kind of system must participate fully in the implementation — Donald Knuth',
+  'The only way to learn a new programming language is by writing programs in it — Dennis Ritchie',
+  'Anyone who considers arithmetical methods of producing random digits is, of course, in a state of sin — John Von Neumann',
+  'We shall do a much better programming job, provided we approach the task with a full appreciation of its tremendous difficulty, provided that we respect the intrinsic limitations of the human mind and approach the task as very humble programmers — Alan Turing',
+  'Learn the principle, abide by the principle, and dissolve the principle — Bruce Lee',
+  'Remember, to learn and not to do is really not to learn. To know and not to do is really not to know — Stephen Covey',
+  'Technology like art is a soaring exercise of the human imagination — Daniel Bell',
+  'Let\'s go invent tomorrow instead of worrying about what happened yesterday — Steve Jobs',
+  'The great growling engine of change - technology — Alvin Toffler',
+  'Innovation is the outcome of a habit, not a random act — Sukant Ratnakar',
+  'The technology you use impresses no one. The experience you create with it is everything — Sean Gerety',
+  'It\'s not that we use technology, we live technology — Godfrey Reggio',
+  'The real problem is not whether machines think but whether men do. — B.F. Skinner',
+  'Fight Features … The only way to make software secure, reliable, and fast is to make it small — Andrew S. Tanenbaum',
+  'The nice thing about standards is that you have so many to choose from — Andrew S. Tanenbaum',
+  'Half of the battle of building performant software is caring enough to look — AJ Stuyvenberg',
+  'The thing is, you can\'t fake drive. If you try to, you can easily burnout — Sophia Turner',
+  'Computer Science is no more about computers than astronomy is about telescopes — E.W. Dijkstra',
+  'Progress is man\'s ability to complicate simplicity — Thor Heyerdahl',
+  'Don\'t shoot a fly with a cannon — Paolo Insogna',
+  'The essential part of any program, the theory of it, is something that could not conceivably be expressed, but is inextricably bound to human beings. — Peter Naur',
+  'The most powerful tool we have as developers is automation — Scott Hanselman',
+  'The only way to go fast, is to go well — Robert C. Martin',
+  'Controlling complexity is the essence of computer programming — Brian Kernighan',
+  'If you can\'t deploy your service, it\'s not done — Jez Humble',
+  'One of my most productive days was throwing away 1000 lines of code — Ken Thompson',
+  'Data trumps intuition — Peter Norvig',
+  'Choose boring technology — Dan McKinley',
+  'Shipping first-time code is like going into debt. A little debt speeds development so long as it is paid back promptly with refactoring — Ward Cunningham',
+  'Design is not just what it looks like and feels like. Design is how it works — Steve Jobs',
+  'A little duplication is better than a little dependency — John Ousterhout',
+  'The purpose of computing is insight, not numbers — Richard Hamming',
+  'Any organization that designs a system will produce a design whose structure is a copy of the organization\'s communication structure — Melvin Conway',
+  'Adding manpower to a late software project makes it later — Frederick P. Brooks Jr.',
+  'The future is uncertain and you will never know less than you know right now — Sandi Metz',
+  'The problem with poorly designed small applications is that if they are successful, they grow up to be poorly designed big applications — Sandi Metz',
+  'The first way design fails is due to lack of it — Sandi Metz'
+];
+
+const CMD_HISTORY = [];
+CMD_HISTORY.idx = -1;
+
 const BOOT_MSGS = [
   { text: '[    0.000000] Booting dvxb.io v2 ...', color: SITE_FAINT },
   { text: '[    0.004201] CPU: db Genuine', color: SITE_FAINT },
+  { text: `[  OK  ] System clock: ${new Date().toLocaleTimeString()}`, color: SITE_OK },
   { text: '[    0.008503] Memory: 64KB stack / 32MB heap', color: SITE_FAINT },
   { text: '[  OK  ] Reached target CS Student', color: SITE_OK },
   { text: '[  OK  ] Started Builder.service', color: SITE_OK },
@@ -132,6 +350,9 @@ function neofetch(term) {
     { label: 'echo', value: 'Print text' },
     { label: 'clear', value: 'Clear terminal' },
     { label: 'neofetch', value: 'Display system & resume info' },
+    { label: 'fortune', value: 'Random programming quote' },
+    { label: 'cowsay', value: 'Cow says your message' },
+    { label: 'matrix', value: 'Toggle matrix rain overlay' },
     { label: 'vm', value: 'Boot Buildroot Linux VM' },
     { label: 'help', value: 'Show this help' },
   ];
@@ -170,7 +391,7 @@ function helpText(term) {
     ['whoami', 'Display current user'],
     ['hostname', 'Show system hostname'],
     ['date', 'Show current date/time'],
-    ['uptime', 'Show session uptime'],
+    ['uptime', 'Live session uptime'],
     ['uname [-a]', 'Print system information'],
     ['pwd', 'Print working directory'],
     ['cat <file>', 'Display file contents'],
@@ -178,6 +399,9 @@ function helpText(term) {
     ['echo <text>', 'Print text'],
     ['clear', 'Clear terminal'],
     ['neofetch', 'Display system & resume info'],
+    ['fortune', 'Random programming quote'],
+    ['cowsay <msg>', 'Cow says your message'],
+    ['matrix', 'Toggle matrix rain overlay'],
     ['vm', 'Boot Buildroot Linux VM'],
     ['help', 'Show this help'],
   ];
@@ -191,6 +415,22 @@ function helpText(term) {
 function executeCommand(input, term) {
   const trimmed = input.trim();
   if (!trimmed) { writePrompt(term); return; }
+
+  // Pipe support: cmd1 | cmd2
+  if (trimmed.includes('|')) {
+    const segments = trimmed.split('|').map(s => s.trim());
+    let captured = '';
+    const capTerm = { write: s => { captured += s; }, writeln: s => { captured += s + '\n'; } };
+    for (let i = 0; i < segments.length; i++) {
+      if (i < segments.length - 1) {
+        executeCommand(segments[i], capTerm);
+      } else {
+        executeCommand(segments[i] + ' "' + captured.trimEnd() + '"', term);
+      }
+    }
+    writePrompt(term);
+    return;
+  }
 
   const parts = trimmed.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
   const cmd = parts[0].toLowerCase();
@@ -207,7 +447,7 @@ function executeCommand(input, term) {
       term.writeln(`${SITE_WHITE}${new Date().toString()}${ANSI_RESET}`);
       break;
     case 'uptime':
-      term.writeln(`${SITE_MUTED} up ${uptimeStr()}${ANSI_RESET}`);
+      term.writeln(`\r${SITE_GREEN} up ${uptimeStr()}${ANSI_RESET}`);
       break;
     case 'pwd':
       term.writeln(`${SITE_BLUE}/home/db${ANSI_RESET}`);
@@ -254,8 +494,52 @@ function executeCommand(input, term) {
     case 'resfetch':
       neofetch(term);
       break;
+    case 'fortune':
+      if (FORTUNES.length) {
+        term.writeln(`${SITE_WHITE}${FORTUNES[Math.floor(Math.random() * FORTUNES.length)]}${ANSI_RESET}`);
+      } else {
+        term.writeln(`${SITE_ERR}No fortunes available${ANSI_RESET}`);
+      }
+      break;
+    case 'cowsay':
+      const cowMsg = args.join(' ') || 'Moo!';
+      const MAX_W = 58;
+      const words = cowMsg.split(' ');
+      const lines = [];
+      let cur = '';
+      for (const w of words) {
+        if (cur && cur.length + w.length + 1 > MAX_W) { lines.push(cur); cur = ''; }
+        cur = cur ? cur + ' ' + w : w;
+      }
+      if (cur) lines.push(cur);
+      if (!lines.length) lines.push('');
+      const maxW = Math.min(Math.max(...lines.map(l => l.length)), MAX_W);
+      const bar = '\u2500'.repeat(maxW + 2);
+      const side = '\u2502';
+      term.writeln(` ${SITE_GREEN} ${bar}${ANSI_RESET}`);
+      for (const l of lines) {
+        term.writeln(` ${SITE_GREEN}${side} ${l.padEnd(maxW)} ${side}${ANSI_RESET}`);
+      }
+      term.writeln(` ${SITE_GREEN} ${bar}${ANSI_RESET}`);
+      term.writeln(`${SITE_GREEN}   \\   ^__^${ANSI_RESET}`);
+      term.writeln(`${SITE_GREEN}    \\  (oo)\\_______${ANSI_RESET}`);
+      term.writeln(`${SITE_GREEN}       (__)\\       )\\/\\${ANSI_RESET}`);
+      term.writeln(`${SITE_GREEN}           ||----w |${ANSI_RESET}`);
+      term.writeln(`${SITE_GREEN}           ||     ||${ANSI_RESET}`);
+      break;
     case 'help':
       helpText(term);
+      break;
+    case 'matrix':
+      if (typeof window.stopMatrixRain === 'function' && typeof window.isMatrixActive === 'function' && window.isMatrixActive()) {
+        window.stopMatrixRain();
+        term.writeln(`${SITE_MUTED}Matrix rain stopped${ANSI_RESET}`);
+      } else if (typeof window.startMatrixRain === 'function') {
+        window.startMatrixRain();
+        term.writeln(`${SITE_GREEN}Matrix rain started. Press Escape to exit.${ANSI_RESET}`);
+      } else {
+        term.writeln(`${SITE_ERR}Matrix rain module not loaded${ANSI_RESET}`);
+      }
       break;
     case 'vm':
       term.writeln(`${SITE_MUTED}Loading Buildroot Linux VM...${ANSI_RESET}`);
@@ -291,4 +575,4 @@ function bootSequence(term, onDone) {
   writeNext();
 }
 
-export { ASCII_ART, vfs, RESUME, BOOT_MSGS, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT };
+export { ASCII_ART, vfs, RESUME, CMD_HISTORY, BOOT_MSGS, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT };

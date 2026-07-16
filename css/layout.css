@@ -3,6 +3,9 @@
   position: relative;
   z-index: 1;
   min-height: 100vh;
+  background: var(--color-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 section {
@@ -14,9 +17,6 @@ section {
 }
 
 section:not(#hero-target) {
-  background: var(--color-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   padding: var(--space-10) var(--space-12);
 }
 

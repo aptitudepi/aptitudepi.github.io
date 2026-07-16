@@ -39,6 +39,14 @@
   font-family: var(--font-mono);
 }
 
+.terminal-clock {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 /* Terminal body */
 .terminal-body {
   flex: 1;

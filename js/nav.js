@@ -77,15 +77,22 @@ function initActiveTracking() {
     dotBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.section === id));
   }
 
-  const observer = new IntersectionObserver((entries) => {
-    const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.intersectionRatio - b.intersectionRatio);
-    if (visible.length) updateActive(visible[visible.length - 1].target.id);
-  }, { threshold: [0.2, 0.5, 0.8] });
-
-  sectionIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) observer.observe(el);
-  });
+  const checkMotion = setInterval(() => {
+    if (!window.Motion) return;
+    clearInterval(checkMotion);
+    window.Motion.scroll(() => {
+      const viewportH = window.innerHeight;
+      let activeId = sectionIds[0];
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        if (mid < viewportH * 0.5) activeId = id;
+      }
+      updateActive(activeId);
+    });
+  }, 200);
 }
 
 export { initNav };

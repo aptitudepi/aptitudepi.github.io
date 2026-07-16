@@ -1,4 +1,5 @@
 import { executeCommand, bootSequence, writePrompt } from './shell.js';
+import { CMD_HISTORY } from './shell.js';
 
 let term = null;
 let fitAddon = null;
@@ -19,9 +20,45 @@ function handleInput(data) {
     if (v86InputHandler) v86InputHandler(data);
     return;
   }
+
+  if (data === '\x1b[A') {
+    if (!bootDone) return;
+    if (CMD_HISTORY.idx < CMD_HISTORY.length - 1) {
+      CMD_HISTORY.idx++;
+      const entry = CMD_HISTORY[CMD_HISTORY.length - 1 - CMD_HISTORY.idx];
+      inputBuffer = entry;
+      term.write('\r\x1b[K');
+      writePrompt(term);
+      term.write(entry);
+    }
+    return;
+  }
+
+  if (data === '\x1b[B') {
+    if (!bootDone) return;
+    if (CMD_HISTORY.idx >= 0) {
+      CMD_HISTORY.idx--;
+      if (CMD_HISTORY.idx >= 0) {
+        inputBuffer = CMD_HISTORY[CMD_HISTORY.length - 1 - CMD_HISTORY.idx];
+      } else {
+        inputBuffer = '';
+      }
+      term.write('\r\x1b[K');
+      writePrompt(term);
+      term.write(inputBuffer);
+    }
+    return;
+  }
+
+  if (data === '\x1b[C' || data === '\x1b[D') return;
+
   for (const char of data) {
     if (char === '\r') {
       term.write('\r\n');
+      if (inputBuffer.trim()) {
+        CMD_HISTORY.push(inputBuffer);
+        CMD_HISTORY.idx = -1;
+      }
       const cmd = inputBuffer;
       inputBuffer = '';
       if (bootDone) executeCommand(cmd, term);

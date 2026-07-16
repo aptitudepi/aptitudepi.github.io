@@ -39,8 +39,8 @@
   --ease-in-expo: cubic-bezier(0.7, 0, 0.84, 0);
   --transition-interactive: 200ms var(--ease-out-expo);
   --shadow-glow-blue: 0 0 24px var(--color-primary-glow);
-  --color-glass: oklch(0.09 0.008 260 / 0.15);
-  --color-glass-hover: oklch(0.14 0.012 260 / 0.25);
+  --color-glass: oklch(0.09 0.008 260 / 0.20);
+  --color-glass-hover: oklch(0.14 0.012 260 / 0.32);
   --color-glass-border: oklch(0.2 0.02 260 / 0.35);
   --color-terminal-bg: oklch(0.06 0.005 260 / 0.12);
   --color-terminal-border: oklch(0.18 0.015 260 / 0.5);
