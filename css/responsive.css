@@ -5,7 +5,7 @@
 }
 @media (max-width: 768px) {
   .nav-dots { display: none; }
-  .nav-links { display: none; }
+
   .nav-toggle { display: flex; }
   .nav-overlay { display: flex; }
   .about-grid { grid-template-columns: 1fr; text-align: center; max-width: 100%; }

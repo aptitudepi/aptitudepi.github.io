@@ -39,87 +39,6 @@
   font-family: var(--font-mono);
 }
 
-/* Windows style */
-.terminal-window.windows .terminal-header {
-  background: #1a1a1a;
-  border-bottom-color: #333;
-  padding: 6px 12px;
-}
-.terminal-window.windows .terminal-dots { display: none; }
-.terminal-window.windows .terminal-title {
-  text-align: left;
-  margin-left: 8px;
-  color: #ccc;
-}
-.terminal-window.windows .win-buttons {
-  display: flex;
-  gap: 2px;
-  margin-left: auto;
-}
-.terminal-window.windows .win-btn {
-  width: 36px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  color: #999;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: var(--font-mono);
-}
-.terminal-window.windows .win-btn:hover {
-  background: rgba(255,255,255,0.1);
-}
-.terminal-window.windows .win-btn.close:hover {
-  background: #e81123;
-  color: #fff;
-}
-
-/* Linux style */
-.terminal-window.linux .terminal-header {
-  background: #2d2d2d;
-  border-bottom-color: #444;
-  padding: 6px 12px;
-  gap: 6px;
-}
-.terminal-window.linux .terminal-dots { display: none; }
-.terminal-window.linux .linux-menu {
-  display: flex;
-  gap: 16px;
-  font-size: 11px;
-  color: #aaa;
-}
-.terminal-window.linux .linux-menu span:hover,
-.terminal-window.linux .linux-menu span.active { color: #fff; cursor: pointer; }
-.terminal-window.linux .terminal-title {
-  text-align: left;
-  margin-left: 8px;
-  color: #888;
-}
-.terminal-window.linux .linux-close {
-  margin-left: auto;
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #888;
-  font-size: 12px;
-  cursor: pointer;
-}
-.terminal-window.linux .linux-close:hover { color: #fff; }
-
-/* Default: no OS buttons shown */
-.win-buttons, .linux-menu, .linux-close { display: none; }
-.terminal-window.windows .win-buttons { display: flex; }
-.terminal-window.linux .linux-menu,
-.terminal-window.linux .linux-close { display: flex; }
-.nav-links { display: flex; gap: 16px; font-size: 11px; color: #aaa; margin-left: auto; }
-.nav-links span:hover,
-.nav-links span.active { color: #fff; cursor: pointer; }
-
 /* Terminal body */
 .terminal-body {
   flex: 1;
@@ -164,7 +83,4 @@
   display: block;
 }
 
-/* OS detection helper (set by JS) */
-body[data-os="macos"] .terminal-window { --os-theme: macos; }
-body[data-os="windows"] .terminal-window { --os-theme: windows; }
-body[data-os="linux"] .terminal-window { --os-theme: linux; }
+

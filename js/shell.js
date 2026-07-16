@@ -56,12 +56,12 @@ function colorBlock(r, g, b) {
 }
 
 const vfs = new Map([
-  ['/home/devkumar/about.txt', `Hi, I'm Devkumar! I am a student at Texas A&M University pursuing a B.S. in Computer Science (2029). My journey into computing began when I built my first PC in 5th grade. That experience opened my eyes to the incredible power of technology in unlocking creative potential and crafting something truly unique.
+  ['/home/db/about.txt', `Hi, I'm Devkumar! I am a student at Texas A&M University pursuing a B.S. in Computer Science (2029). My journey into computing began when I built my first PC in 5th grade. That experience opened my eyes to the incredible power of technology in unlocking creative potential and crafting something truly unique.
 
 Today, I research cancer radiology @ MD Anderson, graph neural networks @ DIVE Lab, and security @ AGGIES Lab, while working as an SRE intern @ Lockheed Martin. I've previously contributed to nanomedicine ML research @ Houston Methodist and built transcriptomics platforms @ UTHSCSA.
 
 If you'd like to connect, collaborate, or discuss exciting projects, please do not hesitate to reach out!`],
-  ['/home/devkumar/links/', `linkedin
+  ['/home/db/links/', `linkedin
 github
 keybase
 resume.pdf`],
@@ -72,15 +72,15 @@ const RESUME = {
   Lastname: 'Banerjee',
   Education: 'BS Computer Science, Texas A&M (2029)',
   Research: ['MD Anderson (Cancer Radiology)', 'DIVE Lab (GNN — Materials)', 'AGGIES Lab (Security)', 'Houston Methodist (Nanomedicine)', 'UTHSCSA (PCPG Transcriptomics)'],
-  Work: ['SRE Intern @ Lockheed Martin', 'Student Asst. @ The Association of Former Students'],
+  Work: ['AI/SRE Intern @ Lockheed Martin', 'SF Dev @ The Association of Former Students'],
   Skills: ['Python', 'PyTorch', 'C', 'C++', 'Java', 'Linux', 'Docker', 'Ansible', 'Keras', 'Streamlit'],
-  Certs: ['GSEC', 'GFACT', 'Azure', 'Linux Pro', 'CCST'],
-  Shell: 'fish 3.7',
+  Certs: ['GSEC', 'GFACT', 'AZ-900', 'SC-900', 'Linux Pro', 'CCST', 'ITF+', 'RVFA'],
+  User: 'db',
 };
 
 const BOOT_MSGS = [
   { text: '[    0.000000] Booting dvxb.io v2 ...', color: SITE_FAINT },
-  { text: '[    0.004201] CPU: Devkumar Genuine', color: SITE_FAINT },
+  { text: '[    0.004201] CPU: db Genuine', color: SITE_FAINT },
   { text: '[    0.008503] Memory: 64KB stack / 32MB heap', color: SITE_FAINT },
   { text: '[  OK  ] Reached target CS Student', color: SITE_OK },
   { text: '[  OK  ] Started Builder.service', color: SITE_OK },
@@ -88,7 +88,7 @@ const BOOT_MSGS = [
 ];
 
 function writePrompt(term) {
-  term.write(`\r\n${SITE_GREEN}devkumar${ANSI_RESET}${SITE_WHITE}@${ANSI_RESET}${SITE_CYAN}dvxb.io${ANSI_RESET}${SITE_MUTED}:${ANSI_RESET}${SITE_BLUE}~${ANSI_RESET}${SITE_MUTED}$ ${ANSI_RESET}`);
+  term.write(`\r\n${SITE_GREEN}db${ANSI_RESET}${SITE_WHITE}@${ANSI_RESET}${SITE_CYAN}dvxb.io${ANSI_RESET}${SITE_MUTED} ${ANSI_RESET}${SITE_BLUE}~${ANSI_RESET}${SITE_MUTED}❯ ${ANSI_RESET}`);
 }
 
 function uptimeStr() {
@@ -109,14 +109,14 @@ function neofetch(term) {
   const maxArtW = Math.max(...ASCII_ART.map(visibleLen));
 
   const infoLines = [
-    { label: '', value: `${ANSI_BOLD}${SITE_WHITE}devkumar@dvxb.io${ANSI_RESET}` },
+    { label: '', value: `${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET}` },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
     { label: 'Name', value: `Devkumar Banerjee` },
     { label: 'Education', value: `BS CS, Texas A&M (2029)` },
     { label: 'Research', value: `MD Anderson · DIVE Lab · AGGIES Lab · Houston Methodist · UTHSCSA` },
-    { label: 'Work', value: `SRE @ Lockheed Martin · Student Asst. @ The Association` },
+    { label: 'Work', value: `AI/SRE @ Lockheed Martin · SF Dev @ The Association` },
     { label: 'Skills', value: `Python · PyTorch · C · C++ · Java · Linux · Docker · Ansible · Keras · Streamlit` },
-    { label: 'Certs', value: `GSEC · GFACT · Azure · Linux Pro · CCST` },
+    { label: 'Certs', value: `GSEC · GFACT · AZ-900 · SC-900 · Linux Pro · CCST · ITF+ · RVFA` },
     { label: 'Shell', value: `fish 3.7` },
     { label: 'Uptime', value: uptimeStr() },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
@@ -198,7 +198,7 @@ function executeCommand(input, term) {
 
   switch (cmd) {
     case 'whoami':
-      term.writeln(`${SITE_WHITE}Devkumar Banerjee${ANSI_RESET}`);
+      term.writeln(`${SITE_WHITE}db${ANSI_RESET}`);
       break;
     case 'hostname':
       term.writeln(`${SITE_CYAN}dvxb.io${ANSI_RESET}`);
@@ -210,7 +210,7 @@ function executeCommand(input, term) {
       term.writeln(`${SITE_MUTED} up ${uptimeStr()}${ANSI_RESET}`);
       break;
     case 'pwd':
-      term.writeln(`${SITE_BLUE}/home/devkumar${ANSI_RESET}`);
+      term.writeln(`${SITE_BLUE}/home/db${ANSI_RESET}`);
       break;
     case 'uname':
       if (args.includes('-a')) {
@@ -221,7 +221,7 @@ function executeCommand(input, term) {
       break;
     case 'cat':
       if (!args.length) { term.writeln(`${SITE_ERR}cat: missing operand${ANSI_RESET}`); break; }
-      const catPath = args[0].startsWith('/') ? args[0] : `/home/devkumar/${args[0]}`;
+      const catPath = args[0].startsWith('/') ? args[0] : `/home/db/${args[0]}`;
       const catContent = vfs.get(catPath);
       if (catContent === undefined) {
         term.writeln(`${SITE_ERR}cat: ${args[0]}: No such file or directory${ANSI_RESET}`);
@@ -230,8 +230,8 @@ function executeCommand(input, term) {
       }
       break;
     case 'ls':
-      const lsPath = args[0] || '/home/devkumar/';
-      const fullPath = lsPath.startsWith('/') ? lsPath : `/home/devkumar/${lsPath}`;
+      const lsPath = args[0] || '/home/db/';
+      const fullPath = lsPath.startsWith('/') ? lsPath : `/home/db/${lsPath}`;
       const lsEntry = vfs.get(fullPath);
       if (lsEntry === undefined) {
         term.writeln(`${SITE_ERR}ls: ${lsPath}: No such file or directory${ANSI_RESET}`);

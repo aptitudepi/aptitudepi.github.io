@@ -63,7 +63,7 @@ function scrollToSection(id) {
 }
 
 function initDotScroll() {
-  document.querySelectorAll('.nav-dot, .nav-links span').forEach(btn => {
+  document.querySelectorAll('.nav-dot').forEach(btn => {
     btn.addEventListener('click', (e) => {
       scrollToSection(btn.dataset.section);
     });
@@ -72,11 +72,9 @@ function initDotScroll() {
 
 function initActiveTracking() {
   const dotBtns = document.querySelectorAll('.nav-dot');
-  const linkBtns = document.querySelectorAll('.nav-links span');
 
   function updateActive(id) {
     dotBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.section === id));
-    linkBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.section === id));
   }
 
   const observer = new IntersectionObserver((entries) => {

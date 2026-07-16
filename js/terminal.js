@@ -8,26 +8,6 @@ let bootDone = false;
 let v86InputHandler = null;
 let v86ExitBuffer = '';
 
-function detectOS() {
-  const ua = navigator.userAgent;
-  if (/mac/i.test(ua)) return 'macos';
-  if (/win/i.test(ua)) return 'windows';
-  if (/linux/i.test(ua)) return 'linux';
-  return 'macos';
-}
-
-function applyOSTheme(os) {
-  document.body.setAttribute('data-os', os);
-  const win = document.querySelector('.terminal-window');
-  if (!win) return;
-  win.classList.remove('macos', 'windows', 'linux');
-  win.classList.add(os);
-  const titleEl = win.querySelector('.terminal-title');
-  if (os === 'macos') titleEl.textContent = 'devkumar@dvxb.io — bash — 80×24';
-  else if (os === 'windows') titleEl.textContent = 'dvxb.io — Command Prompt';
-  else titleEl.textContent = 'devkumar@dvxb.io — bash';
-}
-
 function handleInput(data) {
   if (mode === 'v86') {
     v86ExitBuffer = (v86ExitBuffer + data.toLowerCase()).slice(-30);
@@ -62,8 +42,6 @@ function handleInput(data) {
 }
 
 function createTerminal(container) {
-  applyOSTheme(detectOS());
-
   term = new window.Terminal({
     cursorBlink: true,
     cursorStyle: 'block',
