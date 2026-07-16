@@ -55,7 +55,7 @@ section:not(#hero-target) > * {
 .section-header h2 {
   font-family: var(--font-display);
   font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 700;
+  font-weight: 300;
 }
 
 .about-grid {
