@@ -261,3 +261,337 @@ Very Low effort. Subtle, thematic retro effect.
 - [TerminalWebsite](https://github.com/TomasPalsson/TerminalWebsite) — Git/vim simulation, AI chat via Bedrock, 3D elements
 - [blackgolyb.github.io](https://github.com/blackgolyb/blackgolyb.github.io) — 3D WebGL CRT monitor with xterm.js inside a Three.js scene
 - [tim.waldin.net](https://github.com/twaldin) — Real Docker-backed terminal via Socket.IO
+
+---
+
+## Magic UI Components (83 components)
+
+### Canvas / WebGL / Shader
+
+| Component | Description | Port Effort |
+|-----------|-------------|-------------|
+| **RetroGrid** | 3D perspective grid with WebGL GLSL shader, LOD, scroll animation, CSS fallback | High (866 lines, standalone WebGL) |
+| **Particles** | Canvas particle system with mouse interaction, inertia, fade at edges | Low |
+| **FlickeringGrid** | Canvas grid with random opacity flickering cells (glitching display) | Low |
+| **GlyphMatrix** | Animated grid of randomly mutating glyphs/characters (Matrix-like) | Low |
+| **IconCloud** | Interactive 3D tag cloud on canvas with Fibonacci sphere distribution | Medium |
+| **Confetti** | Canvas confetti cannon via `canvas-confetti` | Low |
+| **CoolMode** | DOM particle burst on click (circles, emojis, physics) | Low |
+| **Globe** | Interactive 3D globe via `cobe` with city markers | Medium |
+
+### Text Effects
+
+| Component | Description | Port Effort |
+|-----------|-------------|-------------|
+| **HyperText** | Scramble/unscramble text on hover (glitch character randomizer) | Low |
+| **MorphingText** | Seamless text morph/blur transition between words (SVG threshold filter) | Low |
+| **AuroraText** | Animated aurora/nebula gradient text via CSS `@keyframes` | Very Low |
+| **TextReveal** | Scroll-driven word-by-word fade-in via Motion `useScroll` + `useTransform` | Medium |
+| **TextAnimate** | Universal text animation with 10 presets (blurIn, slideUp, scaleUp) by word/char/line | Low |
+| **SparklesText** | Floating sparkle stars around text, continuously regenerating | Low |
+| **WordRotate** | Vertical word rotation (slide up/down swap) | Low |
+| **KineticText** | Letter weight/thickness animation on hover via CSS transitions | Low |
+| **FlipText** | Character flipping animation | Low |
+
+### Background / Patterns
+
+| Component | Description | Port Effort |
+|-----------|-------------|-------------|
+| **WarpBackground** | 3D perspective grid box with animated light beams (CSS 3D transforms) | Low |
+| **AnimatedGridPattern** | SVG grid with randomly pulsing square highlights | Low |
+| **InteractiveGridPattern** | SVG grid where individual cells highlight on mouse hover | Low |
+| **DotPattern** | SVG dot pattern background | Trivial |
+| **HexagonPattern** | SVG honeycomb/hexagon grid pattern | Trivial |
+| **NoiseTexture** | SVG `feTurbulence` fractal noise overlay for grain texture | Trivial |
+| **Meteors** | CSS-animated meteor shower (randomized positions and speeds) | Low |
+| **Ripple** | Expanding concentric circle ripple effect as background | Low |
+| **LightRays** | Animated volumetric light rays emanating from top with swing effect | Low |
+| **ProgressiveBlur** | Multi-layer progressively intensifying backdrop blur gradient | Low |
+
+### Interactive Components
+
+| Component | Description | Port Effort |
+|-----------|-------------|-------------|
+| **MagicCard** | Card with mouse-following spotlight/orb glow (Motion spring) | Medium |
+| **Lens** | Interactive magnifying glass over content (mask-based zoom) | Low |
+| **Dock** | macOS-style dock with icon magnification on hover | Medium |
+| **Pointer** | Custom mouse cursor follower with scale animation | Low |
+| **SmoothCursor** | Physics-based smooth cursor with velocity rotation and spring | Medium |
+| **BorderBeam** | Animated beam traveling along container border (CSS `offset-path`) | Low |
+| **ShineBorder** | Animated gradient sweep across borders | Low |
+| **NeonGradientCard** | Card with animated neon border gradient colors | Low |
+| **GlareHover** | CSS glare sweep on hover via pseudo-element gradient transition | Very Low |
+| **BlurFade** | Blur + fade in on scroll with configurable direction | Low |
+
+### Buttons (Animated)
+
+| Component | Description | Port Effort |
+|-----------|-------------|-------------|
+| **ShimmerButton** | Button with rotating shimmer light | Low |
+| **ShinyButton** | Button with shiny reflection effect | Low |
+| **RainbowButton** | Button with animated rainbow gradient | Low |
+| **PulsatingButton** | Button with expanding ring pulse | Low |
+| **RippleButton** | Button with click ripple effect | Low |
+| **InteractiveHoverButton** | Button with interactive hover animation | Low |
+| **AnimatedSubscribeButton** | Subscribe button with icon transition animation | Low |
+
+### Other
+
+| Component | Description | Port Effort |
+|-----------|-------------|-------------|
+| **Terminal** | Terminal mockup with macOS dots and sequenced typing animation | Medium |
+| **AnimatedBeam** | Animated connecting beam between two elements | Medium |
+| **Marquee** | Infinite horizontal/vertical scrolling | Low |
+| **ScrollProgress** | Scroll progress indicator bar | Low |
+| **ScrollBasedVelocity** | Scrolling marquee that speeds up/slows down with scroll velocity | Medium |
+| **AnimatedCircularProgressBar** | SVG circular progress gauge | Low |
+| **PixelImage** | Pixelated image reveal (retro game style) | Medium |
+| **BentoGrid** | Bento-style feature showcase grid | Low |
+| **DottedMap** | SVG world dotted map with pulsing markers | Low |
+
+---
+
+## Galaxy UI Components (3,831 files)
+
+All pure CSS/HTML — zero JavaScript. Sourced from [Uiverse.io](https://uiverse.io/).
+
+| Category | Count | Best For |
+|----------|-------|----------|
+| Buttons | 1,231 | Hover fills, 3D extrude, shimmer, ripple, liquid bubble, glow, border draw |
+| Cards | 726 | Glassmorphism, 3D tilt (25-zone CSS grid hover tracker, no JS), shimmer skeleton |
+| Loaders | 718 | 3D isometric block assembly, compass/radar, book flip, delivery truck, typing scanner |
+| Toggle-switches | 260 | Skeuomorphic 3D toggle, hamburger-to-X morph, sun/moon theme toggle, neumorphic |
+| Inputs | 226 | Border highlight, floating label, search bar, blur glow background |
+| Forms | 180 | Login forms, glassmorphism containers, floating labels |
+| Checkboxes | 171 | Animated wipe/translate, scale+rotate, SVG checkmarks, border morph |
+| Patterns | 103 | Conic/radial/linear gradient backgrounds, dot grids, 3D sphere illusions |
+| Radio-buttons | 102 | Traffic light flicker, glassmorphism slide, animated fill |
+| Tooltips | 62 | Hover reveal, animated gradient, pixel art (Super Mario), 3D border |
+| Notifications | 23 | Level-up shield+wings, toast slide, success/error with progress rings |
+
+### Top Galaxy Picks for Portfolio
+
+| Component | File | Effect |
+|-----------|------|--------|
+| 3D isometric box loader | `loaders/Admin12121_black-sheep-17.html` | 8 animated isometric boxes assembling into structure |
+| Piggy bank coin drop | `loaders/JkHuger_light-lion-86.html` | Full CSS-illustrated piggy bank with blinking eye and coin slot |
+| Skeuomorphic toggle | `Toggle-switches/njesenberger_brave-firefox-90.html` | Realistic 3D toggle with metallic knob, green/red states |
+| Level-up notification | `Notifications/StealthWorm_weak-rattlesnake-4.html` | Shield, wings, crystal, progress rings — all CSS |
+| 3D box card button | `Buttons/adamgiebl_big-ape-36.html` | 5 stacked layers fan out in 3D on hover |
+| Circle morph button | `Buttons/Cornerstone-04_rude-snake-92.html` | Expanding circle morphs to full background fill |
+| Gold shimmer button | `Buttons/vinodjangid07_brave-treefrog-18.html` | Metallic gold gradient with shimmer animation |
+| Liquid bubble button | `Buttons/cssbuttons-io_calm-tiger-42.html` | Liquid bubble rises from bottom on hover |
+| 25-zone 3D tilt card | `Cards/kennyotsu_witty-deer-12.html` | Pure CSS 3D perspective tilt via 5x5 hover grid |
+| Colorful price card | `Cards/Javierrocadev_brave-emu-25.html` | Multi-colored box-shadow cascade on hover |
+| Rainbow dot pattern | `Patterns/BadlyWrittenStylesheet_bad-baboon-47.html` | Radial gradient mask over linear rainbow |
+| Traffic light radios | `Radio-buttons/Praashoo7_mean-dodo-99.html` | Realistic recessed housing with flickering bulbs |
+| Glassmorphism radios | `Radio-buttons/LilaRest_giant-jellyfish-3.html` | Glass panel with elastic slide animation |
+
+---
+
+## Implementation Phases
+
+### Phase 1: Foundation — Smooth Scroll + Scroll-Driven Animations
+
+| Component | Source | Effort |
+|-----------|--------|--------|
+| Lenis smooth scroll | External lib (~3KB) | Drop-in |
+| ProgressiveBlur — scroll-edge fade | Magic UI | Low |
+| BlurFade — section entry animations | Magic UI | Low |
+| TextReveal — word-by-word scroll fade | Magic UI | Medium |
+| ScrollProgress — progress bar (upgrade current) | Magic UI | Low |
+
+**Result**: Scrolling feels silky smooth, sections melt in with blur, text reveals word-by-word.
+
+### Phase 2: Background Upgrade — Replace/Supplement Three.js Particles
+
+| Component | Source | Effort | Vibe |
+|-----------|--------|--------|------|
+| FlowField — organic noise trails (aurora/ember/ocean) | kokonutui | Medium | Colorful, organic |
+| Particles — mouse-interactive floating dots | Magic UI | Low | Clean, techy |
+| FlickeringGrid — glitching display grid | Magic UI | Low | Hacker aesthetic |
+| NoiseTexture — SVG grain overlay on glass | Magic UI | Trivial | CRT texture |
+| GlyphMatrix — falling katakana (supplement matrix rain) | Magic UI | Low | Matrix vibe |
+
+**Best combo**: Keep current Three.js particles as primary. Add NoiseTexture SVG overlay on `#app` for grain. Add FlickeringGrid as interstitial background between sections.
+
+### Phase 3: Hero / Title — First Impression Animations
+
+| Component | Source | Effort |
+|-----------|--------|--------|
+| Typewriter boot sequence | DIY/kokonutui | Low |
+| GlitchText on "dvxb.io" title | Magic UI/kokonutui | Very Low |
+| MorphingText — tagline cycles through words | Magic UI | Low |
+| CRT scanline overlay | DIY CSS | Very Low |
+| CRT power-on animation — screen flash on load | DIY | Low |
+
+**Result**: Page loads → CRT flash → typewriter boot → title glitches intermittently → tagline morphs.
+
+### Phase 4: Project Cards — 3D Tilt + Interactive Glass
+
+| Component | Source | Effort |
+|-----------|--------|--------|
+| 3D tilt cards with spring-physics | kokonutui SpotlightCards | Medium |
+| MagicCard — orb glow following mouse | Magic UI | Medium |
+| BorderBeam — animated light on card border | Magic UI | Low |
+| ShineBorder — gradient sweep on hover | Magic UI | Low |
+| GlareHover — glare sweep on hover | Magic UI | Low |
+| LiquidGlassCard — SVG displacement glass | kokonutui | Medium |
+
+**Best combo**: Card = frosted glass + NoiseTexture. On hover: BorderBeam animates edges, GlareHover sweeps, card tilts 3D toward cursor with spring. Focus-dim siblings scale to 0.96.
+
+### Phase 5: Navigation + Cursor
+
+| Component | Source | Effort |
+|-----------|--------|--------|
+| Dock — macOS-style animated dock nav | Magic UI | Medium |
+| Pointer / SmoothCursor — custom mouse cursor | Magic UI | Medium |
+| MorphicNavbar — glass nav bar | kokonutui | Medium |
+| Magnetic buttons — buttons attract toward cursor | DIY | Medium |
+
+### Phase 6: CTA Button Effects
+
+| Component | Source | Effort |
+|-----------|--------|--------|
+| ShimmerButton / RainbowButton / RippleButton | Magic UI | Low |
+| Galaxy button effects (3D fan-out, circle morph, shimmer, liquid) | Galaxy | Very Low (CSS) |
+| ParticleButton — burst on click | kokonutui | Low |
+
+### Phase 7: Shader / WebGL Effects (shaders.se / hape.io level)
+
+| Component | Source | Effort |
+|-----------|--------|--------|
+| RetroGrid — WebGL 3D perspective scrolling grid | Magic UI | High |
+| Custom GLSL shader background (fluid, plasma, displacement) | Custom | High |
+
+**RetroGrid** is 866 lines of standalone WebGL with GLSL fragment shader, LOD, and CSS fallback. Port it as a hero background. The 3D perspective grid scrolling as you scroll the page gives a similar scroll-driven feel to hape.io.
+
+### Phase 8: Audio Layer
+
+| Feature | Source | Effort |
+|---------|--------|--------|
+| Terminal key clicks (Web Audio API) | Magic UI reference | Medium |
+| Boot chime (synthesized two-tone) | DIY | Low |
+| Background ambient hum | DIY | Low |
+
+### Phase 9: Mobile Optimization
+
+See dedicated Mobile Optimization section below.
+
+### Phase 10: Terminal Commands (from wishlist above)
+
+Prioritize: `history`, `figlet`, `weather`, `man`, `calc`, `todo`, `hollywood`, `sl`, `gh`, `snake`, `np`.
+
+---
+
+## Mobile Optimization
+
+### Root-Cause Analysis
+
+| # | Problem | Cause | Fix |
+|---|---------|-------|-----|
+| 1 | **Can swipe sideways instead of scrolling down** | `cols: 300` in `terminal.js` forces xterm to render 300 characters wide, creating horizontal overflow. No `overflow-x: hidden` on `body`/`html`. | `html, body { overflow-x: hidden; width: 100%; }` — stops horizontal scroll immediately. Set terminal cols dynamically: `cols = Math.max(40, Math.floor(container.clientWidth / 8.5))`. |
+| 2 | **Words wrap wrong / text breaks layout** | No `overflow-wrap: break-word` or `word-break` on `.about-text`, `.spotlight-card p`, and other text containers. Long URLs or technical terms overflow. | `overflow-wrap: break-word; word-break: break-word;` on all text content containers. |
+| 3 | **Touch targets focused on buttons, no scroll points** | `#hero-target` has `height: 100vh` with terminal filling entire viewport. Terminal captures touch events. | `touch-action: pan-y` on terminal container. Add visual scroll indicator (down arrow) below terminal on mobile. |
+| 4 | **Sections have `min-height: 100vh`** creating massive gaps | Every section forced to full viewport. Contact and Resume look empty on mobile. | `section:not(#hero-target):not(#about) { min-height: auto; }` on mobile. |
+| 5 | **Terminal doesn't re-fit on orientation change** | xterm FitAddon only fires on load. | Add orientationchange handler to re-fit terminal. |
+| 6 | **Glass `backdrop-filter` jank** | `blur(16px)` on `#app` is expensive on mobile GPUs. | Detect mobile GPU tier. Fall back to solid bg or reduce blur to 8px on low-end. Use `will-change: backdrop-filter` sparingly. |
+| 7 | **Terminal font too small on cramped screens** | 12px at 768px breakpoint, no smaller breakpoint. | Decrease to 10px at < 480px. Reduce xterm line-height proportionally. |
+| 8 | **Horizontal scroll competing with vertical scroll** | The wide terminal creates a second scroll axis. | Fix #1 eliminates root cause. Then `-webkit-overflow-scrolling: touch` for smooth vertical. |
+| 9 | **Touch targets below minimum size** | Cert badges are 60x60px at 480px breakpoint (below 44x44px minimum). | Ensure all interactive elements are min 44x44px touch target. Increase padding on mobile. |
+| 10 | **Terminal input hidden by mobile keyboard** | No visualViewport resize handling. Terminal doesn't scroll into view when keyboard opens. | Listen for `visualViewport` resize events. Scroll terminal into view. |
+
+### Priority Mobile Fixes (Quick Wins)
+
+1. `html, body { overflow-x: hidden; width: 100%; }` — stops horizontal scroll
+2. Responsive terminal cols — dynamic based on container width instead of hardcoded 300
+3. `overflow-wrap: break-word` on all text containers
+4. `min-height: auto` on mobile for Resume/Contact sections
+5. `touch-action: pan-y` on terminal container
+6. Decrease terminal font to 10px on < 480px screens
+
+### Mobile Media Queries to Add
+
+```css
+/* Add to responsive.css */
+
+/* General overflow fix */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Text wrapping on all text containers */
+.about-text, .spotlight-card p, .bento-card p, .cert-name {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Reduce section heights on mobile */
+@media (max-width: 768px) {
+  section:not(#hero-target):not(#about) {
+    min-height: auto;
+  }
+  .terminal-body {
+    touch-action: pan-y;
+  }
+}
+
+@media (max-width: 480px) {
+  .terminal-body {
+    font-size: 10px;
+  }
+}
+```
+
+---
+
+## Current Design System Reference
+
+### Color Tokens (tokens.css)
+
+```css
+--color-glass: oklch(0.09 0.008 260 / 0.20);
+--color-glass-hover: oklch(0.14 0.012 260 / 0.32);
+--color-glass-border: oklch(0.2 0.02 260 / 0.35);
+--color-terminal-bg: oklch(0.06 0.005 260 / 0.12);
+--color-terminal-border: oklch(0.18 0.015 260 / 0.5);
+--font-display: 'Space Grotesk', sans-serif;
+--font-mono: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+```
+
+### Key CSS Files
+
+| File | Purpose |
+|------|---------|
+| `css/tokens.css` | Design tokens, CSS custom properties, font stacks |
+| `css/base.css` | Reset, gradient utilities, section-header, progress-bar, matrix-rain |
+| `css/layout.css` | #app, sections, grid layouts, hero-shell, about-grid, section-header |
+| `css/components.css` | Spotlight cards, cert badges, social grid, bento grid, scrollbar |
+| `css/terminal.css` | Terminal window frame, header, dots, title, clock, body, xterm overrides |
+| `css/responsive.css` | Media queries for 1024px, 768px, 480px, prefers-reduced-motion |
+
+### Key JS Files
+
+| File | Purpose |
+|------|---------|
+| `js/main.js` | Entry point, Konami code, matrix rain trigger, clock update |
+| `js/shell.js` | VFS, commands, neofetch, boot sequence, fortunes, history |
+| `js/terminal.js` | xterm.js setup, handleInput, arrow key history, v86 mode |
+| `js/matrix-rain.js` | Full-screen katakana rain canvas overlay |
+| `js/three-particles.js` | WebGL2 particle system with GPU tier detection, rainbow mode |
+| `js/nav.js` | Nav dots, active tracking via Motion scroll |
+| `js/animations.js` | Anime.js scroll reveals, card effects |
+| `js/v86-launcher.js` | Buildroot Linux VM booter |
+| `js/matrix-rain.js` | Matrix rain overlay |
+
+---
+
+## Sources / Additional References
+
+- [Magic UI](https://github.com/magicuidesign/magicui) — 83 React components: Particles, RetroGrid (WebGL), HyperText, MorphingText, BorderBeam, MagicCard, Dock, ShimmerButton, NoiseTexture, ProgressiveBlur, and 73 more
+- [Galaxy UI](https://github.com/nicepkg/galaxy) — 3,831 pure CSS components: 1,231 buttons, 726 cards, 718 loaders, 103 patterns, and more. All zero-JS drop-in HTML+CSS.
+- [hape.io](https://www.awwwards.com/sites/hape) — OGL WebGL micro-framework with custom PBR rendering, scroll-driven 3D camera control, custom cursor, music-synced animations, high-fashion aesthetic
+- [shader.se](https://shader.se) — Three.js + React Three Fiber + TSL on WebGPU pipeline. Scroll-driven scene transitions dissolve seamlessly. Everything rendered in-canvas including UI via `@pmndrs/uikit`. 80s corporate tape aesthetic.
+- [Lenis](https://github.com/darkroomengineering/lenis) — Smooth scroll library (~3KB), 2026 standard for premium scroll experiences
+- [OGL](https://github.com/oframe/ogl) — Minimal WebGL library (used by hape.io). Custom PBR rendering, skinning, post-process.
