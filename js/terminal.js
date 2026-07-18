@@ -82,7 +82,6 @@ function createTerminal(container) {
   term = new window.Terminal({
     cursorBlink: true,
     cursorStyle: 'block',
-    cols: 300,
     fontSize: 13,
     fontFamily: "'JetBrains Mono', 'SF Mono', 'Menlo', monospace",
     theme: {

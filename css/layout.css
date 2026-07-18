@@ -2,7 +2,7 @@
   width: 100%;
   position: relative;
   z-index: 1;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--color-glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -10,7 +10,7 @@
 
 section {
   padding: var(--space-10) 0;
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -28,7 +28,7 @@ section:not(#hero-target) > * {
 }
 
 #hero-target {
-  height: 100vh;
+  height: 100dvh;
   display: flex;
   align-items: stretch;
   padding: 0;
@@ -42,6 +42,8 @@ section:not(#hero-target) > * {
   border-radius: 0;
   border: none;
   background: var(--color-terminal-bg);
+  position: relative;
+  z-index: 1;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   overflow: hidden;

@@ -1,3 +1,5 @@
+let isAnimatingScroll = false;
+
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const noAnim = () => prefersReduced || typeof anime === 'undefined';
 
@@ -21,9 +23,8 @@ function initMobileToggle() {
       else overlay.style.opacity = '1';
     } else {
       if (!noAnim()) {
-        anime.animate(overlay, { opacity: 0, duration: 200, ease: 'in(2)' }).finished.then(() => {
-          overlay.style.display = 'none';
-        });
+        anime.animate(overlay, { opacity: 0, duration: 200, ease: 'in(2)' });
+        setTimeout(() => { overlay.style.display = 'none'; }, 250);
       } else {
         overlay.style.display = 'none';
       }
@@ -35,9 +36,8 @@ function initMobileToggle() {
       toggle.classList.remove('open');
       overlay.classList.remove('open');
       if (!noAnim()) {
-        anime.animate(overlay, { opacity: 0, duration: 200, ease: 'in(2)' }).finished.then(() => {
-          overlay.style.display = 'none';
-        });
+        anime.animate(overlay, { opacity: 0, duration: 200, ease: 'in(2)' });
+        setTimeout(() => { overlay.style.display = 'none'; }, 250);
       } else {
         overlay.style.display = 'none';
       }
@@ -51,21 +51,28 @@ function scrollToSection(id) {
   const target = document.getElementById(id);
   if (!target) return;
   const y = target.getBoundingClientRect().top + window.scrollY;
+  isAnimatingScroll = true;
   if (!noAnim()) {
     anime.animate(document.scrollingElement, {
       scrollTop: y,
       duration: 1200,
       ease: 'inOut(2)',
     });
+    setTimeout(() => { isAnimatingScroll = false; }, 1300);
   } else {
     window.scrollTo({ top: y, behavior: 'smooth' });
+    setTimeout(() => { isAnimatingScroll = false; }, 400);
   }
 }
 
 function initDotScroll() {
   document.querySelectorAll('.nav-dot').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      scrollToSection(btn.dataset.section);
+      const section = btn.dataset.section;
+      scrollToSection(section);
+      document.querySelectorAll('.nav-dot').forEach(b =>
+        b.classList.toggle('active', b.dataset.section === section)
+      );
     });
   });
 }
@@ -81,14 +88,19 @@ function initActiveTracking() {
     if (!window.Motion) return;
     clearInterval(checkMotion);
     window.Motion.scroll(() => {
+      if (isAnimatingScroll) return;
       const viewportH = window.innerHeight;
       let activeId = sectionIds[0];
+      let maxVisible = 0;
       for (const id of sectionIds) {
         const el = document.getElementById(id);
         if (!el) continue;
         const rect = el.getBoundingClientRect();
-        const mid = rect.top + rect.height / 2;
-        if (mid < viewportH * 0.5) activeId = id;
+        const visible = Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0);
+        if (visible > maxVisible) {
+          maxVisible = visible;
+          activeId = id;
+        }
       }
       updateActive(activeId);
     });

@@ -54,7 +54,7 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-body { background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 1rem; line-height: 1.6; overflow-x: hidden; min-height: 100vh; }
+body { background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 1rem; line-height: 1.6; overflow-x: hidden; min-height: 100dvh; }
 img { max-width: 100%; height: auto; display: block; }
 a { color: inherit; text-decoration: none; }
 ::selection { background: var(--color-primary-dim); color: var(--color-text); }
@@ -62,3 +62,15 @@ a { color: inherit; text-decoration: none; }
 .skip-link { position: absolute; top: -100%; left: var(--space-4); padding: var(--space-2) var(--space-4); background: var(--color-primary); color: var(--color-bg); border-radius: var(--radius-sm); z-index: 1000; font-family: var(--font-display); font-weight: 600; }
 .skip-link:focus { top: var(--space-4); }
 canvas#c { display: block; position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
