@@ -1,15 +1,10 @@
-@property --hue {
-  syntax: '<number>';
-  initial-value: 0;
-  inherits: false;
-}
-
 .gradient-text {
-  background: linear-gradient(90deg, oklch(0.7 0.3 var(--hue)), oklch(0.7 0.3 calc(var(--hue) + 60)));
+  background: linear-gradient(90deg, #0000FF, #FF0000);
+  background-size: 200% 100%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: hueCycle 6s linear infinite;
+  animation: blueRedDrift 6s ease-in-out infinite;
 }
 
 .gradient-border {
@@ -36,16 +31,17 @@
   font-family: var(--font-display);
   font-size: clamp(2rem, 4vw, 3rem);
   font-weight: 300;
-  background: linear-gradient(90deg, oklch(0.7 0.3 var(--hue)), oklch(0.7 0.3 calc(var(--hue) + 60)));
+  background: linear-gradient(90deg, #0000FF, #FF0000);
+  background-size: 200% 100%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: hueCycle 6s linear infinite;
+  animation: blueRedDrift 6s ease-in-out infinite;
 }
 
-@keyframes hueCycle {
-  0%   { --hue: 0; }
-  100% { --hue: 360; }
+@keyframes blueRedDrift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .terminal-256 {

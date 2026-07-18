@@ -91,7 +91,7 @@ Very Low effort. Subtle, thematic retro effect.
 
 ### Liquid Glass Cards (from kokonutui)
 - SVG `<feTurbulence>` + `<feDisplacementMap>` for realistic glass refraction
-- Currently sections use basic `backdrop-filter: blur(16px)`
+- App backdrop blur is now on a fixed `.glass-backdrop` layer (no scroll compositing)
 - Upgrade project cards and section headers with SVG displacement glass
 - Mouse-following refraction shift. Medium effort, very high impact.
 
@@ -490,25 +490,21 @@ Prioritize: `history`, `figlet`, `weather`, `man`, `calc`, `todo`, `hollywood`, 
 
 | # | Problem | Cause | Fix |
 |---|---------|-------|-----|
-| 1 | **Can swipe sideways instead of scrolling down** | `cols: 300` in `terminal.js` forces xterm to render 300 characters wide, creating horizontal overflow. No `overflow-x: hidden` on `body`/`html`. | `html, body { overflow-x: hidden; width: 100%; }` — stops horizontal scroll immediately. Set terminal cols dynamically: `cols = Math.max(40, Math.floor(container.clientWidth / 8.5))`. |
-| 2 | **Words wrap wrong / text breaks layout** | No `overflow-wrap: break-word` or `word-break` on `.about-text`, `.spotlight-card p`, and other text containers. Long URLs or technical terms overflow. | `overflow-wrap: break-word; word-break: break-word;` on all text content containers. |
-| 3 | **Touch targets focused on buttons, no scroll points** | `#hero-target` has `height: 100vh` with terminal filling entire viewport. Terminal captures touch events. | `touch-action: pan-y` on terminal container. Add visual scroll indicator (down arrow) below terminal on mobile. |
-| 4 | **Sections have `min-height: 100vh`** creating massive gaps | Every section forced to full viewport. Contact and Resume look empty on mobile. | `section:not(#hero-target):not(#about) { min-height: auto; }` on mobile. |
-| 5 | **Terminal doesn't re-fit on orientation change** | xterm FitAddon only fires on load. | Add orientationchange handler to re-fit terminal. |
-| 6 | **Glass `backdrop-filter` jank** | `blur(16px)` on `#app` is expensive on mobile GPUs. | Detect mobile GPU tier. Fall back to solid bg or reduce blur to 8px on low-end. Use `will-change: backdrop-filter` sparingly. |
-| 7 | **Terminal font too small on cramped screens** | 12px at 768px breakpoint, no smaller breakpoint. | Decrease to 10px at < 480px. Reduce xterm line-height proportionally. |
-| 8 | **Horizontal scroll competing with vertical scroll** | The wide terminal creates a second scroll axis. | Fix #1 eliminates root cause. Then `-webkit-overflow-scrolling: touch` for smooth vertical. |
-| 9 | **Touch targets below minimum size** | Cert badges are 60x60px at 480px breakpoint (below 44x44px minimum). | Ensure all interactive elements are min 44x44px touch target. Increase padding on mobile. |
-| 10 | **Terminal input hidden by mobile keyboard** | No visualViewport resize handling. Terminal doesn't scroll into view when keyboard opens. | Listen for `visualViewport` resize events. Scroll terminal into view. |
+| 1 | **Words wrap wrong / text breaks layout** | No `overflow-wrap: break-word` or `word-break` on `.about-text`, `.spotlight-card p`, and other text containers. Long URLs or technical terms overflow. | `overflow-wrap: break-word; word-break: break-word;` on all text content containers. |
+| 2 | **Touch targets focused on buttons, no scroll points** | `#hero-target` has `height: 100vh` with terminal filling entire viewport. Terminal captures touch events. | `touch-action: pan-y` on terminal container. Add visual scroll indicator (down arrow) below terminal on mobile. |
+| 3 | **Sections have `min-height: 100vh`** creating massive gaps | Every section forced to full viewport. Contact and Resume look empty on mobile. | `section:not(#hero-target):not(#about) { min-height: auto; }` on mobile. |
+| 4 | **Terminal doesn't re-fit on orientation change** | xterm FitAddon only fires on load. | Add orientationchange handler to re-fit terminal. |
+| 5 | **Terminal font too small on cramped screens** | 12px at 768px breakpoint, no smaller breakpoint. | Decrease to 10px at < 480px. Reduce xterm line-height proportionally. |
+| 6 | **Touch targets below minimum size** | Cert badges are 60x60px at 480px breakpoint (below 44x44px minimum). | Ensure all interactive elements are min 44x44px touch target. Increase padding on mobile. |
+| 7 | **Terminal input hidden by mobile keyboard** | No visualViewport resize handling. Terminal doesn't scroll into view when keyboard opens. | Listen for `visualViewport` resize events. Scroll terminal into view. |
 
 ### Priority Mobile Fixes (Quick Wins)
 
-1. `html, body { overflow-x: hidden; width: 100%; }` — stops horizontal scroll
-2. Responsive terminal cols — dynamic based on container width instead of hardcoded 300
-3. `overflow-wrap: break-word` on all text containers
-4. `min-height: auto` on mobile for Resume/Contact sections
-5. `touch-action: pan-y` on terminal container
-6. Decrease terminal font to 10px on < 480px screens
+1. `overflow-wrap: break-word` on all text containers
+2. `min-height: auto` on mobile for Resume/Contact sections
+3. `touch-action: pan-y` on terminal container
+4. Decrease terminal font to 10px on < 480px screens
+5. Re-fit terminal on orientation change
 
 ### Mobile Media Queries to Add
 

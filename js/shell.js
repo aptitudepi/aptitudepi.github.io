@@ -295,18 +295,101 @@ const FORTUNES = [
 const CMD_HISTORY = [];
 CMD_HISTORY.idx = -1;
 
-const BOOT_MSGS = [
-  { text: '[    0.000000] Booting dvxb.io v2 ...', color: SITE_FAINT },
-  { text: '[    0.004201] CPU: db Genuine', color: SITE_FAINT },
-  { text: `[  OK  ] System clock: ${new Date().toLocaleTimeString()}`, color: SITE_OK },
-  { text: '[    0.008503] Memory: 64KB stack / 32MB heap', color: SITE_FAINT },
-  { text: '[  OK  ] Reached target CS Student', color: SITE_OK },
-  { text: '[  OK  ] Started Builder.service', color: SITE_OK },
-  { text: '[  OK  ] Started Security Researcher.target', color: SITE_OK },
-];
+let asyncCPU = null;
+
+(async () => {
+  try {
+    if (navigator.userAgentData?.getHighEntropyValues) {
+      const hints = await navigator.userAgentData.getHighEntropyValues(['architecture', 'bitness', 'model']);
+      if (hints.architecture) {
+        let s = hints.architecture;
+        if (hints.bitness) s += ` (${hints.bitness}-bit)`;
+        if (hints.model) s += ` · ${hints.model}`;
+        if (navigator.hardwareConcurrency) s += ` ${navigator.hardwareConcurrency}-core`;
+        asyncCPU = s;
+      }
+    }
+  } catch (_) {}
+})();
+
+function getCPU() {
+  try {
+    const parts = [];
+    const p = navigator.platform || '';
+    const ua = navigator.userAgent || '';
+    if (ua.includes('ARM64') || ua.includes('aarch64')) parts.push('ARM');
+    else if (ua.includes('x64') || ua.includes('Win64') || ua.includes('x86_64')) parts.push('x86_64');
+    else if (p.includes('Intel') || p.includes('Win') || p.includes('Mac')) parts.push('x86_64');
+    else if (p.includes('ARM')) parts.push('ARM');
+    else if (p) parts.push(p.replace(/[_\d].*$/, ''));
+    if (navigator.hardwareConcurrency) parts.push(`${navigator.hardwareConcurrency}-core`);
+    return parts.join(' ') || 'db';
+  } catch (e) { return 'db'; }
+}
+
+function getGPU() {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (gl) {
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      if (ext) {
+        const r = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+        if (r) return r.replace(/^ANGLE\s*\(/i, '').replace(/\)$/, '') || 'Unknown';
+      }
+    }
+  } catch (_) {}
+  return 'Unknown';
+}
+
+let BOOT_MSGS = null;
 
 function writePrompt(term) {
   term.write(`\r\n${SITE_GREEN}db${ANSI_RESET}${SITE_WHITE}@${ANSI_RESET}${SITE_CYAN}dvxb.io${ANSI_RESET}${SITE_MUTED} ${ANSI_RESET}${SITE_BLUE}~${ANSI_RESET}${SITE_MUTED}❯ ${ANSI_RESET}`);
+}
+
+function bootSequence(term, onDone) {
+  if (!BOOT_MSGS) {
+    const cpu = asyncCPU || getCPU();
+    const memGB = navigator.deviceMemory || 2;
+    BOOT_MSGS = [
+      { text: '[    0.000000] Booting dvxb.io...', color: SITE_FAINT },
+      { text: `[    0.004201] CPU: ${cpu} Genuine`, color: SITE_FAINT },
+      { text: `[    0.008503] GPU: ${getGPU()}`, color: SITE_FAINT },
+      { text: `[  OK  ] System clock: ${new Date().toLocaleTimeString()}`, color: SITE_OK },
+      { text: `[    0.012755] Memory: 8MB stack / ${memGB}GB heap`, color: SITE_FAINT },
+      { text: '[  OK  ] Mounted /research', color: SITE_OK },
+      { text: '[  OK  ] Started auditd.service', color: SITE_OK },
+      { text: '[  OK  ] Started decipher-psma@MDA.service', color: SITE_OK },
+      { text: '[  OK  ] Started physics-gnn@DIVE.TAMU.service', color: SITE_OK },
+      { text: '[  OK  ] Started sok-water@AGGIES.TAMU.service', color: SITE_OK },
+      { text: '[  OK  ] Reached target Researcher.target', color: SITE_OK },
+      { text: '[  OK  ] Started icu-procedural@BSW.service', color: SITE_OK },
+      { text: '[  OK  ] Started tutor@WHIT.service', color: SITE_OK },
+      { text: '[  OK  ] Reached target Volunteer.target', color: SITE_OK },
+      { text: '[  OK  ] Started build-agent@LM.service', color: SITE_OK },
+      { text: '[  OK  ] Reached target Employee.target', color: SITE_OK },
+      { text: '[  OK  ] Reached target cs-student.target', color: SITE_OK },
+      { text: '[  OK  ] Started Builder.service', color: SITE_OK },
+      { text: '[  OK  ] Reached target Builder.target', color: SITE_OK },
+    ];
+  }
+  let i = 0;
+  function writeNext() {
+    if (i >= BOOT_MSGS.length) {
+      neofetch(term);
+      setTimeout(() => {
+        writePrompt(term);
+        if (onDone) onDone();
+      }, 300);
+      return;
+    }
+    const msg = BOOT_MSGS[i];
+    term.writeln(`${msg.color}${msg.text}${ANSI_RESET}`);
+    i++;
+    setTimeout(writeNext, 60);
+  }
+  writeNext();
 }
 
 function uptimeStr() {
@@ -554,25 +637,6 @@ function executeCommand(input, term) {
       break;
   }
   writePrompt(term);
-}
-
-function bootSequence(term, onDone) {
-  let i = 0;
-  function writeNext() {
-    if (i >= BOOT_MSGS.length) {
-      neofetch(term);
-      setTimeout(() => {
-        writePrompt(term);
-        if (onDone) onDone();
-      }, 300);
-      return;
-    }
-    const msg = BOOT_MSGS[i];
-    term.writeln(`${msg.color}${msg.text}${ANSI_RESET}`);
-    i++;
-    setTimeout(writeNext, 180);
-  }
-  writeNext();
 }
 
 export { ASCII_ART, vfs, RESUME, CMD_HISTORY, BOOT_MSGS, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT };

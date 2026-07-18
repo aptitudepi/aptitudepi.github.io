@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <filter id="glow"><feGaussianBlur stdDeviation="1.5"/></filter>
+  </defs>
+  <text x="16" y="25" text-anchor="middle" font-family="Noto Sans Bengali, Nirmala UI, sans-serif" font-size="24" font-weight="bold" fill="#0000FF" filter="url(#glow)">
+    দ্ব
+    <animate attributeName="opacity" values="0.3;0.7;0.3" dur="3s" repeatCount="indefinite" />
+    <animate attributeName="fill" values="#0000FF;#FF0000;#0000FF" dur="6s" repeatCount="indefinite" />
+  </text>
+  <text x="16" y="25" text-anchor="middle" font-family="Noto Sans Bengali, Nirmala UI, sans-serif" font-size="24" font-weight="bold" fill="#0000FF">
+    দ্ব
+    <animate attributeName="opacity" values="0.85;1;0.85" dur="3s" repeatCount="indefinite" />
+    <animate attributeName="fill" values="#0000FF;#FF0000;#0000FF" dur="6s" repeatCount="indefinite" />
+  </text>
+</svg>

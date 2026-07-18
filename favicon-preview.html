@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>द्ब vs দ্ব — Favicon Comparison</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    color: #d4d4d8;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  h1 {
+    font-size: 1.3rem;
+    font-weight: 300;
+    color: #f4f4f5;
+    text-align: center;
+    margin-bottom: 0.25rem;
+  }
+  .subtitle {
+    font-size: 0.8rem;
+    color: #52525b;
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  .script-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    max-width: 700px;
+    width: 100%;
+    margin-bottom: 3rem;
+  }
+  .card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    background: #09090b;
+    border: 1px solid #27272a;
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+  .card h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .card .script-name {
+    font-size: 0.75rem;
+    color: #52525b;
+    margin-top: -0.5rem;
+  }
+  .card .desc {
+    font-size: 0.7rem;
+    color: #71717a;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .sizes {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  .size-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .size-label {
+    font-size: 0.6rem;
+    color: #52525b;
+  }
+  .preview {
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tab-bar {
+    display: flex;
+    align-items: center;
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 6px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 200px;
+  }
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 8px;
+    font-size: 10px;
+    color: #a1a1aa;
+    cursor: default;
+    border-right: 1px solid #27272a;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .tab.active { background: #27272a; color: #f4f4f5; }
+  .tab:last-child { border-right: none; }
+  .tab svg { width: 12px; height: 12px; flex-shrink: 0; display: block; }
+  .note {
+    max-width: 600px;
+    text-align: center;
+    background: #09090b;
+    border: 1px solid #27272a;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+  }
+  .note h3 {
+    font-size: 0.85rem;
+    color: #a478f5;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+  }
+  .note p {
+    font-size: 0.75rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+  }
+  .note code {
+    color: #f4f4f5;
+    background: #18181b;
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    font-size: 0.7rem;
+  }
+  .anim-tag {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 0.15em 0.5em;
+    border-radius: 3px;
+    margin: 0 0.15em;
+  }
+  .anim-tag.glow { background: rgba(0,0,255,0.15); color: #6B8BFF; }
+  .anim-tag.drift { background: linear-gradient(90deg,rgba(0,0,255,0.15),rgba(255,0,0,0.15)); color: #c8a0ff; }
+  @media (max-width: 600px) {
+    .script-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>द्ब <span style="color:#52525b">vs</span> দ্ব</h1>
+<p class="subtitle">Devanagari &mdash; Bengali &mdash; both phonetic "db" &mdash; <span class="anim-tag glow">glow 3s</span> + <span class="anim-tag drift">blue↔red drift 6s</span></p>
+
+<div class="script-grid">
+
+  <!-- Devanagari -->
+  <div class="card">
+    <h2>द्ब</h2>
+    <span class="script-name">Devanagari · द (da) + ब (ba)</span>
+    <div class="sizes">
+      <div class="size-group">
+        <div class="preview" style="padding:12px">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="16" height="16">
+            <defs>
+              <style>
+                @keyframes g { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }
+                @keyframes t { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
+                @keyframes d { 0%,100% { color: #0000FF; } 50% { color: #FF0000; } }
+                ._g { animation: g 3s ease-in-out infinite; }
+                ._t { animation: t 3s ease-in-out infinite; }
+                ._d { animation: d 6s ease-in-out infinite; }
+              </style>
+              <filter id="da"><feGaussianBlur stdDeviation="1.5"/></filter>
+            </defs>
+            <g class="_d">
+              <text x="16" y="24" text-anchor="middle" font-family="'Noto Sans Devanagari','Nirmala UI',sans-serif" font-size="24" font-weight="bold" fill="currentColor" filter="url(#da)" class="_g">द्ब</text>
+              <text x="16" y="24" text-anchor="middle" font-family="'Noto Sans Devanagari','Nirmala UI',sans-serif" font-size="24" font-weight="bold" fill="currentColor" class="_t">द्ब</text>
+            </g>
+          </svg>
+        </div>
+        <span class="size-label">16px</span>
+      </div>
+      <div class="size-group">
+        <div class="preview" style="padding:8px">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32"><use href="#d-glyph"/></svg>
+        </div>
+        <span class="size-label">32px</span>
+      </div>
+      <div class="size-group">
+        <div class="preview" style="padding:4px">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="48" height="48"><use href="#d-glyph"/></svg>
+        </div>
+        <span class="size-label">48px</span>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="12" height="12"><use href="#d-glyph"/></svg>
+        dvxb.io
+      </div>
+      <div class="tab active">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="12" height="12"><use href="#d-glyph"/></svg>
+        About
+      </div>
+    </div>
+    <div class="desc">
+      Vertical bar + loop structure. Angular shapes match terminal theme.<br>
+      Wider script recognition (Hindi/Sanskrit/Marathi).
+    </div>
+  </div>
+
+  <!-- Bengali -->
+  <div class="card">
+    <h2>দ্ব</h2>
+    <span class="script-name">Bengali · দ (da) + ব (ba)</span>
+    <div class="sizes">
+      <div class="size-group">
+        <div class="preview" style="padding:12px">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="16" height="16">
+            <defs>
+              <style>
+                @keyframes g { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }
+                @keyframes t { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
+                @keyframes d { 0%,100% { color: #0000FF; } 50% { color: #FF0000; } }
+                ._g { animation: g 3s ease-in-out infinite; }
+                ._t { animation: t 3s ease-in-out infinite; }
+                ._d { animation: d 6s ease-in-out infinite; }
+              </style>
+              <filter id="ba"><feGaussianBlur stdDeviation="1.5"/></filter>
+            </defs>
+            <g class="_d">
+              <text x="16" y="25" text-anchor="middle" font-family="'Noto Sans Bengali','Nirmala UI',sans-serif" font-size="24" font-weight="bold" fill="currentColor" filter="url(#ba)" class="_g">দ্ব</text>
+              <text x="16" y="25" text-anchor="middle" font-family="'Noto Sans Bengali','Nirmala UI',sans-serif" font-size="24" font-weight="bold" fill="currentColor" class="_t">দ্ব</text>
+            </g>
+          </svg>
+        </div>
+        <span class="size-label">16px</span>
+      </div>
+      <div class="size-group">
+        <div class="preview" style="padding:8px">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32"><use href="#b-glyph"/></svg>
+        </div>
+        <span class="size-label">32px</span>
+      </div>
+      <div class="size-group">
+        <div class="preview" style="padding:4px">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="48" height="48"><use href="#b-glyph"/></svg>
+        </div>
+        <span class="size-label">48px</span>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="12" height="12"><use href="#b-glyph"/></svg>
+        dvxb.io
+      </div>
+      <div class="tab active">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="12" height="12"><use href="#b-glyph"/></svg>
+        About
+      </div>
+    </div>
+    <div class="desc">
+      Curved flowing shapes. Your Bengali heritage.<br>
+      More unique (fewer Bengali favicons exist).
+    </div>
+  </div>
+
+</div>
+
+<!-- Deferred glyph defs -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <g id="d-glyph">
+      <style>
+        @keyframes g1 { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }
+        @keyframes t1 { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
+        @keyframes d1 { 0%,100% { color: #0000FF; } 50% { color: #FF0000; } }
+        ._g1 { animation: g1 3s ease-in-out infinite; }
+        ._t1 { animation: t1 3s ease-in-out infinite; }
+        ._d1 { animation: d1 6s ease-in-out infinite; }
+      </style>
+      <filter id="dg"><feGaussianBlur stdDeviation="1.5"/></filter>
+      <g class="_d1">
+        <text x="16" y="24" text-anchor="middle" font-family="'Noto Sans Devanagari','Nirmala UI',sans-serif" font-size="24" font-weight="bold" fill="currentColor" filter="url(#dg)" class="_g1">द्ब</text>
+        <text x="16" y="24" text-anchor="middle" font-family="'Noto Sans Devanagari','Nirmala UI',sans-serif" font-size="24" font-weight="bold" fill="currentColor" class="_t1">द्ब</text>
+      </g>
+    </g>
+    <g id="b-glyph">
+      <style>
+        @keyframes g2 { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }
+        @keyframes t2 { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
+        @keyframes d2 { 0%,100% { color: #0000FF; } 50% { color: #FF0000; } }
+        ._g2 { animation: g2 3s ease-in-out infinite; }
+        ._t2 { animation: t2 3s ease-in-out infinite; }
+        ._d2 { animation: d2 6s ease-in-out infinite; }
+      </style>
+      <filter id="bg"><feGaussianBlur stdDeviation="1.5"/></filter>
+      <g class="_d2">
+        <text x="16" y="25" text-anchor="middle" font-family="'Noto Sans Bengali','Nirmala UI',sans-serif" font-size="24" font-weight="bold" fill="currentColor" filter="url(#bg)" class="_g2">দ্ব</text>
+        <text x="16" y="25" text-anchor="middle" font-family="'Noto Sans Bengali','Nirmala UI',sans-serif" font-size="24" font-weight="bold" fill="currentColor" class="_t2">দ্ব</text>
+      </g>
+    </g>
+  </defs>
+</svg>
+
+<div class="note">
+  <h3>Two simultaneous animations</h3>
+  <p>
+    <span class="anim-tag glow">glow 3s</span> &mdash; blurred backdrop fades 0.3&harr;0.7, glyph breathes 0.85&harr;1<br>
+    <span class="anim-tag drift">blue↔red drift 6s</span> &mdash; <code>#0000FF</code> &harr; <code>#FF0000</code> (green always <code>00</code>)
+  </p>
+  <p style="margin-top:0.4rem;color:#52525b">Interpolates through purple/magenta on the way: blue &rarr; dark purple &rarr; red &rarr; dark purple &rarr; blue. Two glow cycles per drift cycle.</p>
+</div>
+
+</body>
+</html>
