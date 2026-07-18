@@ -32,10 +32,16 @@
   text-align: right;
   justify-content: flex-end;
 }
+@keyframes blueRedColor {
+  0%, 100% { color: #0000FF; }
+  50% { color: #FF0000; }
+}
+
 .nav-dot.active {
-  color: var(--color-text);
+  color: #0000FF;
   background: var(--color-primary-dim);
   box-shadow: 0 0 12px var(--color-primary-glow);
+  animation: blueRedColor 6s ease-in-out infinite;
 }
 .nav-dot:hover {
   color: var(--color-text-muted);
@@ -94,7 +100,7 @@
 }
 .nav-overlay a:hover,
 .nav-overlay a.active {
-  color: var(--color-primary);
+  animation: blueRedColor 6s ease-in-out infinite;
 }
 
 /* ── Projects: Spotlight ───────────────────── */
