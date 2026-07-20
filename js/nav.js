@@ -1,4 +1,5 @@
 let isAnimatingScroll = false;
+const navStartTime = Date.now();
 
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const noAnim = () => prefersReduced || typeof anime === 'undefined';
@@ -70,9 +71,11 @@ function initDotScroll() {
     btn.addEventListener('click', (e) => {
       const section = btn.dataset.section;
       scrollToSection(section);
-      document.querySelectorAll('.nav-dot').forEach(b =>
-        b.classList.toggle('active', b.dataset.section === section)
-      );
+      const phase = ((Date.now() - navStartTime) / 1000) % 6;
+      document.querySelectorAll('.nav-dot').forEach(b => {
+        b.classList.toggle('active', b.dataset.section === section);
+        b.style.animationDelay = b.dataset.section === section ? `-${phase}s` : '';
+      });
     });
   });
 }
@@ -81,7 +84,12 @@ function initActiveTracking() {
   const dotBtns = document.querySelectorAll('.nav-dot');
 
   function updateActive(id) {
-    dotBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.section === id));
+    const phase = ((Date.now() - navStartTime) / 1000) % 6;
+    dotBtns.forEach(btn => {
+      const isActive = btn.dataset.section === id;
+      btn.classList.toggle('active', isActive);
+      btn.style.animationDelay = isActive ? `-${phase}s` : '';
+    });
   }
 
   const checkMotion = setInterval(() => {

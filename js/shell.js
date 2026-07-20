@@ -399,6 +399,13 @@ function visibleLen(s) {
   return s.replace(/\x1b\[[0-9;]*m/g, '').length;
 }
 
+function getBlueRedPhase() {
+  const elapsed = (Date.now() - pageLoadTime) / 1000;
+  const t = Math.sin(elapsed * Math.PI / 3);
+  const mix = (t + 1) / 2;
+  return [Math.round(mix * 255), 0, Math.round((1 - mix) * 255)];
+}
+
 function neofetch(term) {
   const artHeight = ASCII_ART.length;
   const gap = 4;
@@ -448,11 +455,15 @@ function neofetch(term) {
   }
 
   term.writeln('');
+  const phase = getBlueRedPhase();
+  const bPhase = phase.map(c => Math.min(255, Math.round(c * 1.3)));
   const blockColors = [
     [0,0,0],[200,50,50],[50,180,50],[180,180,50],
-    [50,80,200],[180,50,180],[50,180,180],[200,200,200],
+    phase,
+    [180,50,180],[50,180,180],[200,200,200],
     [80,80,80],[255,80,80],[80,255,80],[255,255,80],
-    [80,130,255],[255,80,255],[80,255,255],[255,255,255],
+    bPhase,
+    [255,80,255],[80,255,255],[255,255,255],
   ];
   let blocksRow1 = ' '.repeat(maxArtW + gap);
   let blocksRow2 = ' '.repeat(maxArtW + gap);

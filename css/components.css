@@ -1,3 +1,17 @@
+/* ── Animated Glow ─────────────────────────── */
+@keyframes blueRedGlow12 {
+  0%, 100% { box-shadow: 0 0 12px oklch(0.45 0.31 264 / 0.35); }
+  50% { box-shadow: 0 0 12px oklch(0.5 0.25 30 / 0.35); }
+}
+@keyframes blueRedGlow24 {
+  0%, 100% { box-shadow: 0 0 24px oklch(0.45 0.31 264 / 0.35); }
+  50% { box-shadow: 0 0 24px oklch(0.5 0.25 30 / 0.35); }
+}
+@keyframes blueRedGlow40 {
+  0%, 100% { box-shadow: 0 0 40px oklch(0.45 0.31 264 / 0.35); }
+  50% { box-shadow: 0 0 40px oklch(0.5 0.25 30 / 0.35); }
+}
+
 /* ── Acrylic / Glass Utility ──────────────── */
 .acrylic {
   backdrop-filter: blur(16px);
@@ -40,8 +54,7 @@
 .nav-dot.active {
   color: #0000FF;
   background: var(--color-primary-dim);
-  box-shadow: 0 0 12px var(--color-primary-glow);
-  animation: blueRedColor 6s ease-in-out infinite;
+  animation: blueRedColor 6s ease-in-out infinite, blueRedGlow12 6s ease-in-out infinite;
 }
 .nav-dot:hover {
   color: var(--color-text-muted);
@@ -127,6 +140,7 @@
   -webkit-backdrop-filter: blur(12px);
   overflow: hidden;
   transition: border-color 300ms var(--ease-out-expo), transform 300ms var(--ease-out-expo);
+  animation: blueRedColor 6s ease-in-out infinite;
 }
 .spotlight-card::before {
   content: '';
@@ -141,7 +155,7 @@
   transition: opacity 300ms;
 }
 .spotlight-card:hover {
-  border-color: var(--color-primary);
+  border-color: currentColor;
   transform: translateY(-2px);
 }
 .spotlight-card:hover::before {
@@ -159,13 +173,14 @@
   font-family: var(--font-mono);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
-  color: var(--color-text-faint);
+  color: inherit;
 }
 .spotlight-card h3 {
   font-family: var(--font-display);
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: var(--space-2);
+  color: var(--color-text);
 }
 .spotlight-card p {
   font-size: 0.875rem;
@@ -182,6 +197,7 @@
   color: var(--color-primary);
   font-family: var(--font-display);
   transition: gap var(--transition-interactive);
+  animation: blueRedColor 6s ease-in-out infinite;
 }
 .project-link:hover {
   gap: var(--space-3);
@@ -202,9 +218,10 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: all var(--transition-interactive);
+  animation: blueRedColor 6s ease-in-out infinite;
 }
 .bento-card:hover {
-  border-color: var(--color-primary);
+  border-color: currentColor;
   transform: translateY(-2px);
   box-shadow: 0 4px 20px var(--color-primary-dim);
 }
@@ -220,6 +237,7 @@
   font-size: 1.0625rem;
   font-weight: 600;
   margin-bottom: var(--space-2);
+  color: var(--color-text);
 }
 .bento-card p {
   font-size: 0.8125rem;
@@ -233,7 +251,7 @@
   transition: color 200ms;
   font-family: var(--font-mono);
 }
-.bento-card .github-link:hover { color: var(--color-primary); }
+.bento-card .github-link:hover { color: currentColor; }
 
 .view-more-cta {
   text-align: center;
@@ -251,11 +269,11 @@
   font-size: 0.875rem;
   font-weight: 500;
   transition: all var(--transition-interactive);
+  animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
 .view-more-cta a:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  box-shadow: var(--shadow-glow-blue);
+  border-color: currentColor;
+  color: currentColor;
 }
 
 /* ── Certifications ────────────────────────── */
@@ -282,13 +300,14 @@
   transition: all 250ms var(--ease-out-expo);
   cursor: pointer;
   overflow: hidden;
+  animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
 .cert-badge::before {
   content: '';
   position: absolute;
   inset: -4px;
   border-radius: inherit;
-  border: 1.5px solid var(--color-primary);
+  border: 1.5px solid currentColor;
   opacity: 0;
   scale: 0.8;
   transition: all 0.25s var(--ease-out-expo);
@@ -301,7 +320,7 @@
   transform: translateX(-100%);
   transition: transform 0.5s var(--ease-out-expo);
 }
-.cert-badge:hover { transform: translateY(-3px); border-color: var(--color-primary); box-shadow: var(--shadow-glow-blue); }
+.cert-badge:hover { transform: translateY(-3px); border-color: currentColor; }
 .cert-badge:hover::before { opacity: 1; scale: 1; }
 .cert-badge:hover::after { transform: translateX(100%); }
 .cert-badge img { width: 72px; height: 72px; border-radius: var(--radius-sm); transition: transform 250ms var(--ease-out-expo); }
@@ -316,18 +335,22 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-8);
-  background: var(--color-primary);
-  color: oklch(0 0 0);
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  color: var(--color-primary);
   border-radius: var(--radius-full);
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 1.0625rem;
   transition: all var(--transition-interactive);
-  box-shadow: var(--shadow-glow-blue);
+  animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
 .resume-download a:hover {
-  background: var(--color-primary-hover);
-  box-shadow: 0 0 40px var(--color-primary-glow);
+  background: var(--color-primary-dim);
+  border-color: currentColor;
+  animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
   transform: translateY(-2px) scale(1.02);
 }
 
@@ -353,18 +376,19 @@
   color: var(--color-text-muted);
   transition: all var(--transition-interactive);
   position: relative;
+  animation: blueRedColor 6s ease-in-out infinite;
 }
 .social-link::before {
   content: '';
   position: absolute;
   inset: -4px;
   border-radius: inherit;
-  border: 1.5px solid var(--color-primary);
+  border: 1.5px solid currentColor;
   opacity: 0;
   scale: 0.8;
   transition: all 0.25s var(--ease-out-expo);
 }
-.social-link:hover { border-color: var(--color-primary); color: var(--color-primary); transform: translateY(-2px); }
+.social-link:hover { border-color: currentColor; transform: translateY(-2px); }
 .social-link:hover::before { opacity: 1; scale: 1; }
 .social-link svg { width: 22px; height: 22px; }
 
