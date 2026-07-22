@@ -175,10 +175,10 @@ function initCardTracking() {
     const isBento = card.classList.contains('bento-card');
 
     const tick = () => {
-      gx += (tx - gx) * 0.1;
-      gy += (ty - gy) * 0.1;
-      rx += (trx - rx) * 0.1;
-      ry += (trY - ry) * 0.1;
+      gx += (tx - gx) * 0.18;
+      gy += (ty - gy) * 0.18;
+      rx += (trx - rx) * 0.18;
+      ry += (trY - ry) * 0.18;
       card.style.setProperty('--gx', gx.toFixed(1));
       card.style.setProperty('--gy', gy.toFixed(1));
       if (!isBento) {
