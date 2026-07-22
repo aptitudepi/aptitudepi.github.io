@@ -168,11 +168,11 @@ function initRevealObserver() {
 function initCardTracking() {
   const tilt = (nx, ny) => ({ rx: ny * -6, ry: nx * 6 });
 
-  document.querySelectorAll('.spotlight-card, .bento-card').forEach(card => {
+  document.querySelectorAll('.spotlight-card, .bento-card, .cert-badge').forEach(card => {
     let gx = 0, gy = 0, tx = 0, ty = 0;
     let rx = 0, ry = 0, trx = 0, trY = 0;
     let raf = null;
-    const isBento = card.classList.contains('bento-card');
+    const noTilt = card.classList.contains('bento-card') || card.classList.contains('cert-badge');
 
     const tick = () => {
       gx += (tx - gx) * 0.18;
@@ -181,10 +181,10 @@ function initCardTracking() {
       ry += (trY - ry) * 0.18;
       card.style.setProperty('--gx', gx.toFixed(1));
       card.style.setProperty('--gy', gy.toFixed(1));
-      if (!isBento) {
+      if (!noTilt) {
         card.style.transform = `perspective(900px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateY(-2px)`;
       }
-      const done = Math.abs(gx - tx) < 0.3 && Math.abs(gy - ty) < 0.3 && (isBento || (Math.abs(rx) < 0.05 && Math.abs(ry) < 0.05));
+      const done = Math.abs(gx - tx) < 0.3 && Math.abs(gy - ty) < 0.3 && (noTilt || (Math.abs(rx) < 0.05 && Math.abs(ry) < 0.05));
       if (done) { raf = null; return; }
       raf = requestAnimationFrame(tick);
     };

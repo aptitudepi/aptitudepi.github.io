@@ -362,13 +362,21 @@
 .cert-badge::after {
   content: '';
   position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
-  transform: translateX(-100%);
-  transition: transform 0.5s var(--ease-out-expo);
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, currentColor 0%, transparent 70%);
+  filter: blur(20px);
+  translate: calc(var(--gx, 0) * 1px - 100px) calc(var(--gy, 0) * 1px - 100px);
+  opacity: 0;
+  transition: opacity 400ms;
+  will-change: translate;
 }
 .cert-badge:hover { transform: translateY(-3px); border-color: currentColor; }
-.cert-badge:hover::after { transform: translateX(100%); }
+.cert-badge:hover::after { opacity: 0.2; }
 .cert-badge img { width: 72px; height: 72px; border-radius: var(--radius-sm); transition: transform 250ms var(--ease-out-expo); }
 .cert-badge:hover img { transform: scale(1.08); }
 .cert-badge .cert-name { font-size: 0.625rem; color: var(--color-text-faint); text-align: center; line-height: 1.3; }
