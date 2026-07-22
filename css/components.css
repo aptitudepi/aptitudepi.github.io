@@ -351,6 +351,7 @@
   background: var(--color-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  opacity: 0;
   transition: all 250ms var(--ease-out-expo);
   cursor: pointer;
   overflow: hidden;
