@@ -29,6 +29,22 @@
 | `snake` | Playable Snake game in terminal (80x24 grid) | Medium | Medium |
 | `type` | Typing speed test using FORTUNES quotes | Medium | Medium |
 | `achievements` | Show unlocked easter egg badges | Medium | Medium |
+| `tree` | Display VFS directory structure recursively (├── format) | Low | Medium |
+| `head [-n] <file>` | Read first N lines of a VFS file | Low | Low |
+| `tail [-n] <file>` | Read last N lines of a VFS file | Low | Low |
+| `wc [file]` | Word / line / character count on output or file | Low | Low |
+| `sort` | Sort output lines alphabetically | Low | Low |
+| `uniq` | Remove adjacent duplicate lines from output | Low | Low |
+| `tee <file>` | Split output: display to terminal and write to VFS file | Medium | Low |
+| `ip` | Public IP + geolocation (city, ISP) via Worker proxy | Low | Medium |
+| `uuid [v4]` | Generate UUID v4 via Web Crypto API (no server) | Very Low | Medium |
+| `joke` | Random programming joke from JokeAPI | Low | Medium |
+| `quote` | Random advice from Advice Slip API | Low | Medium |
+| `rps <choice>` | Rock-paper-scissors against the terminal | Low | Low |
+| `quiz` | 40-question frontend quiz with XP system and 4 rank tiers | Medium | Medium |
+| `zip` / `unzip` | Simulated file compression (tar-style ASCII progress with VFS) | Medium | Low |
+| `snippet [add/show/rm]` | Code snippet vault with syntax highlighting in terminal | Low | Medium |
+| `color <value>` | Convert colors between HEX, RGB, HSL, OKLCH (Web Crypto) | Low | Medium |
 
 ### UX Enhancements
 
@@ -37,6 +53,13 @@
 - **Command auto-suggest** — ghost text showing most likely completion (like fish shell). Right arrow or Ctrl+F accepts. Medium effort.
 - **`stats` command** — commands run, uptime, keys pressed, fortune count. localStorage-persisted counters. Low effort.
 - **Keyboard shortcut cheat sheet** — `Ctrl+H` overlay listing all shortcuts (Tab, Ctrl+R, Ctrl+C, Ctrl+L, Ctrl+D, arrow keys, etc.). Low effort.
+- **Command palette** — `⌘K` / `Ctrl+K` opens a fuzzy-search overlay listing every command with live filtering. Execute any command directly from the palette. Medium effort, very high impact (sourced from khriztianmoreno).
+- **Auto-correction on typos** — Mistype `pojects` → "Did you mean `projects`?" Uses Levenshtein distance against command list. Low effort (sourced from RajdeepKushwaha5).
+- **Suggestion panel** — Live dropdown of matching commands + arguments as you type. Navigate with Tab/arrows, Esc to dismiss. Already listed as Tab completion but upgraded to a persistent panel. (sourced from terminal-portfolio-website).
+- **Paste auto-clean** — Automatically strips leading `$ `, `❯ `, `root@host:~# ` from pasted commands. Low effort, reduces friction for copy-paste visitors (sourced from RajdeepKushwaha5).
+- **Copy button on output** — Hovering any command output block shows a copy icon. Click to copy that output to clipboard. Low effort.
+- **Multiple terminal sessions** — tmux-style split panes: `Ctrl+B %` splits vertically, `Ctrl+B "` splits horizontally. Each pane has independent state. High effort, very high impact.
+- **Loading spinner variants** — 5 styles: braille dots, ASCII progress bar, typewriter cursor, dots accumulator, rotating line. Cycling `theme` or `spinner` command. Low effort (sourced from terminal-portfolio-website).
 
 ### Shell Environment
 
@@ -215,6 +238,50 @@ Very Low effort. Subtle, thematic retro effect.
 - Upgrade to CSS `text-shadow: 0.5px 0 0 rgba(0,0,255,0.3), -0.5px 0 0 rgba(255,0,0,0.3);` for LCD subpixel feel.
 - Very Low effort.
 
+### Animated SVG Blobs
+- Generative SVG blobs with morphing `d` attribute behind the hero terminal.
+- anime.js or CSS `@property` animates path between 4-6 predefined organic shapes.
+- Semi-transparent fills in blue/red palette cycle. Layer 3 blobs at different sizes/speeds.
+- Medium effort. Adds organic motion behind the rigid terminal layout (sourced from YasaminAlizadeh).
+
+### Hero Shader Displacement (WebGL)
+- Custom GLSL fragment shader as hero background: fluid displacement field that distorts toward cursor position.
+- Uses raw WebGL2 (not Three.js) for minimal bundle size (~10KB).
+- Colors match page palette. Falls back to static gradient if WebGL unavailable.
+- High effort, very high impact. Transforms the hero from static to living canvas (sourced from delowarhossain).
+
+### Ghost Cursor / Cursor Trails
+- Multiple faint cursor "ghosts" follow the real cursor with increasing delay.
+- Each ghost has `opacity: 0.15→0` and slight scale. 5-8 total.
+- Canvas-based overlay, or DOM divs with CSS transitions.
+- Low effort, medium impact. Makes cursor feel heavy and cinematic (sourced from delowarhossain).
+
+### Magnetic Text
+- Section headings subtly shift toward cursor within a bounding radius.
+- CSS custom properties + rAF lerp (same pattern as MagicCard orb).
+- Maximum offset: 8-12px. Maps to tldraw hovering effect.
+- Low effort. Makes otherwise static text feel responsive (sourced from delowarhossain).
+
+### Idle State / Wait Mode
+- After 30s of inactivity, terminal enters "wait mode": bouncing DVD-logo-style dvxb.io text, slow glitch pulses, or rotating ASCII art.
+- Click or keypress dismisses immediately. Low effort (sourced from jasonbergh/codrops).
+
+### Custom 404 Terminal Page
+- `bash: page_not_found: command not found` in large ASCII.
+- Suggest similar URLs with Levenshtein distance: "Did you mean `/projects`?"
+- Full terminal prompt available on 404 page for instant re-navigation.
+- Low effort, high personality (sourced from nomadicmehul / laxitajain).
+
+### Aura Orbs
+- 3 floating blurred radial gradients that drift slowly behind content sections.
+- Each orb is a `::before` with `filter: blur(60px)` and `animation: auraDrift` (randomized path over 20s).
+- Colors: primary blue, red, and a mix. Opacity 0.1-0.15. Very low effort (sourced from Anandhu9255).
+
+### Interactive 3D Keyboard
+- CSS 3D-transformed keyboard renders below the hero as a decorative element.
+- Keys visibly depress on actual keyboard press via `:active` styles.
+- Function row glows blue/red in sync with color cycle. Low-medium effort (sourced from YasaminAlizadeh).
+
 ---
 
 ## Animations
@@ -386,8 +453,25 @@ Surface portfolio content directly through the terminal — not just links to it
 | **Maze** | `maze` | Generate random maze with DFS, solve with BFS. Arrow keys to walk through. | Medium |
 | **Game of Life** | `life` | Conway's Game of Life on a 40×20 grid. Random seed, step/speed controls, patterns. | Medium |
 | **Pong** | `pong` | Terminal pong. Player uses Q/A keys. CPU opponent. ASCII ball + paddles. | Medium |
+| **Quiz** | `quiz` | 40-question frontend/tech quiz with XP system, 4 rank tiers, localStorage persistence. Multiple choice, timed. | Medium |
+| **RPS** | `rps` | Rock-paper-scissors against the terminal. Best of 5. Running score. Stats. | Low |
 
-### Easter Eggs / Hidden Commands
+### Interactive Adventure
+
+- `adventure` — command-line text adventure set in your own career story.
+- Start screen: character creation with trait selection (2-3 choices).
+- 5-7 "chapters" based on real career milestones.
+- Multiple endings depending on choices made (2-3 endings).
+- Unlockable achievements per ending.
+- High effort, very high impact. Makes the portfolio emotionally memorable — visitors experience your journey instead of reading it (sourced from MeeksonJr's terminal adventure game).
+
+### Hidden Mini-Game: Inspector Mode
+
+- Not a terminal command — a UI mode toggleable via `inspect` command or floating button.
+- Once active, clicking any element on the page shows a tooltip overlay with technical implementation details.
+- Powered by a data attribute lookup: `data-inspect="This card uses ::after with radial-gradient(currentColor, transparent) + blur(40px) for the orb glow."`
+- Content stored in a JS map, not DOM, to keep HTML clean.
+- Medium effort, high impact. Shows depth of craftsmanship and invites curiosity (sourced from MeeksonJr).
 
 | Trigger | Reaction |
 |---------|----------|
@@ -404,6 +488,33 @@ Surface portfolio content directly through the terminal — not just links to it
 | `emacs` | "Emacs launched. Please come back in 3-5 business days while it initializes." |
 | `nano` | Nano actually opens with a real simple text editor in the terminal. |
 | `curl <url>` | Simulated wget-style progress bar followed by "Saved to /dev/null" (or actually fetches via fetch API). |
+| `meow` / `nyan` | Cat animation with ASCII art. Multiple language variants: `cat language`, `woof`, `bark`. |
+| `party` / `disco` / `rave` | Everything turns rainbow. Text cycles through hues. Re-type to disable. |
+| `glitch` / `hack` | Temporary screen-wide glitch artifact burst, then return to normal. |
+| `flip` / `spin` / `barrel roll` | Terminal content flips upside down, spins 360°, or barrel-rolls. CSS transform. |
+| `rickroll` / `rick` | Never gonna give you up — ASCII art + lyrics in terminal. |
+| `xyzzy` | "Nothing happens." / "A cold feeling passes over you." (Colossal Cave reference) |
+| `iddqd` | "God mode activated. You feel invincible." Next command always succeeds with extra flair. |
+| `sus` / `among us` / `amogus` | Red SUS character made of ASCII block chars. |
+| `simone` | Explodes typed letters off-screen with physics animation (sourced from simoneraffaelli). |
+| `dig [hint]` | Treasure hunt: search for hidden `.secrets` file in VFS. First person to find it gets a custom message. Progress saved in localStorage (sourced from laxitajain). |
+
+### Collectibles System (Acorn Hunt)
+
+- 5-10 hidden collectibles scattered across VFS (dotfiles, nested directories, command outputs).
+- `collectibles` command shows found/total count with cryptic hints for the rest.
+- Found items saved in localStorage with timestamp.
+- Rewards: special ASCII art, secret commands, custom MOTD line, "completionist" badge.
+- Medium effort (sourced from laxitajain's acorn hunt concept).
+
+### Visual Mode Effects
+
+- `party` — rainbow color cycle on all terminal text + output. Re-type `party` to toggle.
+- `glitch` — brief screen corruption (CSS animation), self-clears after 2s.
+- `hack` — fake "breach" sequence: hex dump → loading bars → "Access Granted."
+- `ghost` — all text has `opacity: 0.6` with slight blur. Immersion mode.
+- `focus` — dims all output except the last command result. Reading mode.
+- All modes toggle with the same command. Persisted in localStorage. Low effort (sourced from simoneraffaelli).
 
 ---
 
@@ -466,6 +577,44 @@ Surface portfolio content directly through the terminal — not just links to it
 - If no blog yet, RSS of recent git commits + portfolio projects.
 - Low effort. Increases IndieWeb credibility.
 
+### PWA / Offline Support
+
+- Service Worker caching strategy: Cache-first for static assets, network-first for HTML.
+- `manifest.json` with theme color, display mode `standalone`, icon set.
+- Offline fallback page: cached version of the terminal shell (no API-dependent features).
+- Medium effort. Makes the portfolio installable on mobile home screens (sourced from anisul-islam-prog / RajdeepKushwaha5).
+
+### Data Saver Mode
+
+- Check `navigator.connection.saveData` and `navigator.connection.effectiveType`.
+- If Data Saver ON or connection is "slow-2g"/"2g": disable Three.js particles, skip heavy anime.js scroll effects, remove noise texture overlay.
+- Show subtle badge: "⚡ Data Saver — reduced animations."
+- Key commands (`help`, `whoami`, `projects`) still work fully. Low effort (sourced from jasonbergh/codrops).
+
+### DOMPurify Sanitization
+
+- Sanitize all user-generated output (guestbook entries, contact messages, AI responses) with DOMPurify before rendering in the terminal.
+- Prevents XSS via command output. Critical if accepting user input. Low effort (sourced from terminal-portfolio-website).
+
+### SSRF Protection
+
+- Any `curl`-like command or external fetch from the terminal needs URL validation.
+- Block private IP ranges (10.x, 172.16-31.x, 192.168.x, 127.x.x.x, ::1).
+- Block internal metadata endpoints (169.254.x.x, 100.x.x.x).
+- Medium effort. Security-critical for Worker proxy endpoints (sourced from terminal-portfolio-website).
+
+### `/now` Live Activity Page
+
+- "What I'm doing right now" — fetches live GitHub events via API, shows recent commits, PRs, issues.
+- Auto-refreshes every 30s. Styled as a terminal status board.
+- Low-medium effort once GitHub integration exists (sourced from delowarhossain).
+
+### `/uses` Page
+
+- Lists hardware (laptop, monitor, keyboard), software (editor, terminal, tools), and dev environment.
+- Terminal-compatible: `uses` command renders it formatted in the shell.
+- Low effort. Popular personal site convention.
+
 ---
 
 ## Top 10 by Impact/Effort
@@ -492,6 +641,16 @@ Surface portfolio content directly through the terminal — not just links to it
 | 18 | Accessibility pass (a11y) | Medium | High |
 | 19 | Secret 2048 game | Medium | Medium |
 | 20 | Easter egg commands | Low | Medium |
+| 21 | Command palette (`⌘K`) | Medium | Very High |
+| 22 | PWA + service worker | Medium | High |
+| 23 | Particle text playground | Medium | High |
+| 24 | Auto-correction on typos | Low | Medium |
+| 25 | Data saver mode | Low | Medium |
+| 26 | Hero WebGL displacement shader | High | Very High |
+| 27 | Interactive adventure game | High | Very High |
+| 28 | Animated SVG blobs | Medium | High |
+| 29 | Ghost cursor trails | Low | Medium |
+| 30 | `/now` live activity page | Medium | Medium |
 
 ---
 
@@ -666,7 +825,30 @@ All pure CSS/HTML — zero JavaScript. Sourced from [Uiverse.io](https://uiverse
 
 ---
 
-## Implementation Phases
+## Playground System
+
+Interactive canvas demos accessible from the terminal (inspired by simoneraffaelli's portfolio).
+
+| Playground | Command | Description | Tech | Effort |
+|------------|---------|-------------|------|--------|
+| **Particle Text** | `pg particletext` | Text rendered as ~2000 individual character particles. Hover scatters them with mouse repulsion physics. Spring back on leave. Cycles through phrases. | Canvas 2D + spring physics | Medium |
+| **Text Chaos** | `pg chaos` | Bouncing emoji orbs with real-time text reflow. Text flows around circular obstacles. Click to spawn orbs, drag to move, right-click to pop. | `pretext` text layout engine | Medium |
+| **Neural Network Viz** | `pg nn` | Live, animated neural network with firing nodes and pulsing connections. 3-4-3 architecture. Toggle input nodes to see forward propagation. | Canvas 2D or Three.js | Medium |
+| **Fluid Simulation** | `pg fluid` | WebGL2 fluid dynamics — dye and velocity fields. Move mouse to push "ink" through water. Beautiful chaotic patterns. | WebGL2 (Nvidia GPU Gems) | High |
+| **Game of Life** | `pg life` | Conway's Game of Life on a 60x30 grid. Click to toggle cells. Speed controls, preset patterns (glider, pulsar, spaceship). | Canvas 2D | Low |
+| **Audio Visualizer** | `pg viz` | Web Audio API generates tones → waveform + frequency bars rendered on canvas. Select waveform: sine, sawtooth, square. Adjustable frequency. | Web Audio API + Canvas | Medium |
+| **Procedural City** | `pg city` | 3D cityscape generated from random seed. Buildings of varying heights, lit windows. Orbit controls. Regenerate with new seed. | Three.js | High |
+| **Web Synthesizer** | `pg synth` | Playable keyboard synth. Keys map to piano notes. Select waveform, ADSR envelope. Record + playback short loops. | Web Audio API | Medium |
+
+### Playground Infrastructure
+
+- `pg [name]` command opens a playground in a canvas overlay over the terminal.
+- `Esc` or `exit` closes playground and returns to shell.
+- Each playground is a standalone ES module, lazy-loaded on first use.
+- Canvas resolves CSS custom properties (OKLCH → sRGB) via a 1×1 canvas readback technique for theme awareness.
+- Playgrounds are auto-registered: adding a `.js` file to `/js/playgrounds/` makes it available as `pg <filename>`.
+
+---
 
 ### Phase 1: Foundation — Smooth Scroll + Scroll-Driven Animations
 
@@ -787,6 +969,35 @@ Prioritize: `history`, `figlet`, `weather`, `man`, `calc`, `todo`, `hollywood`, 
 | Piping (`command1 \| command2`) | Intermediate buffer | High |
 
 **Result**: The terminal stops feeling like a button panel and starts feeling like a real shell.
+
+### Phase 13: Playground System
+
+| Feature | Based On | Effort |
+|---------|----------|--------|
+| Particle text playground | Canvas + physics | Medium |
+| Text chaos playground | Canvas + pretext library | Medium |
+| Fluid simulation playground | WebGL2 Nvidia GPU Gems | High |
+| Game of Life playground | Canvas 2D | Low |
+| Audio visualizer playground | Web Audio API + Canvas | Medium |
+| Playground framework (lazy-load, Esc to exit, theme sync) | Custom | Medium |
+
+**Result**: Terminal becomes a gateway to interactive demos — visitors can play with physics, audio, and WebGL without leaving the command line.
+
+### Phase 14: Infrastructure & Polish
+
+| Feature | Effort |
+|---------|--------|
+| PWA manifest + service worker | Medium |
+| Data saver mode | Low |
+| DOMPurify + SSRF protection | Medium |
+| `/now` live activity | Medium |
+| `/uses` page | Low |
+| Custom terminal 404 page | Low |
+| Inspector mode | Medium |
+| Auto-correction + suggestion panel | Medium |
+| Command palette (`⌘K`) | Medium |
+
+**Result**: Production-grade resilience, offline capability, and discoverability. Site works on a 2G connection in data saver mode, is installable on mobile, and has no XSS surface.
 
 ---
 
@@ -967,3 +1178,15 @@ html, body {
 - [wttr.in](https://github.com/chubin/wttr.in) — Console-oriented weather service. The gold standard for terminal weather UX.
 - [towel.blinkenlights.nl](https://github.com/martinhansen/towel) — Star Wars ASCII animation over telnet. Easter egg inspiration.
 - [tldr-pages](https://github.com/tldr-pages/tldr) — Simplified man pages. Inspiration for `man` command content format.
+- [khriztianmoreno.com](https://github.com/khriztianmoreno/khriztianmoreno.com) — Terminal portfolio with `⌘K` command palette, virtual filesystem, dark/light themes, `top`-style project view.
+- [simoneraffaelli portfolio](https://github.com/simoneraffaelli/portfolio) — Playground system with particle text + text chaos, command-driven UX, 30+ easter eggs. Terminal with canvas demos.
+- [laxitajain/.dev](https://github.com/laxitajain/.dev) — Linux terminal portfolio with acorn collectibles, VFS navigation (`ls`/`cd`/`cat`/`tree`), fastfetch boot, hidden dotfiles.
+- [MeeksonJr/mo-portfolio-2025](https://github.com/MeeksonJr/mo-portfolio-2025) — Terminal adventure game with character creation + multiple endings, AI chatbots (Gemini/Groq), inspector mode.
+- [nomadicmehul](https://github.com/nomadicmehul/nomadicmehul.github.io) — Terminal portfolio theme with Matrix rain, CRT scanlines, zero dependencies, `config.json` personalization.
+- [blackgolyb](https://github.com/blackgolyb/blackgolyb.github.io) — 3D WebGL CRT monitor with barrel distortion, xterm.js inside a Three.js scene. Source for CRT immersion ideas.
+- [Anandhu9255](https://github.com/Anandhu9255/Portfolio-website-personal) — Anime-VFX-inspired React portfolio with particle backgrounds, typewriter hero, rotating skill rings, aura orbs.
+- [YasaminAlizadeh](https://github.com/YasaminAlizadeh/my-portfolio) — Generative anime.js SVG blobs + interactive 3D CSS keyboard. Source for organic background ideas.
+- [delowarhossain.dev](https://github.com/mdhossain-2437/Creative-Folio) — Awwwards-grade portfolio with custom GLSL hero shader, magnetic text, ghost cursors, smooth WebGL.
+- [jasonbergh.com](https://tympanus.net/codrops/2026/02/20/cinematic-presence-the-directors-cut-of-the-jason-bergh-experience/) — Cinematic Codrops feature: wait mode, viewfinder mask, audio-synced text reveal, data saver mode.
+- [Anshuman-Tripathi](https://github.com/Anshuman-Tripathi-minato/Portfolio) — Agentic AI portfolio with dual-element cursor trails + canvas generative backgrounds. Source for cursor effects.
+- [Th3-C0der playground](https://github.com/Th3-C0der/th3-c0der.github.io) — 40+ interactive experiments: neural network viz, fluid sim, procedural city, web synth, retro games.
