@@ -4,7 +4,7 @@ const noAnim = () => prefersReduced || typeof anime === 'undefined';
 function initAnimations() {
   if (noAnim()) {
     document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
-    document.querySelectorAll('.spotlight-card, .bento-card, .cert-badge, .social-link, .section-header').forEach(el => {
+    document.querySelectorAll('.spotlight-card, .bento-card, .cert-badge, .social-link, .section-header, .about-text').forEach(el => {
       el.style.opacity = '1';
       el.style.transform = 'none';
     });
@@ -18,8 +18,10 @@ function initAnimations() {
   initCardTracking();
   initSectionDividers();
   initBentoSync();
+  initAboutScroll();
   initSocialHover();
   initCertHover();
+  initProjectLinkHover();
   initResumePulse();
   initParticleBurst();
 }
@@ -71,6 +73,7 @@ function initRevealObserver() {
           duration: 500,
           ease: 'out(3)',
           delay: idx * 100,
+          composition: 'blend',
         });
         observer.unobserve(el);
         return;
@@ -155,7 +158,7 @@ function initRevealObserver() {
 
 
   document.querySelectorAll('.section-header').forEach(el => observer.observe(el));
-  document.querySelectorAll('.about-grid').forEach(el => observer.observe(el));
+
   document.querySelectorAll('.certs-grid').forEach(el => observer.observe(el));
   document.querySelectorAll('.social-link').forEach(el => observer.observe(el));
   const resumeCta = document.querySelector('.resume-download');
@@ -232,29 +235,68 @@ function initBentoSync() {
       translateY: [16, 0],
       duration: 800,
       ease: 'out(3)',
+      composition: 'blend',
       autoplay: anime.onScroll({ sync: true }),
     });
   });
 }
 
+function initAboutScroll() {
+  const el = document.querySelector('.about-text');
+  if (!el) return;
+  el.style.opacity = '0';
+  anime.animate(el, {
+    opacity: [0, 1],
+    translateY: [16, 0],
+    duration: 1200,
+    ease: 'out(3)',
+    autoplay: anime.onScroll({ sync: true }),
+  });
+}
+
 function initSocialHover() {
+  const springBouncy = anime.createSpring({ stiffness: 320, damping: 14 });
+  const springSnap = anime.createSpring({ stiffness: 400, damping: 10 });
   document.querySelectorAll('.social-link').forEach(link => {
+    const icon = link.querySelector('svg');
     link.addEventListener('mouseenter', () => {
-      anime.animate(link, { scale: 1.15, translateY: -4, duration: 400, ease: 'spring(1, 80, 10, 0)' });
+      anime.animate(link, { scale: 1.18, translateY: -5, duration: 500, ease: springBouncy });
+      if (icon) anime.animate(icon, { rotate: [0, 10], duration: 400, ease: springSnap });
     });
     link.addEventListener('mouseleave', () => {
-      anime.animate(link, { scale: 1, translateY: 0, duration: 400, ease: 'spring(1, 80, 10, 0)' });
+      anime.animate(link, { scale: 1, translateY: 0, duration: 500, ease: springBouncy });
+      if (icon) anime.animate(icon, { rotate: [10, 0], duration: 400, ease: springSnap });
     });
   });
 }
 
 function initCertHover() {
+  const spring = anime.createSpring({ stiffness: 260, damping: 18 });
   document.querySelectorAll('.cert-badge').forEach(badge => {
     badge.addEventListener('mouseenter', () => {
-      anime.animate(badge, { scale: 1.06, duration: 300, ease: 'out(3)' });
+      anime.animate(badge, { scale: 1.07, duration: 400, ease: spring });
     });
     badge.addEventListener('mouseleave', () => {
-      anime.animate(badge, { scale: 1, duration: 300, ease: 'out(3)' });
+      anime.animate(badge, { scale: 1, duration: 400, ease: spring });
+    });
+  });
+}
+
+function initProjectLinkHover() {
+  const spring = anime.createSpring({ stiffness: 350, damping: 16 });
+  const springSnap = anime.createSpring({ stiffness: 450, damping: 10 });
+  document.querySelectorAll('.project-link').forEach(link => {
+    const arrow = link.querySelector('svg path');
+    if (!arrow) return;
+    let drawable = null;
+    link.addEventListener('mouseenter', () => {
+      anime.animate(link, { gap: '12px', duration: 300, ease: spring });
+      if (!drawable) drawable = anime.createDrawable(arrow);
+      anime.animate(drawable, { draw: ['0 0', '1 1'], duration: 300, ease: springSnap });
+    });
+    link.addEventListener('mouseleave', () => {
+      anime.animate(link, { gap: '8px', duration: 300, ease: spring });
+      if (drawable) anime.animate(drawable, { draw: ['1 1', '0 0'], duration: 300, ease: springSnap });
     });
   });
 }
