@@ -13,8 +13,11 @@ function initAnimations() {
 
   initMotionIntegration();
   initScrollProgress();
+  initHeroTimeline();
   initRevealObserver();
   initCardTracking();
+  initSectionDividers();
+  initBentoSync();
   initSocialHover();
   initCertHover();
   initResumePulse();
@@ -29,6 +32,15 @@ function initMotionIntegration() {
     window.Motion = { animate, scroll, inView, hover, spring };
   `;
   document.body.appendChild(script);
+}
+
+function initHeroTimeline() {
+  const dots = document.querySelectorAll('.terminal-dot');
+  const title = document.querySelector('.terminal-title');
+  if (!dots.length || !title) return;
+  anime.createTimeline()
+    .add(dots, { scale: [0, 1], opacity: [0, 1], duration: 200, ease: 'out(3)' }, 0)
+    .add(title, { opacity: [0, 1], translateY: [-6, 0], duration: 300, ease: 'out(3)' }, 250);
 }
 
 function initScrollProgress() {
@@ -51,7 +63,7 @@ function initRevealObserver() {
       if (!entry.isIntersecting) return;
       const el = entry.target;
 
-      if (el.classList.contains('spotlight-card') || el.classList.contains('bento-card')) {
+      if (el.classList.contains('spotlight-card')) {
         const idx = parseInt(el.dataset.index) || 0;
         anime.animate(el, {
           opacity: [0, 1],
@@ -64,14 +76,15 @@ function initRevealObserver() {
         return;
       }
 
-      if (el.classList.contains('cert-badge')) {
-        const idx = Array.from(el.parentElement.children).indexOf(el);
-        anime.animate(el, {
+      if (el.classList.contains('certs-grid')) {
+        const badges = el.querySelectorAll('.cert-badge');
+        const cols = window.innerWidth < 768 ? 2 : 4;
+        anime.animate(badges, {
           opacity: [0, 1],
           translateY: [12, 0],
-          duration: 200,
+          duration: 300,
           ease: 'out(3)',
-          delay: idx * 30,
+          delay: anime.stagger(30, { grid: [cols, Math.ceil(badges.length / cols)], from: 'center' }),
         });
         observer.unobserve(el);
         return;
@@ -138,12 +151,12 @@ function initRevealObserver() {
   }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
 
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-  document.querySelectorAll('.spotlight-card, .bento-card').forEach(el => observer.observe(el));
+  document.querySelectorAll('.spotlight-card').forEach(el => observer.observe(el));
 
   document.querySelectorAll('.social-grid').forEach(el => observer.observe(el));
   document.querySelectorAll('.section-header').forEach(el => observer.observe(el));
   document.querySelectorAll('.about-grid').forEach(el => observer.observe(el));
-  document.querySelectorAll('.cert-badge').forEach(el => observer.observe(el));
+  document.querySelectorAll('.certs-grid').forEach(el => observer.observe(el));
   document.querySelectorAll('.social-link').forEach(el => observer.observe(el));
   const resumeCta = document.querySelector('.resume-download');
   if (resumeCta) observer.observe(resumeCta);
@@ -189,6 +202,37 @@ function initCardTracking() {
       tx = -250; ty = -250;
       trx = 0; trY = 0;
       if (!raf) raf = requestAnimationFrame(tick);
+    });
+  });
+}
+
+function initSectionDividers() {
+  const paths = document.querySelectorAll('.section-divider svg path');
+  if (!paths.length) return;
+  const divs = document.querySelectorAll('.section-divider');
+  divs.forEach((div, i) => {
+    const path = div.querySelector('svg path');
+    if (!path) return;
+    const drawable = anime.createDrawable(path);
+    anime.animate(drawable, {
+      draw: ['0 0', '1 1'],
+      duration: 2000,
+      ease: 'inOut(3)',
+      delay: i * 200,
+      autoplay: anime.onScroll({ sync: true }),
+    });
+  });
+}
+
+function initBentoSync() {
+  document.querySelectorAll('.bento-card').forEach(card => {
+    card.style.opacity = '0';
+    anime.animate(card, {
+      opacity: [0, 1],
+      translateY: [16, 0],
+      duration: 800,
+      ease: 'out(3)',
+      autoplay: anime.onScroll({ sync: true }),
     });
   });
 }
