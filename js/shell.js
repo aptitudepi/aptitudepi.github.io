@@ -1,3 +1,5 @@
+import { generateOutput, showModelSelector, switchModel } from './ai.js';
+
 const pageLoadTime = Date.now();
 
 const ANSI_RESET = '\x1b[0m';
@@ -488,10 +490,14 @@ function helpText(term) {
     ['echo <text>', 'Print text'],
     ['clear', 'Clear terminal'],
     ['neofetch', 'Display system & resume info'],
+    ['about', 'Show a longer bio about me'],
     ['fortune', 'Random programming quote'],
     ['cowsay <msg>', 'Cow says your message'],
     ['matrix', 'Toggle matrix rain overlay'],
     ['vm', 'Boot Buildroot Linux VM'],
+    ['ai <prompt>', 'Talk to local AI'],
+    ['ai-models', 'List AI models'],
+    ['ai-model <id>', 'Switch AI model (0-4)'],
     ['help', 'Show this help'],
   ];
   term.writeln(`${ANSI_BOLD}${SITE_WHITE}Available commands${ANSI_RESET}`);
@@ -583,6 +589,19 @@ function executeCommand(input, term) {
     case 'resfetch':
       neofetch(term);
       break;
+    case 'about':
+      term.writeln(`${SITE_WHITE}Devkumar Banerjee${ANSI_RESET}`);
+      term.writeln(`${SITE_MUTED}───────────────${ANSI_RESET}`);
+      term.writeln(`${SITE_WHITE}CS Honors @ Texas A&M University${ANSI_RESET}`);
+      term.writeln(`Builder of terminal-themed portfolios with ${SITE_CYAN}xterm.js${ANSI_RESET}`);
+      term.writeln(`frosted glass UI, ${SITE_CYAN}Three.js${ANSI_RESET} particle effects, and a`);
+      term.writeln(`local AI assistant running ${SITE_CYAN}Transformers.js${ANSI_RESET} in-browser`);
+      term.writeln(`(WASM/WebGPU). Systems tinkerer, researcher, and open-source`);
+      term.writeln(`contributor. Interested in ML infrastructure, developer tooling,`);
+      term.writeln(`and building things that feel alive.`);
+      term.writeln(`cv: ${SITE_BLUE}https://dvxb.io${ANSI_RESET}`);
+      term.writeln(`gh: ${SITE_BLUE}https://github.com/aptitudepi${ANSI_RESET}`);
+      break;
     case 'fortune':
       if (FORTUNES.length) {
         term.writeln(`${SITE_WHITE}${FORTUNES[Math.floor(Math.random() * FORTUNES.length)]}${ANSI_RESET}`);
@@ -636,6 +655,20 @@ function executeCommand(input, term) {
         window.bootVM(term);
       } else {
         term.writeln(`${SITE_ERR}VM module not loaded${ANSI_RESET}`);
+      }
+      break;
+    case 'ai':
+    case 'llm':
+      generateOutput(args.join(' '), term).then(() => writePrompt(term));
+      return;
+    case 'ai-models':
+      showModelSelector(term);
+      break;
+    case 'ai-model':
+      if (args.length) {
+        switchModel(args[0], term);
+      } else {
+        showModelSelector(term);
       }
       break;
     default:
