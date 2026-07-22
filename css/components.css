@@ -136,8 +136,8 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: url("#liquid-glass") blur(12px);
+  -webkit-backdrop-filter: url("#liquid-glass") blur(12px);
   overflow: hidden;
   transition: border-color 300ms var(--ease-out-expo), transform 300ms var(--ease-out-expo);
   animation: blueRedColor 6s ease-in-out infinite;
@@ -154,11 +154,24 @@
   opacity: 0;
   transition: opacity 300ms;
 }
+.spotlight-card::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 8%, transparent) 0%, transparent 70%);
+  filter: blur(40px);
+  translate: calc(var(--gx, 0) * 1px - 250px) calc(var(--gy, 0) * 1px - 250px);
+  opacity: 0;
+  transition: opacity 400ms;
+  will-change: translate;
+}
 .spotlight-card:hover {
   border-color: currentColor;
-  transform: translateY(-2px);
 }
-.spotlight-card:hover::before {
+.spotlight-card:hover::before, .spotlight-card:hover::after {
   opacity: 1;
 }
 .spotlight-card .tags {
@@ -211,20 +224,36 @@
   padding: var(--space-4) 0;
 }
 .bento-card {
+  position: relative;
   padding: var(--space-6);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: url("#liquid-glass") blur(12px);
+  -webkit-backdrop-filter: url("#liquid-glass") blur(12px);
+  overflow: hidden;
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite;
 }
+.bento-card::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 6%, transparent) 0%, transparent 70%);
+  filter: blur(30px);
+  translate: calc(var(--gx, 0) * 1px - 200px) calc(var(--gy, 0) * 1px - 200px);
+  opacity: 0;
+  transition: opacity 400ms;
+  will-change: translate;
+}
 .bento-card:hover {
   border-color: currentColor;
-  transform: translateY(-2px);
   box-shadow: 0 4px 20px var(--color-primary-dim);
 }
+.bento-card:hover::after { opacity: 1; }
 .mono-tag {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
@@ -268,12 +297,37 @@
   font-family: var(--font-display);
   font-size: 0.875rem;
   font-weight: 500;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
+}
+.view-more-cta a::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-primary-dim);
+  z-index: -1;
+  transition: transform 0.3s cubic-bezier(0,0,0.5,2), width 0.3s cubic-bezier(0,0,0.5,2);
 }
 .view-more-cta a:hover {
   border-color: currentColor;
   color: currentColor;
+  animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
+}
+.view-more-cta a:hover::before {
+  width: 100%;
+  height: 100%;
+  right: 0;
+  border-radius: var(--radius-full);
+  transform: translateY(-50%);
+  transition: transform 0.25s cubic-bezier(0,0,0.5,2), width 0.25s cubic-bezier(0,0,0.5,2), border-radius 0.25s ease;
 }
 
 /* ── Certifications ────────────────────────── */
@@ -344,14 +398,38 @@
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 1.0625rem;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
-.resume-download a:hover {
+.resume-download a::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  transform: translateY(-50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
   background: var(--color-primary-dim);
+  z-index: -1;
+  transition: transform 0.3s cubic-bezier(0,0,0.5,2), width 0.3s cubic-bezier(0,0,0.5,2);
+}
+.resume-download a:hover {
+  background: var(--color-glass);
   border-color: currentColor;
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
   transform: translateY(-2px) scale(1.02);
+}
+.resume-download a:hover::before {
+  width: 100%;
+  height: 100%;
+  right: 0;
+  border-radius: var(--radius-full);
+  transform: translateY(-50%);
+  transition: transform 0.25s cubic-bezier(0,0,0.5,2), width 0.25s cubic-bezier(0,0,0.5,2), border-radius 0.25s ease;
 }
 
 /* ── Contact / Social ──────────────────────── */

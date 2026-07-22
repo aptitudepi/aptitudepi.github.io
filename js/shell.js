@@ -372,6 +372,24 @@ function bootSequence(term, onDone) {
     ];
   }
   let i = 0;
+  function typeMessage(msg) {
+    const str = `${msg.color}${msg.text}${ANSI_RESET}`;
+    let ci = 0;
+    function typeChar() {
+      if (ci >= str.length) {
+        term.write('\r\n');
+        i++;
+        setTimeout(writeNext, 60);
+        return;
+      }
+      term.write(str[ci]);
+      ci++;
+      const variance = 20 + Math.random() * 60;
+      const pause = ci === str.length - 1 ? variance * 3 : variance;
+      setTimeout(typeChar, pause);
+    }
+    typeChar();
+  }
   function writeNext() {
     if (i >= BOOT_MSGS.length) {
       neofetch(term);
@@ -381,10 +399,7 @@ function bootSequence(term, onDone) {
       }, 300);
       return;
     }
-    const msg = BOOT_MSGS[i];
-    term.writeln(`${msg.color}${msg.text}${ANSI_RESET}`);
-    i++;
-    setTimeout(writeNext, 60);
+    typeMessage(BOOT_MSGS[i]);
   }
   writeNext();
 }

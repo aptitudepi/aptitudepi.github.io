@@ -29,7 +29,9 @@
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; transition: none; }
-  .spotlight-card::before, .spotlight-card:hover::before { opacity: 0; transition: none; }
+  .spotlight-card::before, .spotlight-card:hover::before,
+  .spotlight-card::after, .spotlight-card:hover::after,
+  .bento-card::after, .bento-card:hover::after { opacity: 0; transition: none; }
   .cert-badge:hover, .spotlight-card:hover, .bento-card:hover { transform: none; }
   .about-image .frame { animation: none; }
   .section-header h2 { animation: none; background-size: 100% 100%; }
