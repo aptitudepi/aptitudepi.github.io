@@ -161,6 +161,8 @@
 .spotlight-card::before {
   content: '';
   position: absolute;
+  top: 0;
+  left: 0;
   width: 300px;
   height: 300px;
   border-radius: 50%;
@@ -173,6 +175,8 @@
 .spotlight-card::after {
   content: '';
   position: absolute;
+  top: 0;
+  left: 0;
   pointer-events: none;
   width: 500px;
   height: 500px;
@@ -187,8 +191,11 @@
 .spotlight-card:hover {
   border-color: currentColor;
 }
-.spotlight-card:hover::before, .spotlight-card:hover::after {
+.spotlight-card:hover::before {
   opacity: 1;
+}
+.spotlight-card:hover::after {
+  opacity: 0.25;
 }
 .spotlight-card .tags {
   display: flex;
@@ -255,6 +262,8 @@
 .bento-card::after {
   content: '';
   position: absolute;
+  top: 0;
+  left: 0;
   pointer-events: none;
   width: 400px;
   height: 400px;
@@ -270,7 +279,7 @@
   border-color: currentColor;
   box-shadow: 0 4px 24px currentColor;
 }
-.bento-card:hover::after { opacity: 1; }
+.bento-card:hover::after { opacity: 0.2; }
 .mono-tag {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
