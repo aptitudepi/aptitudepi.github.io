@@ -30,6 +30,7 @@
   html { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .bento-card { opacity: 1; }
+  .social-link { opacity: 1; }
   .spotlight-card::before, .spotlight-card:hover::before,
   .spotlight-card::after, .spotlight-card:hover::after,
   .bento-card::after, .bento-card:hover::after { opacity: 0; transition: none; }

@@ -153,7 +153,7 @@ function initRevealObserver() {
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
   document.querySelectorAll('.spotlight-card').forEach(el => observer.observe(el));
 
-  document.querySelectorAll('.social-grid').forEach(el => observer.observe(el));
+
   document.querySelectorAll('.section-header').forEach(el => observer.observe(el));
   document.querySelectorAll('.about-grid').forEach(el => observer.observe(el));
   document.querySelectorAll('.certs-grid').forEach(el => observer.observe(el));

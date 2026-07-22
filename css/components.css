@@ -470,6 +470,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   color: var(--color-text-muted);
+  opacity: 0;
   transition: all var(--transition-interactive);
   position: relative;
   animation: blueRedColor 6s ease-in-out infinite;
