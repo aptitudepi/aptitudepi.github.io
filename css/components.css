@@ -475,7 +475,6 @@
   animation: blueRedColor 6s ease-in-out infinite;
 }
 .social-link:hover { border-color: currentColor; background: color-mix(in srgb, currentColor 18%, transparent); transform: translateY(-2px); }
-.social-link:hover svg { color: #000; }
 .social-link svg { width: 22px; height: 22px; }
 
 .footer { text-align: center; padding: var(--space-6); background: var(--color-glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--color-text-faint); font-size: 0.75rem; }
