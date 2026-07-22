@@ -186,7 +186,6 @@
 }
 .spotlight-card:hover {
   border-color: currentColor;
-  background: color-mix(in srgb, currentColor 18%, transparent);
 }
 .spotlight-card:hover::before, .spotlight-card:hover::after {
   opacity: 1;
@@ -269,8 +268,7 @@
 }
 .bento-card:hover {
   border-color: currentColor;
-  background: color-mix(in srgb, currentColor 18%, transparent);
-  box-shadow: 0 4px 20px var(--color-primary-dim);
+  box-shadow: 0 4px 20px color-mix(in srgb, currentColor 35%, transparent);
 }
 .bento-card:hover::after { opacity: 1; }
 .mono-tag {
@@ -360,7 +358,7 @@
   transform: translateX(-100%);
   transition: transform 0.5s var(--ease-out-expo);
 }
-.cert-badge:hover { transform: translateY(-3px); border-color: currentColor; background: color-mix(in srgb, currentColor 18%, transparent); }
+.cert-badge:hover { transform: translateY(-3px); border-color: currentColor; }
 .cert-badge:hover::after { transform: translateX(100%); }
 .cert-badge img { width: 72px; height: 72px; border-radius: var(--radius-sm); transition: transform 250ms var(--ease-out-expo); }
 .cert-badge:hover img { transform: scale(1.08); }
