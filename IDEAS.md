@@ -112,6 +112,25 @@ Very Low effort. Subtle, thematic retro effect.
 - Hides the "too clean" look of pure glass
 - Popular on Apple's Liquid Glass. Low effort.
 
+### Border Beam
+- Animated conic-gradient beam traveling along container border using CSS `@property --beam-angle` + `mask-composite: exclude`
+- Applied to CTA buttons (GitHub, Resume download) — instant visual pop
+- Beam cycles blue → red → dim blue through host palette
+- Low effort, high impact. Verified working.
+
+### Magnetic Button Effect
+- SVG inside social-link buttons follows cursor position within link bounds with spring-physics interpolation
+- JavaScript: `mousemove` → `getBoundingClientRect()` → normalized offset → `requestAnimationFrame` lerp → `--mag-x`/`--mag-y` custom properties
+- CSS: `transform: translate(var(--mag-x), var(--mag-y))` with `will-change: transform`
+- Social link container scales to 1.18 on `mouseenter` (spring-physics via anime.js)
+- Medium effort, high impact. Makes static links feel alive.
+
+### AI Loading Spinner
+- Animated emoji sequence (🌒🌓🌔🌕🌖🌗🌘) displayed during Transformers.js model loading
+- Spinner replaces "Loading..." text, updates every 150ms via `setInterval`
+- Cleared when AI pipeline resolves or on error
+- Very low effort, medium impact. Gives user feedback during 5-15s WASM model load.
+
 ### Theme System
 - 5-8 themes accessible via `theme <name>`: Dracula, Matrix (green), Amber, Ocean, Nord, default
 - CSS custom properties swapped at runtime
@@ -141,6 +160,30 @@ Very Low effort. Subtle, thematic retro effect.
 - Each word staggers in sequentially (50ms delay between words)
 - Uses IntersectionObserver + CSS transitions
 - Low effort, medium impact.
+
+### Character-by-Character Heading Reveal
+- Each letter of section `<h2>` is wrapped in a `<span>` with `display: inline-block`
+- Spans start `opacity: 0; transform: translateY(20px)` — staggered in at 25ms intervals via `setTimeout` on scroll reveal
+- `IntersectionObserver` with `threshold: 0.5` ensures it triggers once per heading
+- Subtle premium feel. Low effort.
+
+### Hero Entrance Animation
+- Terminal panel fades in on page load with `opacity: 0 → 1`, `transform: scale(0.97 → 1)`, `filter: blur(6px → 0)`
+- CSS `@keyframes heroEntrance { to { opacity: 1; transform: scale(1); filter: blur(0); } }` with 1s `var(--ease-out-expo)` 100ms delay
+- `animation-fill-mode: forwards` retains final state
+- Very low effort, makes page load feel intentional.
+
+### Smooth Spotlight Tracking (RAF)
+- Spotlight card `mousemove` handler drives a `requestAnimationFrame` loop with lerp factor 0.15
+- Target xy from mouse event → current xy converges with spring-like smoothness
+- `mouseleave` cancels RAF, resets to center
+- Upgrade from raw mousemove (jittery on low-DPI screens). Low effort.
+
+### Blur + Fade Scroll Reveal
+- `.reveal` class extended with `filter: blur(4px)` transitioning to `blur(0)` on `.visible`
+- Smoother entry than raw opacity + translateY alone — masks initial jank
+- Still `transition: opacity 600ms, transform 600ms, filter 600ms`
+- Trivial effort (one CSS property per reveal class).
 
 ### 3D Tilt Cards (from kokonutui SpotlightCards)
 - Project cards rotate in 3D space toward cursor with spring-physics
