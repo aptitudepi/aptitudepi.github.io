@@ -36,6 +36,28 @@
 - **`Ctrl+R` reverse search** — incremental search through CMD_HISTORY. Standard bash behavior. Medium effort, high impact.
 - **Command auto-suggest** — ghost text showing most likely completion (like fish shell). Right arrow or Ctrl+F accepts. Medium effort.
 - **`stats` command** — commands run, uptime, keys pressed, fortune count. localStorage-persisted counters. Low effort.
+- **Keyboard shortcut cheat sheet** — `Ctrl+H` overlay listing all shortcuts (Tab, Ctrl+R, Ctrl+C, Ctrl+L, Ctrl+D, arrow keys, etc.). Low effort.
+
+### Shell Environment
+
+Transform the terminal from a command-dispatch facade into a real-feeling shell environment.
+
+| Feature | Description | Effort | Impact |
+|---------|-------------|--------|--------|
+| **Command piping (`\|`)** | Chain commands: `fortune \| cowsay`. Stdout of first feeds stdin of next. Right-associative. | High | Very High |
+| **Shell variables** | `$USER`, `$HOSTNAME`, `$PWD`, `$SHELL`, `$EDITOR`. `echo $VAR` and `export VAR=val`. | Medium | High |
+| **Output redirection** | `>`, `>>`, `2>` operators for stdout/stderr. `echo "note" > ~/notes.txt` actually writes to VFS. | Medium | High |
+| **Scripting mode** | Multi-line input with `\` continuation or `for i in 1 2 3; do ... done` blocks. | High | Medium |
+| **Command substitution** | `$(cmd)` or backtick expansion: `echo "Today is $(date)"`. | Medium | Medium |
+| **`cowsay`/`ponysay`** | Classic ASCII art speech bubble. Pipe-friendly: `fortune \| cowsay`. | Low | Medium |
+| **`fortune -l`** | Long fortunes. `fortune -c` shows category. Categories: wisdom, code, philosophy, humor. | Low | Low |
+| **`cmatrix`** | Matrix rain in the terminal (already have full-screen overlay, but in-terminal version is different). | Low | Medium |
+| **`yes <text>`** | Repeatedly outputs text until Ctrl+C. | Very Low | Low |
+| **`banner <text>`** | Large ASCII banner text (hash-based). | Low | Medium |
+| **`watch <cmd>`** | Run command repeatedly, clear screen between runs. `watch -n 2 date`. | Low | Medium |
+| **`env`** | List all shell environment variables and their values. | Very Low | Medium |
+| **`which <cmd>`** | Show path to a command in the VFS. | Very Low | Low |
+| **`alias`** | Define and list command aliases persisted in localStorage. | Low | Medium |
 
 ---
 
@@ -66,6 +88,33 @@
 - Visualized as waveform bars in the terminal header
 - Demo mode generates synthetic audio
 - Could sync with particles for audio-reactive color shifts
+
+---
+
+## Integrations
+
+Beyond music — hook the terminal into the services the user actually visits daily.
+
+| Integration | Command | Data Source | Effort | Impact |
+|-------------|---------|-------------|--------|--------|
+| **Hacker News** | `hn [top/new/show/ask]` | Firebase API (free, no auth) | Low | High |
+| **GitHub notifications** | `gh notify` | GitHub API notifications endpoint | Medium | High |
+| **Dev.to articles** | `devto` | Dev.to API (free, no auth) | Low | Medium |
+| **Stack Overflow rep** | `so` | Stack Exchange API | Low | Medium |
+| **Goodreads reading** | `books` | Goodreads RSS → Worker parser | Low | Medium |
+| **YouTube subscriber count** | `yt <channel>` | YouTube Data API via Worker | Low | Medium |
+| **Strava** | `strava` | Strava API, OAuth stored in Worker | Medium | Medium |
+| **Steam game library** | `steam <user>` | Steam API (free, no auth needed for public) | Low | Low |
+| **Crypto prices** | `crypto [btc/eth/sol]` | CoinGecko API (free, no auth) | Very Low | Medium |
+| **Stock ticker** | `stock <SYMBOL>` | Finnhub or Yahoo Finance via Worker | Low | Medium |
+| **Reddit** | `reddit <subreddit>` | Reddit JSON API (.json suffix, no auth) | Low | Medium |
+| **Weather maps** | `weather -m` | OpenWeatherMap tiles or wttr.in ANSI | Medium | Low |
+
+### Composite Commands
+
+- `mood` — aggregates weather + last played track + GitHub streak + today's commits into one status readout. Medium effort.
+- `day` — morning dashboard: weather, calendar events (if Google Calendar linked), HN top story, random fortune. Low effort once integrations exist.
+- `whereis db` — geo-IP lookup via Worker + Cloudflare Trace. Replies with approximate city and ISP. Low effort.
 
 ---
 
@@ -136,6 +185,35 @@ Very Low effort. Subtle, thematic retro effect.
 - CSS custom properties swapped at runtime
 - Persisted in localStorage
 - Medium effort, high impact.
+
+### Halation / Glow Bleed
+- Simulates CRT bloom: bright elements bleed into surrounding dark areas.
+- CSS `box-shadow` with `color-mix(in srgb, currentColor 60%, transparent)` on text, borders, and glowing elements.
+- Subtle on white text, pronounced on bright colored elements. Very Low effort.
+
+### Phosphor Burn-in
+- Faint ghost of the boot sequence text persists for ~30s after boot, slowly fading.
+- CSS `::after` on terminal body with `mix-blend-mode: difference`, animated opacity.
+- Low effort. Niche retro effect that rewards repeat visitors.
+
+### Static Interference (VHS Noise)
+- Brief full-screen static burst as transition between sections.
+- Canvas 2D with random pixel noise, 120ms duration.
+- `Ctrl` key press also triggers subtle static. Low effort.
+
+### Dirty Glass Smudge
+- Semi-transparent SVG overlay on glass cards with blurred grease spots.
+- Randomly generated at page load so no two visits look identical.
+- Very low effort once NoiseTexture SVG approach is proven.
+
+### Lens Flare on Light Elements
+- Conic-gradient pseudo-elements positioned at "light source" (cursor, glowing border corners).
+- Fades in/out on hover. Pure CSS. Low effort.
+
+### Subpixel Rendering Emulation
+- Slight RGB color fringing on terminal text edges (Chromatic Aberration, already listed).
+- Upgrade to CSS `text-shadow: 0.5px 0 0 rgba(0,0,255,0.3), -0.5px 0 0 rgba(255,0,0,0.3);` for LCD subpixel feel.
+- Very Low effort.
 
 ---
 
@@ -272,11 +350,121 @@ Very Low effort. Subtle, thematic retro effect.
 
 ---
 
+## Terminal Content & Portfolio
+
+Surface portfolio content directly through the terminal — not just links to it.
+
+| Feature | Command | Description | Effort |
+|---------|---------|-------------|--------|
+| **Resume viewer** | `cat resume.md` | Renders a markdown resume with ANSI headers, bullet lists, horizontal rules. Source: `~/.resume.md` in VFS. | Low |
+| **Project browser** | `projects [filter]` | Lists projects from page content. `projects web` filters by tag. `projects --json` for machine output. | Low |
+| **Case studies** | `case <name>` | Full case study rendered in terminal: problem, approach, tech, outcome. Source: markdown in VFS. | Medium |
+| **Skill graph** | `skills` | ASCII bar chart of skill proficiency. Bars are ANSI blocks with color gradient. | Low |
+| **Timeline** | `timeline` | Chronological career/education timeline as ASCII tree. Years on left, events branching right. | Low |
+| **Guestbook** | `guestbook [add/list]` | Leave a message or browse all visitor messages. Persisted via Durable Object or KV. | Medium |
+| **Contact form** | `contact <message>` | Sends message via Cloudflare Email Worker. Prompt for email, validate, send. | Medium |
+| **Blog reader** | `blog [list/show <id>]` | Browse and read markdown blog posts. Rendered with ANSI formatting, images as links. | High |
+| **Reading stats** | `stats --reading` | Total blog words read across sessions, time spent, articles completed. | Low |
+| **Changelog** | `changelog` | Recent git commits displayed as a terminal-friendly changelog. Source: git log fetch via Worker. | Low |
+
+### Markdown Rendering in Terminal
+
+- Basic markdown → ANSI conversion: `#` → bold magenta, `##` → bold cyan, `-` → bullet with indent, `**bold**` → ANSI bold.
+- Code blocks get a green border and monospace. Links show `[text](url)` with url dimmed.
+- Render engine: simple regex-based converter, 200 lines. Reusable for `cat`, `blog`, `case`.
+- Low effort, very high impact. Makes the terminal feel like a real content platform.
+
+---
+
+| Game | Command | Description | Effort |
+|------|---------|-------------|--------|
+| **2048** | `2048` | Slide tiles to merge powers of 2. 4×4 grid, WASD, score tracking. | Medium |
+| **Tetris** | `tetris` | Classic falling blocks. 10×20 grid, WASD/arrow rotate, score + lines. | High |
+| **Minesweeper** | `mines` | 9×9 grid with 10 mines. WASD nav, space to reveal, F to flag. | Medium |
+| **Hangman** | `hangman` | Word guessing from fortunes dictionary. Hard mode: coding terminology only. | Low |
+| **Dungeon** | `dungeon` | Text adventure. Simple 5-room map with items, doors, and a win condition. | Medium |
+| **Maze** | `maze` | Generate random maze with DFS, solve with BFS. Arrow keys to walk through. | Medium |
+| **Game of Life** | `life` | Conway's Game of Life on a 40×20 grid. Random seed, step/speed controls, patterns. | Medium |
+| **Pong** | `pong` | Terminal pong. Player uses Q/A keys. CPU opponent. ASCII ball + paddles. | Medium |
+
+### Easter Eggs / Hidden Commands
+
+| Trigger | Reaction |
+|---------|----------|
+| `42` | "The answer to life, the universe, and everything." Fade in Douglas Adams quote. |
+| `coffee` | "brew: illegal option -- all\nUsage: brew install caffeine\nError: no room in mug" |
+| `rm -rf /` | "rm: /.bash_profile: Permission denied\nrm: /.ssh: Permission denied\n... nice try." |
+| `rm -rf .` | "Congratulations, you played yourself." (no actual deletion) |
+| `:(){ :\|:& };:` | The fork bomb ASCII art with a comedic "whoa there, cowboy" response |
+| `make me a sandwich` | "What? Make it yourself." / "sudo make me a sandwich" → "Okay." |
+| `apt-get install <anything>` | Simulated apt output ending in "0 upgraded, 0 newly installed, 0 to remove." |
+| `telnet <anything>` | Star Wars ASCII animation (like the real `telnet towel.blinkenlights.nl`) |
+| `kubectl` | "kubectl: command not found. Did you mean `docker`?" → "docker: command not found." |
+| `vim` | ":q to exit — wait, no, :q! — ESC : q ! ENTER — okay, :wq — actually just Ctrl+Alt+Del" |
+| `emacs` | "Emacs launched. Please come back in 3-5 business days while it initializes." |
+| `nano` | Nano actually opens with a real simple text editor in the terminal. |
+| `curl <url>` | Simulated wget-style progress bar followed by "Saved to /dev/null" (or actually fetches via fetch API). |
+
+---
+
 ## Infrastructure
 
 - **Visitor counter** — Cloudflare Worker + KV for daily unique visits (IP-hashed). `visitors` command.
 - **GitHub stars widget** — Worker aggregates stars across repos with 1h cache. Display in MOTD or `gh` command.
 - **Lenis smooth scroll** — replace native scroll for scroll-triggered animation coherence.
+
+---
+
+## Developer Infrastructure
+
+### CI / Automated Quality
+
+| Tool | What It Does | Effort |
+|------|--------------|--------|
+| **Lighthouse CI** | GitHub Action running Lighthouse on every PR. Reports performance, a11y, SEO scores. | Low |
+| **Bundle size tracking** | GitHub Action + status check for JS/CSS bundle deltas. Alerts on regressions. | Low |
+| **Visual regression** | Playwright snapshots of hero, terminal, cards. Catches unintended CSS changes. | Medium |
+| **A11y audit** | `axe-playwright` integration in CI. Scans each page section for WCAG violations. | Low |
+| **HTML validator** | `html-validate` or W3C validator in CI. Catches unclosed tags, duplicate IDs. | Very Low |
+
+### Performance Budgets
+
+| Metric | Target | Enforcement |
+|--------|--------|-------------|
+| Total JS (gzip) | < 150 KB | Bundle analyzer in CI |
+| Total CSS (gzip) | < 30 KB | CSS stats in CI |
+| FCP | < 1.5s | Lighthouse CI |
+| LCP | < 2.0s | Lighthouse CI |
+| CLS | < 0.1 | Lighthouse CI |
+| TBT | < 200ms | Lighthouse CI |
+
+### Security Headers
+
+- Add `Content-Security-Policy` header via Cloudflare Worker or Pages `_headers`.
+- Strict CSP: no `unsafe-inline` for scripts (anime.js needs hashes or nonces).
+- `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`.
+- Medium effort (CSP especially tricky with anime.js + inline event handlers).
+
+### Resource Hints & Preloading
+
+| Hint | Target | Why |
+|------|--------|-----|
+| `preconnect` | Google Fonts, Cloudflare CDN | Warm DNS + TLS before fetch |
+| `preload` | hero-terminal CSS, fonts, anime.js | Critical render path assets |
+| `prefetch` | Three.js, Transformers.js | Idle-time fetch for below-fold deps |
+| `modulepreload` | `js/main.js` | ES module graph preload |
+
+### Sitemap & Robots
+
+- Auto-generated `sitemap.xml` from section IDs + terminal commands list. Very Low effort.
+- `robots.txt` allowing all crawlers but pointing to sitemap. Very Low effort.
+- `humans.txt` — standard "built by" file. Trivial.
+
+### RSS Feed
+
+- Generate `feed.xml` listing portfolio projects, blog posts, and changelog entries.
+- If no blog yet, RSS of recent git commits + portfolio projects.
+- Low effort. Increases IndieWeb credibility.
 
 ---
 
@@ -294,10 +482,56 @@ Very Low effort. Subtle, thematic retro effect.
 | 8 | `figlet` command | Low | Medium |
 | 9 | `hollywood` command | Low | High |
 | 10 | Multiple color themes | Medium | High |
+| 11 | Shell variables + piping | High | Very High |
+| 12 | `hn` — Hacker News reader | Low | High |
+| 13 | Guestbook + live visitor counter | Medium | High |
+| 14 | Resume `cat resume.md` | Low | Medium |
+| 15 | Markdown rendering engine | Low | Very High |
+| 16 | CRT static transition (VHS noise) | Low | Medium |
+| 17 | Performance budget + CI | Low | Medium |
+| 18 | Accessibility pass (a11y) | Medium | High |
+| 19 | Secret 2048 game | Medium | Medium |
+| 20 | Easter egg commands | Low | Medium |
 
 ---
 
-## Sources / References
+## Accessibility
+
+### Quick Wins (Low Effort)
+
+| Fix | Description |
+|-----|-------------|
+| **Skip to content** | First focusable element after `<body>`. Skips terminal, nav, goes to about section. |
+| **Focus indicator** | Visible `outline` or `box-shadow` ring on `:focus-visible` for all interactive elements. Current: removed. |
+| **Terminal role** | `role="terminal"` or `role="log"` on xterm container. `aria-live="polite"` for output area. |
+| **Reduced motion audit** | Verify every anime.js animation respects `prefers-reduced-motion`. Current: partial. |
+| **Touch target sizes** | Ensure all buttons/links are min 44×44px interactive area. Cert badges at mobile. |
+| **Color contrast** | Verify all theme combinations pass WCAG AA for text (4.5:1) and non-text (3:1). |
+| **Alt text** | Cert badge icons and project card images need meaningful `alt` attributes. |
+| **Focus trap** | Terminal input captures focus; need Escape to leave terminal focus trap. |
+
+### Structural (Medium Effort)
+
+| Feature | Description |
+|---------|-------------|
+| **Heading hierarchy** | Verify single `<h1>`, correct nesting (h1 → h2 → h3). Current nav + title may conflict. |
+| **Landmarks** | `<header>`, `<main>`, `<nav>`, `<section>` with `aria-label` where ambiguous. |
+| **Keyboard navigation map** | Document all keyboard interactions: Tab through sections, arrows in terminal, Enter to activate. |
+| **Screen reader announcements** | Terminal output changes need `aria-live="polite"` updates. Boot sequence should announce completion. |
+| **Focus management on command output** | After command runs, focus stays in terminal input. After closing modals/overlays, return focus to trigger. |
+| **Link purpose** | "View on GitHub" links need `aria-label` with repo name. Social links need `aria-label="GitHub"` etc. |
+
+### Terminal-Specific A11y
+
+| Challenge | Mitigation |
+|-----------|------------|
+| xterm.js captures all keyboard input | Provide Escape hatch: `Ctrl+Alt` exits terminal focus. Announce to screen reader. |
+| ANSI colors may not map to theme | Ensure all text output has a visible foreground color (no `default` that blends into background). |
+| Matrix rain overlay obstructs content | Matrix rain should pause or dismiss on focus move or `prefers-reduced-motion`. |
+| AI response streaming | Use `aria-live="assertive"` during AI stream, `aria-live="polite"` when complete. |
+| Particle burst is decorative | `aria-hidden="true"` on burst canvas. |
+
+---
 
 - [kokonutui](https://github.com/kokonut-labs/kokonutui) — FlowField, LiquidGlassCard, SpotlightCards, MouseEffectCard, BeamsBackground, GlitchText, TypeWriter, ParticleButton, and 30+ other React components (portable to vanilla JS)
 - [terminal-portfolio-website](https://github.com/SouleymaneSy7/terminal-portfolio-website) — 46 commands, 31 OKLCH themes, Web Audio key clicks, accessibility
@@ -525,6 +759,101 @@ See dedicated Mobile Optimization section below.
 
 Prioritize: `history`, `figlet`, `weather`, `man`, `calc`, `todo`, `hollywood`, `sl`, `gh`, `snake`, `np`.
 
+### Phase 11: Terminal Content & Portfolio
+
+| Feature | Based On | Effort |
+|---------|----------|--------|
+| Markdown → ANSI renderer | Custom (regex-based) | Low |
+| `cat resume.md` | Markdown renderer | Low |
+| `projects`, `case` | Markdown renderer + section content | Medium |
+| `skills` — ASCII bar chart | Canvas or string builder | Low |
+| `timeline` — ASCII tree | String builder | Low |
+| `changelog` | GitHub API or local commit log | Low |
+
+**Result**: Terminal becomes an actual content platform — users can browse the portfolio without ever leaving the command line.
+
+### Phase 12: Shell Environment
+
+| Feature | Based On | Effort |
+|---------|----------|--------|
+| Shell variables (`$USER`, `$PWD`, etc.) | Custom parser | Medium |
+| `export VAR=val` | Variable store | Medium |
+| `echo` expansion | Template parser | Medium |
+| `alias` | localStorage key-value | Low |
+| `which`, `env` | VFS traversal | Low |
+| `cowsay`, `banner`, `yes` | Static string generators | Low |
+| `watch` | setInterval loop | Low |
+| Output redirect (`> file`) | VFS write | Medium |
+| Piping (`command1 \| command2`) | Intermediate buffer | High |
+
+**Result**: The terminal stops feeling like a button panel and starts feeling like a real shell.
+
+---
+
+## Real-time / WebSocket Features
+
+Add live, collaborative, and dynamic elements via Cloudflare WebSocket or Durable Objects.
+
+| Feature | Description | Tech | Effort |
+|---------|-------------|------|--------|
+| **Live visitor counter** | See how many people are on the site right now. `visitors -l` shows live count in terminal MOTD. | Durable Object + WebSocket | Medium |
+| **Terminal cursor heatmap** | Anonymous aggregate of where users click/type. Displayed as overlay heatmap. | WebSocket + Canvas | Medium |
+| **Collaborative terminal** | Share terminal session URL. Both users see each other's commands and output in real time. | Durable Object + WebSocket | High |
+| **Live coding demo** | Broadcast keystrokes to visitors watching a "live coding" mode. Like twitch for terminal. | Durable Object + WebSocket | High |
+| **Guestbook** | `guestbook add <msg>` persists to Durable Object. `guestbook` lists recent entries, visible to all. | DO + KV | Medium |
+| **Anonymous polling** | `poll "best editor?" "vim" "emacs" "nano"` — live vote counts visible in terminal. | Durable Object | Medium |
+| **Beat / metronome** | `beat 120` — server-synced metronome all visitors can sync to. Party trick. | Durable Object | Low |
+
+---
+
+## Performance
+
+### Bundle Optimization
+
+| Module | Current Est. | Target | Strategy |
+|--------|-------------|--------|----------|
+| xterm.js + addons | ~80 KB gzip | — | Essential, keep bundled. |
+| Three.js | ~50 KB gzip | — | Essential for particles, keep. |
+| anime.js | ~15 KB gzip | — | Already loaded. |
+| Transformers.js | ~8 MB WASM | — | Dynamic import only when `ai` command is first used. |
+| Motion (scroll progress) | ~5 KB gzip | — | Already loaded. |
+| **Total main bundle** | ~150 KB gzip | < 120 KB | Review unused xterm addons, tree-shake anime.js. |
+
+### Code Splitting Plan
+
+```
+main bundle (critical, loaded synchronously):
+  - main.js, terminal.js, shell.js, nav.js, animations.js
+  - tokens.css, base.css, layout.css, components.css, terminal.css, responsive.css
+
+deferred (dynamic import on first interaction):
+  - three-particles.js (defer until after first paint)
+  - matrix-rain.js (load on Konami code only)
+  - v86-launcher.js (load on v86 command only)
+  - ai.js (load on ai command only) — includes full Transformers.js WASM
+  - burst-canvas logic (load on first click)
+```
+
+### Caching Strategy
+
+| Asset | Cache Strategy | Detail |
+|-------|---------------|--------|
+| HTML (`index.html`) | `no-cache` | Revalidate always, ETag for 304 |
+| CSS/JS (versioned) | `immutable` / 1 year | `main.a1b2c3.js` — content hash in filename |
+| Fonts (Google Fonts) | 1 year | Already CDN-cached |
+| Images (badge icons) | 1 week | Resized + optimized via Cloudflare Image Resizing |
+| Three.js (CDN) | 1 year | ES module from CDN |
+| anime.js (CDN) | 1 year | ES module from CDN |
+
+### Loading Sequence (Critical Path)
+
+1. `preconnect` to Google Fonts, Cloudflare CDN, anime.js CDN
+2. `preload` fonts, hero-terminal CSS, anime.js
+3. First paint: terminal shell (visible within 1s)
+4. `defer` Three.js, matrix-rain, v86, Transformers.js
+5. Idle: prefetch v86 WASM binary, Transformers.js models
+6. First interaction: eagerly load deferred modules
+
 ---
 
 ## Mobile Optimization
@@ -634,3 +963,7 @@ html, body {
 - [shader.se](https://shader.se) — Three.js + React Three Fiber + TSL on WebGPU pipeline. Scroll-driven scene transitions dissolve seamlessly. Everything rendered in-canvas including UI via `@pmndrs/uikit`. 80s corporate tape aesthetic.
 - [Lenis](https://github.com/darkroomengineering/lenis) — Smooth scroll library (~3KB), 2026 standard for premium scroll experiences
 - [OGL](https://github.com/oframe/ogl) — Minimal WebGL library (used by hape.io). Custom PBR rendering, skinning, post-process.
+- [tmux](https://github.com/tmux/tmux) — Terminal multiplexer. Inspiration for split-pane terminal UX in browser.
+- [wttr.in](https://github.com/chubin/wttr.in) — Console-oriented weather service. The gold standard for terminal weather UX.
+- [towel.blinkenlights.nl](https://github.com/martinhansen/towel) — Star Wars ASCII animation over telnet. Easter egg inspiration.
+- [tldr-pages](https://github.com/tldr-pages/tldr) — Simplified man pages. Inspiration for `man` command content format.
