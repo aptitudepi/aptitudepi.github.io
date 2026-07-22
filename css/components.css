@@ -186,6 +186,7 @@
 }
 .spotlight-card:hover {
   border-color: currentColor;
+  background: color-mix(in srgb, currentColor 18%, transparent);
 }
 .spotlight-card:hover::before, .spotlight-card:hover::after {
   opacity: 1;
@@ -268,6 +269,7 @@
 }
 .bento-card:hover {
   border-color: currentColor;
+  background: color-mix(in srgb, currentColor 18%, transparent);
   box-shadow: 0 4px 20px var(--color-primary-dim);
 }
 .bento-card:hover::after { opacity: 1; }
@@ -334,7 +336,6 @@
   margin: 0 auto;
 }
 .cert-badge {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -351,16 +352,6 @@
   overflow: hidden;
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
-.cert-badge::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: inherit;
-  border: 1.5px solid currentColor;
-  opacity: 0;
-  scale: 0.8;
-  transition: all 0.25s var(--ease-out-expo);
-}
 .cert-badge::after {
   content: '';
   position: absolute;
@@ -369,8 +360,7 @@
   transform: translateX(-100%);
   transition: transform 0.5s var(--ease-out-expo);
 }
-.cert-badge:hover { transform: translateY(-3px); border-color: currentColor; }
-.cert-badge:hover::before { opacity: 1; scale: 1; }
+.cert-badge:hover { transform: translateY(-3px); border-color: currentColor; background: color-mix(in srgb, currentColor 18%, transparent); }
 .cert-badge:hover::after { transform: translateX(100%); }
 .cert-badge img { width: 72px; height: 72px; border-radius: var(--radius-sm); transition: transform 250ms var(--ease-out-expo); }
 .cert-badge:hover img { transform: scale(1.08); }
