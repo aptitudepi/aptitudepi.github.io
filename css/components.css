@@ -268,7 +268,7 @@
 }
 .bento-card:hover {
   border-color: currentColor;
-  box-shadow: 0 4px 20px color-mix(in srgb, currentColor 35%, transparent);
+  box-shadow: 0 4px 24px currentColor;
 }
 .bento-card:hover::after { opacity: 1; }
 .mono-tag {
