@@ -372,34 +372,27 @@ function bootSequence(term, onDone) {
     ];
   }
   let i = 0;
-  function typeMessage(msg) {
-    const str = `${msg.color}${msg.text}${ANSI_RESET}`;
-    let ci = 0;
-    function typeChar() {
-      if (ci >= str.length) {
-        term.write('\r\n');
-        i++;
-        setTimeout(writeNext, 60);
-        return;
-      }
-      term.write(str[ci]);
-      ci++;
-      const variance = 20 + Math.random() * 60;
-      const pause = ci === str.length - 1 ? variance * 3 : variance;
-      setTimeout(typeChar, pause);
-    }
-    typeChar();
-  }
   function writeNext() {
     if (i >= BOOT_MSGS.length) {
       neofetch(term);
-      setTimeout(() => {
-        writePrompt(term);
-        if (onDone) onDone();
-      }, 300);
+      setTimeout(() => { writePrompt(term); if (onDone) onDone(); }, 80);
       return;
     }
-    typeMessage(BOOT_MSGS[i]);
+    const msg = BOOT_MSGS[i];
+    const str = `${msg.color}${msg.text}${ANSI_RESET}`;
+    let ci = 0;
+    function typeChar() {
+      const end = Math.min(ci + 10, str.length);
+      for (; ci < end; ci++) term.write(str[ci]);
+      if (ci >= str.length) {
+        term.write('\r\n');
+        i++;
+        setTimeout(writeNext, 10);
+        return;
+      }
+      setTimeout(typeChar, 2 + Math.random() * 4);
+    }
+    typeChar();
   }
   writeNext();
 }
