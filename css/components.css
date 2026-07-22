@@ -314,37 +314,14 @@
   font-family: var(--font-display);
   font-size: 0.875rem;
   font-weight: 500;
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
-}
-.view-more-cta a::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -8px;
-  transform: translateY(-50%);
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--color-primary-dim);
-  z-index: -1;
-  transition: transform 0.3s cubic-bezier(0,0,0.5,2), width 0.3s cubic-bezier(0,0,0.5,2);
 }
 .view-more-cta a:hover {
   border-color: currentColor;
   color: currentColor;
+  background: color-mix(in srgb, currentColor 18%, transparent);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
-}
-.view-more-cta a:hover::before {
-  width: 100%;
-  height: 100%;
-  right: 0;
-  border-radius: var(--radius-full);
-  transform: translateY(-50%);
-  transition: transform 0.25s cubic-bezier(0,0,0.5,2), width 0.25s cubic-bezier(0,0,0.5,2), border-radius 0.25s ease;
 }
 
 /* ── Certifications ────────────────────────── */
@@ -416,38 +393,14 @@
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 1.0625rem;
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
-.resume-download a::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -8px;
-  transform: translateY(-50%);
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--color-primary-dim);
-  z-index: -1;
-  transition: transform 0.3s cubic-bezier(0,0,0.5,2), width 0.3s cubic-bezier(0,0,0.5,2);
-}
 .resume-download a:hover {
-  background: var(--color-glass);
   border-color: currentColor;
+  background: color-mix(in srgb, currentColor 18%, transparent);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
   transform: translateY(-2px) scale(1.02);
-}
-.resume-download a:hover::before {
-  width: 100%;
-  height: 100%;
-  right: 0;
-  border-radius: var(--radius-full);
-  transform: translateY(-50%);
-  transition: transform 0.25s cubic-bezier(0,0,0.5,2), width 0.25s cubic-bezier(0,0,0.5,2), border-radius 0.25s ease;
 }
 
 /* ── Contact / Social ──────────────────────── */
