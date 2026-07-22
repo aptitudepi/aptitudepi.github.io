@@ -68,10 +68,10 @@ function initRevealObserver() {
         const idx = Array.from(el.parentElement.children).indexOf(el);
         anime.animate(el, {
           opacity: [0, 1],
-          translateY: [16, 0],
-          duration: 400,
+          translateY: [12, 0],
+          duration: 200,
           ease: 'out(3)',
-          delay: idx * 60,
+          delay: idx * 30,
         });
         observer.unobserve(el);
         return;
