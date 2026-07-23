@@ -133,6 +133,46 @@ Beyond music — hook the terminal into the services the user actually visits da
 | **Reddit** | `reddit <subreddit>` | Reddit JSON API (.json suffix, no auth) | Low | Medium |
 | **Weather maps** | `weather -m` | OpenWeatherMap tiles or wttr.in ANSI | Medium | Low |
 
+### Weather Radar — Implementation Notes (Attempted, June 2026)
+
+**Goal**: `weather -r` renders a RainViewer radar precipitation map composited over ESRI World_Topo_Map tiles, displayed as ANSI truecolor half-blocks in the terminal, with multi-frame animation cycling through the last hour.
+
+**Data Sources**:
+- **Radar tiles**: RainViewer public API (`api.rainviewer.com/public/weather-maps.json`). Gives a manifest of past frames (5–10 min apart) with tile paths. Tile URL: `{host}{path}/512/{zoom}/{lat}/{lon}/{colorScheme}/{opacity}.png`
+- **Topo tiles**: ESRI World_Topo_Map (`server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{zoom}/{y}/{x}.png`). No auth required.
+- **Zoom levels**: RainViewer supports 2–12; ESRI supports 0–18. Used zoom 7 for a good balance of coverage and detail.
+
+**Color scheme**: RainViewer scheme `0` has transparent background (only precipitation has non-zero alpha). Schemes `2+` embed a dark base map (solid fill, no transparency) — the alpha-based `t.a > 10` check rendered every pixel as `▀` because all pixels had alpha=255. Using scheme `0` fixed this, but zoom 7 didn't look great for the test location.
+
+**ANSI Rendering Pipeline**:
+1. Fetch topo tile (512×512 PNG via `createImageBitmap`)
+2. Fetch radar tile (same dimensions)
+3. Composite on a `<canvas>`: topo drawn first (darkened 0.45×), radar drawn on top
+4. `ctx.getImageData(0, 0, 512, 512)` samples the composited result
+5. Sample to terminal grid: `cols × rows` where each terminal row = 2 canvas rows (half-block `▀`/`▄`)
+6. Each grid cell picks the top and bottom canvas pixel; if both have alpha > 10, render `▀` with foreground = top pixel color and background = bottom pixel color via ANSI 24-bit truecolor (`\x1b[38;2;R;G;Bm` / `\x1b[48;2;R;G;Bm`)
+
+**Edge detection attempt**: Replaced uniform darkening with Sobel edge detection (3×3 kernels, threshold `mag > 80 && luma > 100`) to extract only coastlines/roads/borders as white lines on transparent background. Text naturally filtered out by the luminance threshold. This was promising but not fully tuned — many text artifacts remained and the threshold needed per-tile adjustment.
+
+**Marker**: Cyan (`#00ffff`) crosshair at the user's location (canvas center, 256,256): two concentric circles (radii 10 and 5, lineWidth 2) + crosshair + "YOU" label (9px monospace).
+
+**Animation**:
+- Filtered past frames within 3600s window, capped at 12
+- Pre-composited all frames (topo + radar + marker) into `ImageData` arrays
+- Rendered the latest frame as the initial display
+- `setInterval` at 250ms: `\x1b[{rows+2}A` cursor-up to grid start, rewrote grid + border + timestamp
+- `term._radarAnim` stored on the terminal object, cleared at start of any new command
+
+**Known Problems** (why it was scrapped for now):
+1. **Artifacting**: The cursor-up redraw sometimes corrupted the header/border lines. The exact cursor position after the initial render depended on the `\r\n` vs `\n` line endings used in `term.write()` vs `term.writeln()` — xterm.js treats LF only as "move down" without carriage return, so `\r\n` must be used consistently. renderGrid used `\r\n` per line but the last line's trailing `\r\n` was either sliced off or doubled depending on the code path, shifting the border position by one line.
+2. **Boundary escape**: The animation rewrite spanned `rows + 2` lines (grid + border + timestamp) but the actual occupied lines sometimes differed by 1, causing writes to bleed into the header area or beyond the box.
+3. **Zoom vs detail**: At zoom 7 the radar tile covered too large an area for local weather detail. Zoom 8 caused "zoom level not supported" errors from RainViewer for some configurations.
+4. **Color scheme fragility**: Scheme `0` (transparent) worked well for alpha detection but scheme `2+` (base map embedded) filled the entire grid — there was no reliable way to distinguish precipitation pixels from base map pixels without alpha.
+5. **Frame count**: 12 frames × 512×512 canvas compositing + `getImageData` was heavy. Adding the edge detection pass (full Sobel over 512×512) added ~5ms per frame.
+6. **Animation lifecycle**: If the user typed a command mid-animation, the `setInterval` callback could fire during the new command's output, causing mixed output. Clearing on `executeCommand` fixed the race but left stale cursor positions.
+
+**Future Approach**: Use `wttr.in` ANSI output directly (no composite, no canvas, no animation — just fetch `wttr.in/{city}?format=%C+%t` and display the text). For radar, a static screenshot-like render with a zoom level that renders cleanly at the terminal's native resolution. Skip animation entirely until a reliable diff-based redraw strategy is found.
+
 ### Composite Commands
 
 - `mood` — aggregates weather + last played track + GitHub streak + today's commits into one status readout. Medium effort.

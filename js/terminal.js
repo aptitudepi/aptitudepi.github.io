@@ -1,4 +1,4 @@
-import { executeCommand, bootSequence, writePrompt } from './shell.js';
+import { executeCommand, bootSequence, writePrompt, COMMANDS, vfs, SITE_FAINT, ANSI_RESET } from './shell.js';
 import { CMD_HISTORY } from './shell.js';
 
 let term = null;
@@ -51,6 +51,69 @@ function handleInput(data) {
   }
 
   if (data === '\x1b[C' || data === '\x1b[D') return;
+
+  if (data === '\t') {
+    if (!bootDone || !inputBuffer.trim()) return;
+    const partial = inputBuffer.trim().toLowerCase();
+    const isPath = partial.startsWith('./') || partial.startsWith('/') || partial.startsWith('~');
+    let candidates = [];
+    if (isPath) {
+      for (const key of vfs.keys()) {
+        const base = partial.startsWith('/') ? key : key.replace(/^\/home\/db\//, './');
+        if (base.startsWith(partial)) candidates.push(base);
+      }
+    } else {
+      const parts = partial.split(/\s+/);
+      const lastWord = parts[parts.length - 1];
+      if (parts.length > 1) {
+        for (const key of vfs.keys()) {
+          const base = key.replace(/^\/home\/db\//, '');
+          if (base.startsWith(lastWord)) candidates.push(base);
+        }
+        if (!candidates.length) {
+          for (const c of COMMANDS) {
+            if (c.startsWith(lastWord)) candidates.push(c);
+          }
+        }
+      } else {
+        for (const c of COMMANDS) {
+          if (c.startsWith(partial)) candidates.push(c);
+        }
+        if (!candidates.length) {
+          for (const key of vfs.keys()) {
+            const base = key.replace(/^\/home\/db\//, '');
+            const display = base.endsWith('.txt') || base.endsWith('.md') || base.endsWith('.pdf') ? base : base + '/';
+            if (display.startsWith(partial)) candidates.push(display);
+          }
+        }
+      }
+    }
+    if (candidates.length === 1) {
+      const completion = candidates[0];
+      const rest = completion.slice(inputBuffer.trim().length - (isPath || partial.includes(' ') ? 0 : 0));
+      const addTrailing = !completion.endsWith('/') && !completion.endsWith('.txt') && !completion.endsWith('.md');
+      const suffix = addTrailing ? ' ' : '';
+      for (const ch of rest + suffix) { inputBuffer += ch; term.write(ch); }
+    } else if (candidates.length > 1) {
+      const prefixLen = candidates.reduce((len, c) => {
+        let i = 0;
+        while (i < len && i < c.length && c[i] === candidates[0][i]) i++;
+        return i;
+      }, Infinity);
+      if (prefixLen > inputBuffer.trim().length) {
+        const common = candidates[0].slice(inputBuffer.trim().length, prefixLen);
+        for (const ch of common) { inputBuffer += ch; term.write(ch); }
+      } else {
+        term.write('\r\n');
+        candidates.forEach(c => term.writeln(`${SITE_FAINT}${c}${ANSI_RESET}`));
+        writePrompt(term);
+        term.write(inputBuffer);
+      }
+    } else {
+      term.write('\x07');
+    }
+    return;
+  }
 
   for (const char of data) {
     if (char === '\r') {

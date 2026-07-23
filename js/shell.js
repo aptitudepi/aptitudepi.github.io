@@ -334,6 +334,9 @@ function getGPU() {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     if (gl) {
+      if (navigator.userAgent.includes('Firefox')) {
+        return gl.getParameter(gl.RENDERER) || 'Unknown';
+      }
       const ext = gl.getExtension('WEBGL_debug_renderer_info');
       if (ext) {
         const r = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
@@ -405,6 +408,30 @@ function uptimeStr() {
   return `${d} days, ${h} hours, ${m} minutes`;
 }
 
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+const COMMANDS = ['whoami', 'hostname', 'date', 'uptime', 'uname', 'pwd', 'cat', 'ls', 'echo', 'clear', 'neofetch', 'resfetch', 'about', 'fortune', 'cowsay', 'help', 'matrix', 'vm', 'ai', 'ai-models', 'ai-model', 'history', 'crt', 'noise', 'weather', 'hn', 'md', 'cv'];
+
+function suggestCommand(input) {
+  let best = null, bestDist = Infinity;
+  for (const c of COMMANDS) {
+    const d = levenshtein(input, c);
+    if (d < bestDist && d <= 2) { bestDist = d; best = c; }
+  }
+  return best;
+}
+
 function visibleLen(s) {
   return s.replace(/\x1b\[[0-9;]*m/g, '').length;
 }
@@ -445,8 +472,16 @@ function neofetch(term) {
     { label: 'echo', value: 'Print text' },
     { label: 'clear', value: 'Clear terminal' },
     { label: 'neofetch', value: 'Display system & resume info' },
+    { label: 'about', value: 'Show a longer bio about me' },
+    { label: 'cv', value: 'Alias for neofetch' },
     { label: 'fortune', value: 'Random programming quote' },
     { label: 'cowsay', value: 'Cow says your message' },
+    { label: 'crt', value: 'Toggle CRT scanline overlay' },
+    { label: 'noise', value: 'Toggle noise texture overlay' },
+    { label: 'history', value: 'Show command history' },
+    { label: 'weather [-f]', value: 'Weather forecast (-f for °F)' },
+    { label: 'hn', value: 'Show Hacker News top stories' },
+    { label: 'md', value: 'Render markdown from URL' },
     { label: 'matrix', value: 'Toggle matrix rain overlay' },
     { label: 'vm', value: 'Boot Buildroot Linux VM' },
     { label: 'help', value: 'Show this help' },
@@ -501,6 +536,12 @@ function helpText(term) {
     ['about', 'Show a longer bio about me'],
     ['fortune', 'Random programming quote'],
     ['cowsay <msg>', 'Cow says your message'],
+    ['crt', 'Toggle CRT scanline overlay'],
+    ['noise', 'Toggle noise texture overlay'],
+    ['history', 'Show command history'],
+    ['weather [-f]', 'Weather forecast (-f for °F)'],
+    ['hn', 'Show Hacker News top stories'],
+    ['md <url>', 'Render markdown from URL'],
     ['matrix', 'Toggle matrix rain overlay'],
     ['vm', 'Boot Buildroot Linux VM'],
     ['ai <prompt>', 'Talk to local AI'],
@@ -513,6 +554,123 @@ function helpText(term) {
   cmds.forEach(([cmd, desc]) => {
     term.writeln(`  ${SITE_GREEN}${cmd.padEnd(14)}${ANSI_RESET}${SITE_WHITE}${desc}${ANSI_RESET}`);
   });
+}
+
+async function getLocation() {
+  try {
+    const pos = await new Promise((res, rej) => {
+      if (!navigator.geolocation) { rej('no geo'); return; }
+      navigator.geolocation.getCurrentPosition(p => res(p), () => rej('denied'), { timeout: 8000, enableHighAccuracy: false });
+    });
+    return { lat: pos.coords.latitude, lon: pos.coords.longitude, city: null };
+  } catch {
+    const ipResp = await fetch('https://ipapi.co/json/');
+    const ipData = await ipResp.json();
+    return { lat: ipData.latitude, lon: ipData.longitude, city: ipData.city };
+  }
+}
+
+async function weatherCommand(term, args) {
+  const isF = args.includes('-f');
+  term.writeln(`${SITE_MUTED}Fetching location...${ANSI_RESET}`);
+  let lat, lon, city;
+  try { const loc = await getLocation(); lat = loc.lat.toFixed(4); lon = loc.lon.toFixed(4); city = loc.city; }
+  catch {
+    term.writeln(`${SITE_ERR}Could not determine location.${ANSI_RESET}`);
+    term.writeln(`${SITE_FAINT}  .       .       .${ANSI_RESET}`);
+    term.writeln(`${SITE_FAINT}    .   .   .   .${ANSI_RESET}`);
+    term.writeln(`${SITE_FAINT}  .  +  .  +  .${ANSI_RESET}`);
+    term.writeln(`${SITE_FAINT}    .   .   .   .${ANSI_RESET}`);
+    term.writeln(`${SITE_FAINT}  .       .       .${ANSI_RESET}`);
+    writePrompt(term); return;
+  }
+
+  term.writeln(`${SITE_MUTED}Fetching weather${city ? ' for ' + city : ''}...${ANSI_RESET}`);
+  try {
+    const wResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
+    const wData = await wResp.json();
+    const cw = wData.current_weather;
+    const tempUnit = isF ? '°F' : '°C';
+    const temp = isF ? (cw.temperature * 9 / 5 + 32).toFixed(1) : cw.temperature;
+    const wmoCodes = {
+      0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+      45: 'Foggy', 48: 'Rime fog', 51: 'Light drizzle', 53: 'Moderate drizzle',
+      55: 'Dense drizzle', 61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
+      71: 'Slight snow', 73: 'Moderate snow', 75: 'Heavy snow',
+      80: 'Slight showers', 81: 'Moderate showers', 82: 'Violent showers',
+      95: 'Thunderstorm', 96: 'Thunderstorm w/ slight hail', 99: 'Thunderstorm w/ heavy hail',
+    };
+    const cond = wmoCodes[cw.weathercode] || `Code ${cw.weathercode}`;
+    const windKmh = (cw.windspeed * 3.6).toFixed(1);
+    const hi = isF ? (wData.daily.temperature_2m_max[0] * 9/5 + 32).toFixed(1) : wData.daily.temperature_2m_max[0];
+    const lo = isF ? (wData.daily.temperature_2m_min[0] * 9/5 + 32).toFixed(1) : wData.daily.temperature_2m_min[0];
+    term.writeln(`${SITE_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━${ANSI_RESET}`);
+    term.writeln(`${SITE_BLUE}  ${city || `${lat}, ${lon}`}${ANSI_RESET}`);
+    term.writeln(`${SITE_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━${ANSI_RESET}`);
+    term.writeln(`${SITE_WHITE}  ${cond}   ${temp}${tempUnit}${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}  H: ${hi}${tempUnit}  L: ${lo}${tempUnit}${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}  Wind: ${windKmh} km/h${ANSI_RESET}`);
+    term.writeln(`${SITE_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━${ANSI_RESET}`);
+  } catch {
+    term.writeln(`${SITE_ERR}Failed to fetch weather data${ANSI_RESET}`);
+  }
+  writePrompt(term);
+}
+
+
+
+async function hnCommand(term) {
+  term.writeln(`${SITE_MUTED}Fetching top stories...${ANSI_RESET}`);
+  try {
+    const idsResp = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+    const ids = await idsResp.json();
+    const topIds = ids.slice(0, 30);
+    const items = await Promise.all(topIds.map(id =>
+      fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())
+    ));
+    term.writeln(`${SITE_CYAN}┌────┬──────────────────────────────────────────────────┬───────┬────────┐${ANSI_RESET}`);
+    term.writeln(`${SITE_CYAN}│${SITE_FAINT} #  ${SITE_CYAN}│${SITE_FAINT} Title                                            ${SITE_CYAN}│${SITE_FAINT} Score ${SITE_CYAN}│${SITE_FAINT} Comments${SITE_CYAN}│${ANSI_RESET}`);
+    term.writeln(`${SITE_CYAN}├────┼──────────────────────────────────────────────────┼───────┼────────┤${ANSI_RESET}`);
+    items.forEach((item, i) => {
+      if (!item) return;
+      const num = String(i + 1).padStart(2);
+      const title = (item.title || 'Untitled').slice(0, 48).padEnd(48);
+      const score = String(item.score || 0).padStart(5);
+      const comments = String(item.descendants || 0).padStart(6);
+      term.writeln(`${SITE_CYAN}│${SITE_GREEN}${num} ${SITE_CYAN}│${SITE_WHITE} ${title} ${SITE_CYAN}│${SITE_MUTED} ${score}${SITE_CYAN}│${SITE_MUTED} ${comments}${SITE_CYAN}│${ANSI_RESET}`);
+    });
+    term.writeln(`${SITE_CYAN}└────┴──────────────────────────────────────────────────┴───────┴────────┘${ANSI_RESET}`);
+  } catch {
+    term.writeln(`${SITE_ERR}Failed to fetch Hacker News${ANSI_RESET}`);
+  }
+  writePrompt(term);
+}
+
+function mdCommand(term, args) {
+  if (!args.length) { term.writeln(`${SITE_ERR}md: missing URL${ANSI_RESET}`); writePrompt(term); return; }
+  let url = args[0];
+  if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+  term.writeln(`${SITE_MUTED}Opening ${url} in markdown viewer...${ANSI_RESET}`);
+  try {
+    const existing = document.getElementById('md-viewer-iframe');
+    if (existing) existing.remove();
+    const iframe = document.createElement('iframe');
+    iframe.id = 'md-viewer-iframe';
+    iframe.src = `md-viewer.html?url=${encodeURIComponent(url)}`;
+    iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:9999;border:none;background:oklch(0 0 0)';
+    document.body.appendChild(iframe);
+    const closeBtn = document.createElement('button');
+    closeBtn.id = 'md-viewer-close';
+    closeBtn.textContent = '✕';
+    closeBtn.style.cssText = 'position:fixed;top:16px;right:16px;z-index:10000;width:36px;height:36px;border-radius:50%;border:1px solid oklch(0.3 0.02 260);background:oklch(0.1 0.01 260 / 0.8);color:oklch(0.9 0.01 260);font-size:18px;cursor:pointer;backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center';
+    closeBtn.addEventListener('click', () => { iframe.remove(); closeBtn.remove(); });
+    document.body.appendChild(closeBtn);
+    term.writeln(`${SITE_GREEN}md viewer opened. Press ✕ or Esc to close${ANSI_RESET}`);
+    document.addEventListener('keydown', function onEsc(e) { if (e.key === 'Escape') { iframe.remove(); closeBtn.remove(); document.removeEventListener('keydown', onEsc); } });
+  } catch {
+    term.writeln(`${SITE_ERR}Failed to open markdown viewer${ANSI_RESET}`);
+  }
+  writePrompt(term);
 }
 
 function executeCommand(input, term) {
@@ -679,11 +837,56 @@ function executeCommand(input, term) {
         showModelSelector(term);
       }
       break;
-    default:
-      term.writeln(`${SITE_ERR}${cmd}: command not found${ANSI_RESET}`);
+    case 'history':
+      if (CMD_HISTORY.length === 0) {
+        term.writeln(`${SITE_MUTED}No commands in history${ANSI_RESET}`);
+      } else {
+        for (let i = 0; i < CMD_HISTORY.length; i++) {
+          const idx = String(i + 1).padStart(3, ' ');
+          term.writeln(`${SITE_FAINT}${idx}  ${ANSI_RESET}${SITE_WHITE}${CMD_HISTORY[i]}${ANSI_RESET}`);
+        }
+      }
       break;
+    case 'cv':
+      neofetch(term);
+      break;
+    case 'crt': {
+      const el = document.getElementById('crt-overlay');
+      if (el) {
+        el.classList.toggle('active');
+        term.writeln(`${SITE_GREEN}crt overlay ${el.classList.contains('active') ? 'enabled' : 'disabled'}${ANSI_RESET}`);
+      }
+      break;
+    }
+    case 'noise': {
+      const el = document.getElementById('noise-overlay');
+      if (el) {
+        el.classList.toggle('active');
+        term.writeln(`${SITE_GREEN}noise overlay ${el.classList.contains('active') ? 'enabled' : 'disabled'}${ANSI_RESET}`);
+      }
+      break;
+    }
+    case 'weather':
+      weatherCommand(term, args);
+      return;
+    case 'hn':
+      hnCommand(term);
+      return;
+    case 'md':
+      mdCommand(term, args);
+      return;
+    default: {
+      const suggestion = suggestCommand(cmd);
+      if (suggestion) {
+        term.writeln(`${SITE_ERR}${cmd}: command not found${ANSI_RESET}`);
+        term.writeln(`${SITE_MUTED}Did you mean \`${SITE_WHITE}${suggestion}${SITE_MUTED}\`?${ANSI_RESET}`);
+      } else {
+        term.writeln(`${SITE_ERR}${cmd}: command not found${ANSI_RESET}`);
+      }
+      break;
+    }
   }
   writePrompt(term);
 }
 
-export { ASCII_ART, vfs, RESUME, CMD_HISTORY, BOOT_MSGS, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT };
+export { ASCII_ART, vfs, RESUME, CMD_HISTORY, BOOT_MSGS, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS };

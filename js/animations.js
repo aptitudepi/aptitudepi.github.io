@@ -23,6 +23,7 @@ function initAnimations() {
   initCertHover();
   initProjectLinkHover();
   initResumePulse();
+  initMagneticText();
   initParticleBurst();
 }
 
@@ -255,8 +256,8 @@ function initAboutScroll() {
 }
 
 function initSocialHover() {
-  const springBouncy = anime.createSpring({ stiffness: 320, damping: 14 });
-  const springSnap = anime.createSpring({ stiffness: 400, damping: 10 });
+  const springBouncy = anime.spring({ stiffness: 320, damping: 14 });
+  const springSnap = anime.spring({ stiffness: 400, damping: 10 });
   document.querySelectorAll('.social-link').forEach(link => {
     const icon = link.querySelector('svg');
     link.addEventListener('mouseenter', () => {
@@ -271,7 +272,7 @@ function initSocialHover() {
 }
 
 function initCertHover() {
-  const spring = anime.createSpring({ stiffness: 260, damping: 18 });
+  const spring = anime.spring({ stiffness: 260, damping: 18 });
   document.querySelectorAll('.cert-badge').forEach(badge => {
     badge.addEventListener('mouseenter', () => {
       anime.animate(badge, { scale: 1.07, duration: 400, ease: spring });
@@ -283,8 +284,8 @@ function initCertHover() {
 }
 
 function initProjectLinkHover() {
-  const spring = anime.createSpring({ stiffness: 350, damping: 16 });
-  const springSnap = anime.createSpring({ stiffness: 450, damping: 10 });
+  const spring = anime.spring({ stiffness: 350, damping: 16 });
+  const springSnap = anime.spring({ stiffness: 450, damping: 10 });
   document.querySelectorAll('.project-link').forEach(link => {
     const arrow = link.querySelector('svg path');
     if (!arrow) return;
@@ -313,6 +314,43 @@ function initResumePulse() {
     duration: 2000,
     loop: true,
     ease: 'inOut(2)',
+  });
+}
+
+function initMagneticText() {
+  document.querySelectorAll('[data-magnetic]').forEach(el => {
+    let raf = null, targetX = 0, targetY = 0, curX = 0, curY = 0;
+    const maxDist = 30;
+    el.addEventListener('mousemove', e => {
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const strength = Math.min(1, dist / 200);
+      const angle = Math.atan2(dy, dx);
+      targetX = Math.cos(angle) * maxDist * strength;
+      targetY = Math.sin(angle) * maxDist * strength;
+      el.classList.add('magnetic-active');
+      if (!raf) {
+        raf = requestAnimationFrame(function tick() {
+          curX += (targetX - curX) * 0.15;
+          curY += (targetY - curY) * 0.15;
+          el.style.transform = `translate(${curX.toFixed(1)}px, ${curY.toFixed(1)}px)`;
+          if (Math.abs(curX - targetX) > 0.1 || Math.abs(curY - targetY) > 0.1) {
+            raf = requestAnimationFrame(tick);
+          } else { raf = null; }
+        });
+      }
+    });
+    el.addEventListener('mouseleave', () => {
+      targetX = 0; targetY = 0;
+      el.classList.remove('magnetic-active');
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      curX = 0; curY = 0;
+      el.style.transform = '';
+    });
   });
 }
 
