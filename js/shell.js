@@ -615,9 +615,28 @@ async function weatherCommand(term, args) {
   }
   const lat = loc.lat.toFixed(4);
   const lon = loc.lon.toFixed(4);
-  const locStr = loc.city && loc.region
-    ? `${loc.city}, ${loc.region} <${lat}, ${lon}>`
+  const state = loc.region_code || loc.region;
+  const locStr = loc.city && state
+    ? `${loc.city}, ${state} <${lat}, ${lon}>`
     : `<${lat}, ${lon}>`;
+
+  if (args.includes('--debug')) {
+    term.writeln(`${SITE_LABEL}loc:${ANSI_RESET} ${SITE_WHITE}${JSON.stringify(loc)}${ANSI_RESET}`);
+    term.writeln(`${SITE_LABEL}locStr:${ANSI_RESET} ${SITE_WHITE}${locStr}${ANSI_RESET}`);
+    term.writeln(`${SITE_LABEL}prefetched:${ANSI_RESET} ${SITE_WHITE}${_prefetchedLocation !== null}${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Fetching raw ipapi response...${ANSI_RESET}`);
+    try {
+      const r = await fetch('https://ipapi.co/json/');
+      const d = await r.json();
+      for (const k of ['city','region','region_code','country','country_code','latitude','longitude']) {
+        term.writeln(`  ${SITE_FAINT}${k}:${ANSI_RESET} ${SITE_GREEN}${JSON.stringify(d[k])}${ANSI_RESET}`);
+      }
+    } catch (e) {
+      term.writeln(`${SITE_ERR}ipapi.co error: ${e.message}${ANSI_RESET}`);
+    }
+    writePrompt(term);
+    return;
+  }
 
   term.writeln(`${SITE_MUTED}Fetching weather for ${locStr}...${ANSI_RESET}`);
   try {
