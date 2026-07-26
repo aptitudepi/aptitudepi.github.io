@@ -2,6 +2,7 @@ version = 1
 
 [[analyzers]]
 name = "javascript"
+exclude_patterns = ["assets/v86/**"]
 
   [analyzers.meta]
   environment = [
@@ -9,7 +10,3 @@ name = "javascript"
     "jquery"
   ]
   globals = { anime = true }
-
-exclude_patterns = [
-  "assets/v86/**",
-]
