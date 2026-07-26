@@ -317,7 +317,7 @@ let asyncCPU = null;
   } catch (_) {}
   fetch('https://ipapi.co/json/')
     .then(r => r.json())
-    .then(d => { _prefetchedLocation = { lat: d.latitude, lon: d.longitude, city: d.city, region: d.region, country: d.country_code }; })
+    .then(d => { _prefetchedLocation = { lat: d.latitude, lon: d.longitude, city: d.city, region: d.region, region_code: d.region_code, country: d.country_code }; })
     .catch(() => {});
 })();
 
@@ -590,6 +590,7 @@ async function getLocation() {
       lon: ipData.longitude,
       city: ipData.city || null,
       region: ipData.region || null,
+      region_code: ipData.region_code || null,
       country: ipData.country_code || null,
     };
   }
