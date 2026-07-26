@@ -16,24 +16,6 @@ function detectHz(cb) {
   requestAnimationFrame(tick);
 }
 
-function buildTrailFrag(w, h) {
-  return `precision highp float;
-uniform sampler2D uPrev,uParts;
-uniform float uTime,uDecay;
-uniform vec4 uModeW;
-${CURL}
-void main(){
-  vec2 uv=gl_FragCoord.xy/vec2(${w}.,${h}.);
-  vec3 fp=vec3(uv*2.-1.,uTime*.12);
-  vec2 vel=curlFlow(fp)*.0012+curl2(fp*3.)*.0004;
-  vel*=mix(vec2(1.),vec2(-1.,1.),uModeW.y);
-  vec2 src=clamp(uv-vel,.001,.999);
-  vec4 prev=texture2D(uPrev,src)*uDecay;
-  vec4 parts=texture2D(uParts,uv);
-  gl_FragColor=max(prev,parts*1.25);
-}`;
-}
-
 const CURL = `
 vec4 _p(vec4 x){return mod(((x*34.)+1.)*x,289.);}
 vec4 _t(vec4 r){return 1.7928429-.8537347*r;}
@@ -74,6 +56,24 @@ vec2 curlFlow(vec3 p){
 }
 `;
 
+function buildTrailFrag(w, h) {
+  return `precision highp float;
+uniform sampler2D uPrev,uParts;
+uniform float uTime,uDecay;
+uniform vec4 uModeW;
+${CURL}
+void main(){
+  vec2 uv=gl_FragCoord.xy/vec2(${w}.,${h}.);
+  vec3 fp=vec3(uv*2.-1.,uTime*.12);
+  vec2 vel=curlFlow(fp)*.0012+curl2(fp*3.)*.0004;
+  vel*=mix(vec2(1.),vec2(-1.,1.),uModeW.y);
+  vec2 src=clamp(uv-vel,.001,.999);
+  vec4 prev=texture2D(uPrev,src)*uDecay;
+  vec4 parts=texture2D(uParts,uv);
+  gl_FragColor=max(prev,parts*1.25);
+}`;
+}
+
 const BS_GLSL = `
 float bsNorm(float x){
   float t=1./(1.+.2316419*abs(x));
@@ -112,14 +112,6 @@ function initParticles() {
 
   window.addEventListener('scroll', () => { scrollOffset = window.scrollY; }, { passive: true });
 
-  function applyQuality(tier) {
-    gpuTier = tier;
-    if (tier === 0) { SZ = 128; PR = Math.min(PR_raw, 1); }
-    else if (tier === 1) { SZ = 192; PR = Math.min(PR_raw, 1.5); }
-    else { SZ = 256; PR = Math.min(PR_raw, 2); }
-    R.setPixelRatio(PR);
-  }
-
   const W = () => window.innerWidth;
   const H = () => window.innerHeight;
 
@@ -129,6 +121,14 @@ function initParticles() {
   R.setPixelRatio(PR);
   R.setSize(W(), H());
   R.autoClear = false;
+
+  function applyQuality(tier) {
+    gpuTier = tier;
+    if (tier === 0) { SZ = 128; PR = Math.min(PR_raw, 1); }
+    else if (tier === 1) { SZ = 192; PR = Math.min(PR_raw, 1.5); }
+    else { SZ = 256; PR = Math.min(PR_raw, 2); }
+    R.setPixelRatio(PR);
+  }
 
   const scene = new THREE.Scene();
   const camMain = new THREE.PerspectiveCamera(50, W() / H(), 0.01, 10);

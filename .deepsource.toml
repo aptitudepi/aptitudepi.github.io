@@ -8,3 +8,8 @@ name = "javascript"
     "browser",
     "jquery"
   ]
+  globals = { anime = true }
+
+exclude_patterns = [
+  "assets/v86/**",
+]
