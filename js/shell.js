@@ -315,7 +315,10 @@ let asyncCPU = null;
       }
     }
   } catch (_) {}
-  getLocation().then(loc => _prefetchedLocation = loc).catch(() => {});
+  fetch('https://ipapi.co/json/')
+    .then(r => r.json())
+    .then(d => { _prefetchedLocation = { lat: d.latitude, lon: d.longitude, city: d.city, region: d.region, country: d.country_code }; })
+    .catch(() => {});
 })();
 
 function getCPU() {
