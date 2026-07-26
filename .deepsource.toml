@@ -1,8 +1,11 @@
 version = 1
 
+exclude_patterns = [
+  "assets/v86/**"
+]
+
 [[analyzers]]
 name = "javascript"
-exclude_patterns = ["assets/v86/**"]
 
   [analyzers.meta]
   environment = [
