@@ -12,4 +12,12 @@ name = "javascript"
     "browser",
     "jquery"
   ]
-  globals = { anime = true }
+  globals = ["anime"]
+
+[[analyzers]]
+name = "shell"
+enabled = false
+
+[[analyzers]]
+name = "css"
+enabled = false
