@@ -12,7 +12,7 @@ name = "javascript"
     "browser",
     "jquery"
   ]
-  globals = ["anime"]
+  globals = ["anime", "V86"]
 
 [[analyzers]]
 name = "shell"

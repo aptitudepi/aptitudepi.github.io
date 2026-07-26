@@ -6,10 +6,7 @@ const ANSI_RESET = '\x1b[0m';
 const ANSI_BOLD = '\x1b[1m';
 function ansiRGB(r, g, b) { return `\x1b[38;2;${r};${g};${b}m`; }
 function ansiBgRGB(r, g, b) { return `\x1b[48;2;${r};${g};${b}m`; }
-function ansiBoldRGB(r, g, b) { return `${ANSI_BOLD}\x1b[38;2;${r};${g};${b}m`; }
-
 const SITE_BLUE = ansiRGB(80, 140, 250);
-const SITE_VIOLET = ansiRGB(160, 100, 230);
 const SITE_RED = ansiRGB(220, 80, 100);
 const SITE_GREEN = ansiRGB(60, 200, 120);
 const SITE_CYAN = ansiRGB(60, 190, 220);
