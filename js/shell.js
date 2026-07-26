@@ -297,6 +297,9 @@ const FORTUNES = [
 const CMD_HISTORY = [];
 CMD_HISTORY.idx = -1;
 
+let _hnItems = [];
+let _prefetchedLocation = null;
+
 let asyncCPU = null;
 
 (async () => {
@@ -312,6 +315,7 @@ let asyncCPU = null;
       }
     }
   } catch (_) {}
+  getLocation().then(loc => _prefetchedLocation = loc).catch(() => {});
 })();
 
 function getCPU() {
@@ -562,30 +566,57 @@ async function getLocation() {
       if (!navigator.geolocation) { rej('no geo'); return; }
       navigator.geolocation.getCurrentPosition(p => res(p), () => rej('denied'), { timeout: 8000, enableHighAccuracy: false });
     });
-    return { lat: pos.coords.latitude, lon: pos.coords.longitude, city: null };
+    const geoResp = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`,
+      { headers: { 'User-Agent': navigator.userAgent } }
+    );
+    const geoData = await geoResp.json();
+    const a = geoData.address || {};
+    return {
+      lat: pos.coords.latitude,
+      lon: pos.coords.longitude,
+      city: a.city || a.town || a.village || a.county || null,
+      region: a.state || null,
+      country: a.country_code || null,
+    };
   } catch {
     const ipResp = await fetch('https://ipapi.co/json/');
     const ipData = await ipResp.json();
-    return { lat: ipData.latitude, lon: ipData.longitude, city: ipData.city };
+    return {
+      lat: ipData.latitude,
+      lon: ipData.longitude,
+      city: ipData.city || null,
+      region: ipData.region || null,
+      country: ipData.country_code || null,
+    };
   }
 }
 
 async function weatherCommand(term, args) {
   const isF = args.includes('-f');
   term.writeln(`${SITE_MUTED}Fetching location...${ANSI_RESET}`);
-  let lat, lon, city;
-  try { const loc = await getLocation(); lat = loc.lat.toFixed(4); lon = loc.lon.toFixed(4); city = loc.city; }
-  catch {
-    term.writeln(`${SITE_ERR}Could not determine location.${ANSI_RESET}`);
-    term.writeln(`${SITE_FAINT}  .       .       .${ANSI_RESET}`);
-    term.writeln(`${SITE_FAINT}    .   .   .   .${ANSI_RESET}`);
-    term.writeln(`${SITE_FAINT}  .  +  .  +  .${ANSI_RESET}`);
-    term.writeln(`${SITE_FAINT}    .   .   .   .${ANSI_RESET}`);
-    term.writeln(`${SITE_FAINT}  .       .       .${ANSI_RESET}`);
-    writePrompt(term); return;
+  let loc;
+  if (_prefetchedLocation) {
+    loc = _prefetchedLocation;
+  } else {
+    try { loc = await getLocation(); }
+    catch {
+      term.writeln(`${SITE_ERR}Could not determine location.${ANSI_RESET}`);
+      term.writeln(`${SITE_FAINT}  .       .       .${ANSI_RESET}`);
+      term.writeln(`${SITE_FAINT}    .   .   .   .${ANSI_RESET}`);
+      term.writeln(`${SITE_FAINT}  .  +  .  +  .${ANSI_RESET}`);
+      term.writeln(`${SITE_FAINT}    .   .   .   .${ANSI_RESET}`);
+      term.writeln(`${SITE_FAINT}  .       .       .${ANSI_RESET}`);
+      writePrompt(term); return;
+    }
   }
+  const lat = loc.lat.toFixed(4);
+  const lon = loc.lon.toFixed(4);
+  const locStr = loc.city && loc.region
+    ? `${loc.city}, ${loc.region} <${lat}, ${lon}>`
+    : `<${lat}, ${lon}>`;
 
-  term.writeln(`${SITE_MUTED}Fetching weather${city ? ' for ' + city : ''}...${ANSI_RESET}`);
+  term.writeln(`${SITE_MUTED}Fetching weather for ${locStr}...${ANSI_RESET}`);
   try {
     const wResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
     const wData = await wResp.json();
@@ -605,7 +636,7 @@ async function weatherCommand(term, args) {
     const hi = isF ? (wData.daily.temperature_2m_max[0] * 9/5 + 32).toFixed(1) : wData.daily.temperature_2m_max[0];
     const lo = isF ? (wData.daily.temperature_2m_min[0] * 9/5 + 32).toFixed(1) : wData.daily.temperature_2m_min[0];
     term.writeln(`${SITE_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━${ANSI_RESET}`);
-    term.writeln(`${SITE_BLUE}  ${city || `${lat}, ${lon}`}${ANSI_RESET}`);
+    term.writeln(`${SITE_BLUE}  ${locStr}${ANSI_RESET}`);
     term.writeln(`${SITE_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━${ANSI_RESET}`);
     term.writeln(`${SITE_WHITE}  ${cond}   ${temp}${tempUnit}${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}  H: ${hi}${tempUnit}  L: ${lo}${tempUnit}${ANSI_RESET}`);
@@ -619,7 +650,106 @@ async function weatherCommand(term, args) {
 
 
 
-async function hnCommand(term) {
+function timeAgo(epoch) {
+  const diff = Date.now() / 1000 - epoch;
+  if (diff < 60) return `${Math.floor(diff)}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+  return `${Math.floor(diff / 2592000)}mo ago`;
+}
+
+function stripHtml(html) {
+  if (!html) return '';
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || '';
+}
+
+function renderComment(term, item, depth) {
+  if (!item || item.deleted || item.dead) return;
+  const indent = '  '.repeat(depth);
+  const ago = item.time ? timeAgo(item.time) : '';
+  term.writeln(`${indent}${SITE_GREEN}${item.by || 'anonymous'}${ANSI_RESET} ${SITE_FAINT}${ago}${ANSI_RESET}`);
+  if (item.text) {
+    const text = stripHtml(item.text);
+    const wrap = Math.max(20, 72 - indent.length);
+    const lines = text.match(new RegExp(`.{1,${wrap}}`, 'g')) || [];
+    lines.forEach(line => term.writeln(`${indent}${line}`));
+  }
+  if (depth < 2 && item._replies && item._replies.length > 0) {
+    for (const reply of item._replies) {
+      renderComment(term, reply, depth + 1);
+    }
+  }
+}
+
+async function hnCommand(term, args) {
+  if (args.length > 0) {
+    const idx = parseInt(args[0], 10);
+    if (isNaN(idx) || idx < 1 || idx > _hnItems.length) {
+      term.writeln(`${SITE_ERR}hn: invalid index${ANSI_RESET}`);
+      writePrompt(term);
+      return;
+    }
+    const item = _hnItems[idx - 1];
+    if (!item) {
+      term.writeln(`${SITE_ERR}hn: item not found${ANSI_RESET}`);
+      writePrompt(term);
+      return;
+    }
+    term.writeln(`${SITE_MUTED}Fetching story #${item.id}...${ANSI_RESET}`);
+    try {
+      const storyResp = await fetch(`https://hacker-news.firebaseio.com/v0/item/${item.id}.json`);
+      const story = await storyResp.json();
+      if (!story) throw new Error('empty');
+
+      term.writeln(`${ANSI_BOLD}${SITE_WHITE}${story.title}${ANSI_RESET}`);
+      const by = story.by || 'anonymous';
+      const pts = story.score || 0;
+      const cmts = story.descendants || 0;
+      const ago = story.time ? timeAgo(story.time) : '';
+      term.writeln(`${SITE_MUTED}by ${SITE_GREEN}${by}${SITE_MUTED} | ${pts} points | ${cmts} comments | ${ago}${ANSI_RESET}`);
+      if (story.url) {
+        term.writeln(`${SITE_BLUE}${story.url}${ANSI_RESET}`);
+      }
+      if (story.text) {
+        term.writeln('');
+        term.writeln(stripHtml(story.text));
+      }
+
+      if (story.kids && story.kids.length > 0) {
+        term.writeln('');
+        const commentIds = story.kids.slice(0, 10);
+        const comments = await Promise.all(
+          commentIds.map(id =>
+            fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())
+          )
+        );
+        for (const comment of comments) {
+          if (comment && comment.kids && comment.kids.length > 0) {
+            const replyIds = comment.kids.slice(0, 3);
+            comment._replies = (await Promise.all(
+              replyIds.map(id =>
+                fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())
+              )
+            )).filter(Boolean);
+          }
+        }
+        for (const comment of comments) {
+          renderComment(term, comment, 0);
+          term.writeln('');
+        }
+      } else {
+        term.writeln(`${SITE_MUTED}No comments yet${ANSI_RESET}`);
+      }
+    } catch {
+      term.writeln(`${SITE_ERR}Failed to fetch story #${item.id}${ANSI_RESET}`);
+    }
+    writePrompt(term);
+    return;
+  }
+
   term.writeln(`${SITE_MUTED}Fetching top stories...${ANSI_RESET}`);
   try {
     const idsResp = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
@@ -628,6 +758,7 @@ async function hnCommand(term) {
     const items = await Promise.all(topIds.map(id =>
       fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())
     ));
+    _hnItems = items;
     term.writeln(`${SITE_CYAN}┌────┬──────────────────────────────────────────────────┬───────┬────────┐${ANSI_RESET}`);
     term.writeln(`${SITE_CYAN}│${SITE_FAINT} #  ${SITE_CYAN}│${SITE_FAINT} Title                                            ${SITE_CYAN}│${SITE_FAINT} Score ${SITE_CYAN}│${SITE_FAINT} Comments${SITE_CYAN}│${ANSI_RESET}`);
     term.writeln(`${SITE_CYAN}├────┼──────────────────────────────────────────────────┼───────┼────────┤${ANSI_RESET}`);
@@ -640,6 +771,7 @@ async function hnCommand(term) {
       term.writeln(`${SITE_CYAN}│${SITE_GREEN}${num} ${SITE_CYAN}│${SITE_WHITE} ${title} ${SITE_CYAN}│${SITE_MUTED} ${score}${SITE_CYAN}│${SITE_MUTED} ${comments}${SITE_CYAN}│${ANSI_RESET}`);
     });
     term.writeln(`${SITE_CYAN}└────┴──────────────────────────────────────────────────┴───────┴────────┘${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Type ${SITE_WHITE}hn <number>${SITE_MUTED} to view a story${ANSI_RESET}`);
   } catch {
     term.writeln(`${SITE_ERR}Failed to fetch Hacker News${ANSI_RESET}`);
   }
@@ -870,7 +1002,7 @@ function executeCommand(input, term) {
       weatherCommand(term, args);
       return;
     case 'hn':
-      hnCommand(term);
+      hnCommand(term, args);
       return;
     case 'md':
       mdCommand(term, args);
