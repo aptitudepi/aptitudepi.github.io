@@ -41,6 +41,7 @@
   --color-glass: oklch(0.09 0.008 260 / 0.20);
   --color-glass-hover: oklch(0.14 0.012 260 / 0.32);
   --color-glass-border: oklch(0.2 0.02 260 / 0.35);
+  --color-panel: oklch(0.055 0.006 260 / 0.94);
   --color-terminal-bg: oklch(0.06 0.005 260 / 0.12);
   --color-terminal-border: oklch(0.18 0.015 260 / 0.5);
   --color-terminal-header: oklch(0.1 0.008 260 / 0.3);

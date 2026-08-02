@@ -39,7 +39,7 @@ function initMotionIntegration() {
 
 function initHeroTimeline() {
   const dots = document.querySelectorAll('.terminal-dot');
-  const title = document.querySelector('.terminal-title');
+  const title = document.querySelector('.doc-nav-crumb') || document.querySelector('.terminal-title');
   if (!dots.length || !title) return;
   anime.createTimeline()
     .add(dots, { scale: [0, 1], opacity: [0, 1], duration: 200, ease: 'out(3)' }, 0)

@@ -13,128 +13,7 @@ body::before {
   pointer-events: none;
 }
 
-/* ── Nav bar — terminal header (matches the hero's header) ───── */
-.doc-nav {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: 10px 16px;
-  background: var(--color-terminal-header);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--color-terminal-border);
-  user-select: none;
-}
-
-.terminal-dots {
-  display: flex;
-  gap: 8px;
-}
-.terminal-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-.terminal-dot.red { background: #ff5f57; }
-.terminal-dot.yellow { background: #febc2e; }
-.terminal-dot.green { background: #28c840; }
-
-.doc-crumb {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-1);
-  font-family: var(--font-mono);
-}
-
-.doc-nav-home {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--color-text);
-  transition: color var(--transition-interactive);
-}
-.doc-nav-home:hover { color: var(--color-primary); }
-
-.doc-nav-sep {
-  color: var(--color-text-faint);
-  font-size: 0.9rem;
-}
-
-.doc-nav-crumb {
-  position: relative;
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-  transition: color var(--transition-interactive);
-}
-.doc-nav-crumb:hover { color: var(--color-primary); }
-
-/* RGB-split glitch on the current-page crumb (from terminal.css). */
-.doc-nav-crumb::before,
-.doc-nav-crumb::after {
-  content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  opacity: 0;
-}
-.doc-nav-crumb::before {
-  color: #ff0000;
-  animation: docGlitch1 5s infinite;
-}
-.doc-nav-crumb::after {
-  color: #0000ff;
-  animation: docGlitch2 4.7s infinite;
-}
-
-@keyframes docGlitch1 {
-  0%, 85%, 88%, 100% { opacity: 0; transform: translate(0); }
-  86% { opacity: 0.6; transform: translate(-1px, 0); clip-path: inset(20% 0 30% 0); }
-  87% { opacity: 0.4; transform: translate(1px, 0); clip-path: inset(60% 0 10% 0); }
-  89% { opacity: 0.5; transform: translate(-0.5px, 0); clip-path: inset(40% 0 50% 0); }
-  90% { opacity: 0; transform: translate(0); }
-  95% { opacity: 0.3; transform: translate(1.5px, 0); clip-path: inset(10% 0 70% 0); }
-  96% { opacity: 0; transform: translate(0); }
-}
-@keyframes docGlitch2 {
-  0%, 82%, 84%, 92%, 94%, 100% { opacity: 0; transform: translate(0); }
-  83% { opacity: 0.5; transform: translate(1px, 0); clip-path: inset(30% 0 40% 0); }
-  85% { opacity: 0.3; transform: translate(-1.5px, 0); clip-path: inset(50% 0 20% 0); }
-  93% { opacity: 0.5; transform: translate(2px, 0); clip-path: inset(70% 0 5% 0); }
-  95% { opacity: 0.4; transform: translate(-1px, 0); clip-path: inset(15% 0 60% 0); }
-}
-
-.doc-nav-links {
-  margin-left: auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-}
-.doc-nav-links a {
-  padding: 4px var(--space-2);
-  border-radius: var(--radius-sm);
-  font-size: 0.8125rem;
-  font-family: var(--font-mono);
-  color: var(--color-text-muted);
-  border: 1px solid transparent;
-  transition: color var(--transition-interactive), border-color var(--transition-interactive);
-}
-.doc-nav-links a:hover {
-  color: var(--color-text);
-  border-color: var(--color-glass-border);
-}
-
-.terminal-clock {
-  font-size: 11px;
-  color: var(--color-text-faint);
-  font-family: var(--font-mono);
-  white-space: nowrap;
-}
+/* ── Nav bar — shared terminal bar lives in css/nav.css ───────── */
 
 /* ── Layout ──────────────────────────────── */
 .doc-main {
@@ -148,7 +27,7 @@ body::before {
 .doc-panel {
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-glass-border);
-  background: var(--color-glass);
+  background: var(--color-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   padding: clamp(var(--space-6), 5vw, var(--space-12));
@@ -178,7 +57,9 @@ body::before {
   text-underline-offset: 3px;
   transition: color var(--transition-interactive);
 }
-.doc-panel a:hover { color: var(--color-primary-hover); }
+.doc-panel a:hover {
+  animation: docColorCycle 6s ease-in-out infinite;
+}
 .doc-panel u { text-decoration-thickness: 1px; }
 .doc-panel sup,
 .doc-panel sub { font-size: 0.75em; }
@@ -299,14 +180,15 @@ body::before {
 /* ── Man pages ───────────────────────────── */
 .man .doc-panel {
   font-family: var(--font-mono);
-  background: var(--color-terminal-bg);
+  background: var(--color-panel);
   border-color: var(--color-terminal-border);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   font-size: 0.875rem;
   line-height: 1.6;
 }
-.man .doc-panel a { color: var(--color-terminal-blue); }
+.man .doc-panel a { color: var(--color-primary); }
+.man .doc-panel a:hover { animation: docColorCycle 6s ease-in-out infinite; }
 .man .doc-panel p { max-width: 72ch; }
 
 /* Override the global `section` rule from layout.css. */
@@ -344,29 +226,37 @@ body::before {
   font-weight: 700;
   letter-spacing: 0.12em;
   color: var(--color-terminal-cyan);
-  margin: var(--space-6) 0 var(--space-2);
+  margin: var(--space-5) 0 var(--space-2);
 }
 
 .man-body {
-  padding-left: 1.5em;
+  padding-left: 2.5em;
 }
 .man-body > .man-para {
-  margin: 0 0 var(--space-3);
-  padding-left: 1em;
-  text-indent: -1em;
+  margin: 0 0 var(--space-2);
   color: var(--color-text-muted);
 }
+
+/* FILES / SEE ALSO rows: table layout so entry names align across rows. */
+.man-section:has(.man-file) .man-body {
+  display: table;
+}
 .man-file {
-  display: flex;
-  gap: var(--space-4);
-  margin: 0 0 var(--space-2);
-  padding-left: 1em;
-  text-indent: -1em;
+  display: table-row;
   color: var(--color-text-muted);
+}
+.man-file code,
+.man-file .man-file-desc {
+  display: table-cell;
+  vertical-align: baseline;
+  padding: 0 0 var(--space-2);
+}
+.man-file .man-file-desc {
+  padding-left: var(--space-5);
+  overflow-wrap: break-word;
 }
 .man-file code {
   color: var(--color-text);
-  flex-shrink: 0;
 }
 
 /* ── Misc inline ─────────────────────────── */
@@ -386,10 +276,7 @@ body::before {
 
 /* ── Responsive ──────────────────────────── */
 @media (max-width: 640px) {
-  .doc-nav { flex-wrap: wrap; gap: var(--space-2); }
   .entry-row { flex-direction: column; gap: 0; }
   .entry-date { align-self: flex-start; }
-  .man-body { padding-left: 0.25em; }
-  .doc-nav-links { margin-left: 0; width: 100%; }
-  .terminal-clock { margin-left: auto; }
+  .man-body { padding-left: 1em; }
 }

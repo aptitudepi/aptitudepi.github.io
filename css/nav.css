@@ -1,0 +1,137 @@
+/* nav.css — shared terminal-bar navigation, used on every page on the site. */
+
+.doc-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 10px 16px;
+  background: var(--color-terminal-header);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--color-terminal-border);
+  user-select: none;
+}
+
+.terminal-dots {
+  display: flex;
+  gap: 8px;
+}
+.terminal-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.terminal-dot.red { background: #ff5f57; }
+.terminal-dot.yellow { background: #febc2e; }
+.terminal-dot.green { background: #28c840; }
+
+.doc-crumb {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+}
+
+.doc-nav-home {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text);
+  transition: color var(--transition-interactive);
+}
+.doc-nav-home:hover { color: var(--color-primary); }
+
+.doc-nav-sep {
+  color: var(--color-text-faint);
+  font-size: 0.9rem;
+}
+
+.doc-nav-crumb {
+  position: relative;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  transition: color var(--transition-interactive);
+}
+.doc-nav-crumb:hover { color: var(--color-primary); }
+
+/* RGB-split glitch on the current-page crumb (from terminal.css). */
+.doc-nav-crumb::before,
+.doc-nav-crumb::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+}
+.doc-nav-crumb::before {
+  color: #ff0000;
+  animation: docGlitch1 5s infinite;
+}
+.doc-nav-crumb::after {
+  color: #0000ff;
+  animation: docGlitch2 4.7s infinite;
+}
+
+@keyframes docGlitch1 {
+  0%, 85%, 88%, 100% { opacity: 0; transform: translate(0); }
+  86% { opacity: 0.6; transform: translate(-1px, 0); clip-path: inset(20% 0 30% 0); }
+  87% { opacity: 0.4; transform: translate(1px, 0); clip-path: inset(60% 0 10% 0); }
+  89% { opacity: 0.5; transform: translate(-0.5px, 0); clip-path: inset(40% 0 50% 0); }
+  90% { opacity: 0; transform: translate(0); }
+  95% { opacity: 0.3; transform: translate(1.5px, 0); clip-path: inset(10% 0 70% 0); }
+  96% { opacity: 0; transform: translate(0); }
+}
+@keyframes docGlitch2 {
+  0%, 82%, 84%, 92%, 94%, 100% { opacity: 0; transform: translate(0); }
+  83% { opacity: 0.5; transform: translate(1px, 0); clip-path: inset(30% 0 40% 0); }
+  85% { opacity: 0.3; transform: translate(-1.5px, 0); clip-path: inset(50% 0 20% 0); }
+  93% { opacity: 0.5; transform: translate(2px, 0); clip-path: inset(70% 0 5% 0); }
+  95% { opacity: 0.4; transform: translate(-1px, 0); clip-path: inset(15% 0 60% 0); }
+}
+
+/* The site's blue↔red color cycle, applied to hovered nav buttons. Same
+   duration/keyframes as `blueRedColor` in components.css so the hue stays
+   in phase with the rest of the page. */
+@keyframes docColorCycle {
+  0%, 100% { color: #0000ff; }
+  50% { color: #ff0000; }
+}
+
+.doc-nav-links {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.doc-nav-links a {
+  padding: 4px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+  border: 1px solid transparent;
+  transition: border-color var(--transition-interactive);
+}
+.doc-nav-links a:hover {
+  border-color: var(--color-glass-border);
+  animation: docColorCycle 6s ease-in-out infinite;
+}
+
+.terminal-clock {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .doc-nav { flex-wrap: wrap; gap: var(--space-2); }
+  .doc-nav-links { margin-left: 0; width: 100%; }
+  .terminal-clock { margin-left: auto; }
+}

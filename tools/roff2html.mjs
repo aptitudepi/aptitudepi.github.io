@@ -86,7 +86,8 @@ export function roffToHtml(src) {
       let inner = '';
       for (const p of current.paras) {
         if (p.kind === 'file') {
-          inner += `<div class="man-file"><code>${p.code}</code><span class="man-file-desc">${p.desc}</span></div>`;
+          const rowClass = current.name === 'SEE ALSO' ? 'man-file man-seealso' : 'man-file';
+          inner += `<div class="${rowClass}"><code>${p.code}</code><span class="man-file-desc">${p.desc}</span></div>`;
         } else {
           inner += `<p class="man-para">${p.text}</p>`;
         }
@@ -121,7 +122,7 @@ export function roffToHtml(src) {
     // Indented body line?
     const indent = raw.length - raw.trimStart().length;
     if (current && indent > 0) {
-      if (current.name === 'FILES' && /\s{2,}/.test(trimmed)) {
+      if ((current.name === 'FILES' || current.name === 'SEE ALSO') && /\s{2,}/.test(trimmed)) {
         flushPara();
         const [code, ...rest] = trimmed.split(/\s{2,}/);
         current.paras.push({ kind: 'file', code: renderText(code), desc: renderText(rest.join(' ')) });

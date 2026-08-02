@@ -57,6 +57,7 @@
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/terminal.css">
+<link rel="stylesheet" href="css/nav.css">
 <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
@@ -110,15 +111,22 @@
 <h1 class="sr-only">Devkumar Banerjee — CS Student, Builder, Researcher</h1>
 <section id="hero-target">
   <div class="hero-shell terminal-window">
-    <div class="terminal-header">
-      <div class="terminal-dots">
+    <nav class="doc-nav" aria-label="Site navigation">
+      <div class="terminal-dots" aria-hidden="true">
         <span class="terminal-dot red"></span>
         <span class="terminal-dot yellow"></span>
         <span class="terminal-dot green"></span>
       </div>
-      <span class="terminal-title" data-text="db@dvxb.io — fish 3.7">db@dvxb.io — fish 3.7</span>
+      <a class="doc-nav-home" href="/">dvxb.io</a>
+      <span class="doc-nav-sep" aria-hidden="true">/</span>
+      <a class="doc-nav-crumb" href="#hero-target" data-text="terminal">terminal</a>
+      <nav class="doc-nav-links" aria-label="Pages">
+        <a href="/resume">resume</a>
+        <a href="/cv">cv</a>
+        <a href="/man/">man</a>
+      </nav>
       <span class="terminal-clock" id="headerClock"></span>
-    </div>
+    </nav>
     <div class="terminal-body" id="terminal-container"></div>
   </div>
 </section>
