@@ -68,7 +68,7 @@ function scrollToSection(id) {
 
 function initDotScroll() {
   document.querySelectorAll('.nav-dot').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', () => {
       const section = btn.dataset.section;
       scrollToSection(section);
       const phase = ((Date.now() - navStartTime) / 1000) % 6;

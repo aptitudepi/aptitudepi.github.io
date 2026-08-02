@@ -59,7 +59,7 @@ function init() {
 
   const container = document.getElementById('terminal-container');
   if (container && typeof Terminal !== 'undefined') {
-    const term = createTerminal(container);
+    createTerminal(container);
     startBoot();
   }
 }

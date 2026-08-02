@@ -330,7 +330,7 @@ function getCPU() {
     else if (p) parts.push(p.replace(/[_\d].*$/, ''));
     if (navigator.hardwareConcurrency) parts.push(`${navigator.hardwareConcurrency}-core`);
     return parts.join(' ') || 'db';
-  } catch (e) { return 'db'; }
+  } catch { return 'db'; }
 }
 
 function getGPU() {
@@ -437,7 +437,7 @@ function suggestCommand(input) {
 }
 
 function visibleLen(s) {
-  return s.replace(/\x1b\[[0-9;]*m/g, '').length;
+  return s.replace(/\u001b\[[0-9;]*m/g, '').length;
 }
 
 function getBlueRedPhase() {

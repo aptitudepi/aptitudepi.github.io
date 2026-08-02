@@ -408,7 +408,7 @@ function initParticleBurst() {
   }
 
   document.querySelectorAll('.view-more-cta a, .resume-download a, .project-link').forEach(el => {
-    el.addEventListener('click', e => {
+    el.addEventListener('click', () => {
       const rect = el.getBoundingClientRect();
       burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
     });
