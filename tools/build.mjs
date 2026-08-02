@@ -31,6 +31,19 @@ function renderTemplate(name, vars) {
 
 const resumeTex = read(join(FULL_CV, 'resume.tex'));
 const cvTex = read(join(FULL_CV, 'cv.tex'));
+const siteManual = roffToHtml(read(join(SITE, 'dvxb.io.7'))).html;
+
+const DOWNLOAD_ICON =
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+
+function downloadButton(label, href) {
+  return `<div class="resume-download doc-download">
+    <a href="${href}" target="_blank" rel="noopener noreferrer">
+      ${DOWNLOAD_ICON}
+      ${label}
+    </a>
+  </div>`;
+}
 
 const pages = [
   {
@@ -41,6 +54,7 @@ const pages = [
     canonical: 'https://dvxb.io/resume',
     crumbHref: '/resume',
     crumbText: 'resume',
+    download: downloadButton('Download resume', '/assets/resume.pdf'),
     body: texToHtml(resumeTex),
   },
   {
@@ -51,16 +65,29 @@ const pages = [
     canonical: 'https://dvxb.io/cv',
     crumbHref: '/cv',
     crumbText: 'cv',
+    download: downloadButton('Download CV', '/assets/cv.pdf'),
     body: texToHtml(cvTex),
   },
   {
     template: 'man.html',
     out: 'man/index.html',
-    title: 'resume(1) — Devkumar Banerjee',
-    desc: 'Man page for Devkumar Banerjee — AI Systems / SRE Intern @ Lockheed Martin, UT MD Anderson, DIVE Lab, AGGIES Lab.',
+    title: 'dvxb.io(7) — Personal Website Manual',
+    desc: "Man page for dvxb.io — Devkumar Banerjee's personal website.",
     canonical: 'https://dvxb.io/man/',
     crumbHref: '/man/',
     crumbText: 'man',
+    download: '',
+    body: siteManual,
+  },
+  {
+    template: 'man.html',
+    out: 'man/resume.html',
+    title: 'resume(1) — Devkumar Banerjee',
+    desc: 'Man page for Devkumar Banerjee — AI Systems / SRE Intern @ Lockheed Martin, UT MD Anderson, DIVE Lab, AGGIES Lab.',
+    canonical: 'https://dvxb.io/man/resume',
+    crumbHref: '/man/',
+    crumbText: 'man',
+    download: downloadButton('Download resume', '/assets/resume.pdf'),
     body: texToHtml(resumeTex),
   },
   {
@@ -71,7 +98,8 @@ const pages = [
     canonical: 'https://dvxb.io/man/dvxb.io.7',
     crumbHref: '/man/',
     crumbText: 'man',
-    body: roffToHtml(read(join(SITE, 'dvxb.io.7'))).html,
+    download: '',
+    body: siteManual,
   },
 ];
 
@@ -84,6 +112,7 @@ for (const page of pages) {
     CANONICAL: page.canonical,
     CRUMB_HREF: page.crumbHref,
     CRUMB_TEXT: page.crumbText,
+    DOWNLOAD: page.download,
     BODY: page.body,
   });
   writeFileSync(join(SITE, page.out), html);

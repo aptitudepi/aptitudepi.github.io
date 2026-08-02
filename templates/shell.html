@@ -27,37 +27,31 @@
 <link rel="stylesheet" href="/css/doc.css">
 </head>
 <body>
-<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden" focusable="false">
-  <defs>
-    <filter id="liquid-glass" colorInterpolationFilters="sRGB">
-      <feTurbulence baseFrequency="0.05 0.05" numOctaves="1" result="turbulence" seed="1" type="fractalNoise"/>
-      <feGaussianBlur in="turbulence" result="blurredNoise" stdDeviation="2"/>
-      <feDisplacementMap in="SourceGraphic" in2="blurredNoise" result="displaced" scale="30" xChannelSelector="R" yChannelSelector="B"/>
-      <feGaussianBlur in="displaced" result="finalBlur" stdDeviation="4"/>
-      <feComposite in="finalBlur" in2="finalBlur" operator="over"/>
-    </filter>
-  </defs>
-</svg>
 <canvas id="c" aria-hidden="true"></canvas>
 
 <a class="skip-link" href="#main">Skip to content</a>
 
 <header class="doc-nav">
-  <div class="doc-nav-inner">
+  <div class="terminal-dots" aria-hidden="true">
+    <span class="terminal-dot red"></span>
+    <span class="terminal-dot yellow"></span>
+    <span class="terminal-dot green"></span>
+  </div>
+  <div class="doc-crumb">
     <a class="doc-nav-home" href="/">dvxb.io</a>
     <span class="doc-nav-sep">/</span>
-    <a class="doc-nav-crumb" href="__CRUMB_HREF__">__CRUMB_TEXT__</a>
-    <nav class="doc-nav-links" aria-label="Resume pages">
-      <a href="/resume">resume</a>
-      <a href="/cv">cv</a>
-      <a href="/man/">man</a>
-      <a href="/assets/resume.pdf" download>resume.pdf</a>
-      <a href="/assets/cv.pdf" download>cv.pdf</a>
-    </nav>
+    <a class="doc-nav-crumb" data-text="__CRUMB_TEXT__" href="__CRUMB_HREF__">__CRUMB_TEXT__</a>
   </div>
+  <nav class="doc-nav-links" aria-label="Pages">
+    <a href="/resume">resume</a>
+    <a href="/cv">cv</a>
+    <a href="/man/">man</a>
+  </nav>
+  <span class="terminal-clock" id="headerClock" role="timer" aria-label="Current time"></span>
 </header>
 
 <main id="main" class="doc-main">
+__DOWNLOAD__
   <article class="doc-panel">
 __BODY__
   </article>
@@ -70,6 +64,15 @@ __BODY__
 <script type="module">
   import { initParticles } from '/js/three-particles.js';
   initParticles();
+</script>
+<script>
+  (function () {
+    var el = document.getElementById('headerClock');
+    if (!el) return;
+    var tick = function () { el.textContent = new Date().toLocaleTimeString(); };
+    tick();
+    setInterval(tick, 1000);
+  })();
 </script>
 </body>
 </html>
