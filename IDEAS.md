@@ -740,6 +740,36 @@ Surface portfolio content directly through the terminal — not just links to it
 
 ---
 
+## Resume Variants
+
+Job-targeted resume variants from the single Full-CV content source. The site
+already generates `/resume`, `/cv`, `/man/`, and the PDFs in CI, so a variant is
+just another render of the same `.tex` data — no new hosting.
+
+| Variant | Idea | Effort |
+|---------|------|--------|
+| `--job=sre` | Reorder SRE-relevant work first, filter `\resumeItem`s by tag, drop non-SRE awards | Medium |
+| `--job=ml` | Lead with ML research (DIVE Lab, AGGIES Lab, F-DCFPyL), emphasize publications | Medium |
+| `--job=research` | Lead with publications + teaching, expand CV-style entries | Medium |
+| `--1page` | Hard 1-page constraint with tighter spacing + omitted optional sections | Low |
+| `--scan` | Keyword-dense bullet rephrasing to match a specific ATS/req listing | High |
+
+Implementation sketch:
+- Tag each `\resumeItem`/entry in `resume.tex`/`cv.tex` with a metadata key, e.g.
+  `\resumeItem[job=sre,ml]{...}`. Additive metadata only — the base renders stay
+  byte-identical.
+- The site's `tex2html.mjs` gains a variant filter that drops non-matching
+  bullets and reorders sections by a per-variant section rank table.
+- Variants are URL-addressable but **not served yet** — no `/resume?type=sre`.
+  Full-CV may trial-build variants (they're just alternate .tex); the site still
+  only consumes `resume.tex` and `cv.tex`.
+
+Prior art: the abandoned dynamic-resume system in `~/repos/resume` (source-of-truth
+YAML + template renderer). The variant filter is the same idea without a server —
+pure static generation.
+
+---
+
 ## Magic UI Components (83 components)
 
 ### Canvas / WebGL / Shader

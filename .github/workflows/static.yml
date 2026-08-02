@@ -1,43 +1,91 @@
-# Simple workflow for deploying static content to GitHub Pages
+# Build and deploy the static site to GitHub Pages.
+#
+# Everything on /resume, /cv, /man/, and assets/*.pdf is GENERATED here from
+# the private aptitudepi/Full-CV TeX source — nothing is committed. The Full-CV
+# checkout requires a fine-grained PAT (secrets.FULL_CV_PAT) with Contents: Read
+# access on aptitudepi/Full-CV only.
 name: Deploy static content to Pages
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
 
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+    inputs:
+      full_cv_ref:
+        description: "Full-CV git ref to build from (branch, tag, or SHA)"
+        required: false
+        default: "main"
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+  # Keep resume/cv in sync with Full-CV even without site changes.
+  schedule:
+    - cron: "0 6 * * *"
+
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
+env:
+  FULL_CV_REF: ${{ inputs.full_cv_ref || 'main' }}
+
 jobs:
-  # Single deploy job since we're just deploying
-  deploy:
+  build-and-deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout site
         uses: actions/checkout@v5
+
+      - name: Checkout Full-CV content
+        uses: actions/checkout@v5
+        with:
+          repository: aptitudepi/Full-CV
+          ref: ${{ env.FULL_CV_REF }}
+          path: full-cv
+          token: ${{ secrets.FULL_CV_PAT }}
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Tectonic
+        run: |
+          curl -fL -o tectonic.tar.gz \
+            "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.16.9/tectonic-0.16.9-x86_64-unknown-linux-musl.tar.gz"
+          tar xzf tectonic.tar.gz
+          sudo install -m 755 tectonic /usr/local/bin/
+
+      - name: Build HTML
+        run: bun tools/build.mjs
+        env:
+          FULL_CV_DIR: ${{ github.workspace }}/full-cv
+
+      - name: Build PDFs
+        run: bun tools/build-pdf.mjs
+        env:
+          FULL_CV_DIR: ${{ github.workspace }}/full-cv
+
+      - name: Remove Full-CV checkout from artifact
+        run: rm -rf full-cv
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          # Upload entire repository
+          # Upload the whole workspace — includes the generated
+          # resume.html/cv.html/man/ and assets/*.pdf on disk.
           path: '.'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
