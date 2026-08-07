@@ -349,24 +349,29 @@ function scaleRadii(opts, scale) {
  * size rather than one design times a scale factor.
  */
 const STATES = {
-  // bottom-right of the terminal while the model downloads
+  // The terminal pair sits at the foot of the text column, a little over one
+  // 17px row tall, so it reads as the running command's own spinner. That
+  // rules out upstream's 64px tunings — at chat-avatar scale the mark buries
+  // the last three lines of live output — so both use the inline-text ones.
+  //
+  // While the model downloads:
   searching: {
-    size: 64,
+    size: 24,
     painter: 'globe',
-    speed: 2.015,
-    count: 0.42,
-    dotScale: 1.15,
-    extra: { scanMul: 4.08, dimBase: 0.45 },
+    speed: 2.665,
+    count: 0.105,
+    dotScale: 1.75,
+    extra: { scanMul: 4.335, dimBase: 0.45 },
   },
 
-  // same spot, while the model is generating
+  // same spot, while it generates:
   composing: {
-    size: 64,
+    size: 24,
     painter: 'sash',
-    speed: 2.34,
-    count: 0.25,
-    dotScale: 0.85,
-    extra: { bandMul: 2.0 },
+    speed: 3.12,
+    count: 0.09,
+    dotScale: 1.073,
+    extra: { bandMul: 2.2 },
   },
 
   // the nav bar mark
@@ -498,39 +503,82 @@ function attachOrb(canvas, state) {
 
 let thinking = null;
 // Nothing stops a second `ai` being typed while the first is still loading, so
-// the orb is shared: it goes away when the last caller is done with it.
+// the mark is shared: it goes away when the last caller is done with it.
 let thinkingCallers = 0;
 
+// The mark is a decoration on the terminal buffer rather than an overlay on the
+// viewport: it gets rows of its own, scrolls with the scrollback, and the cursor
+// and every line printed after it land below the animation instead of behind it.
+const MARK_ROWS = 2;
+const MARK_COLS = 4;
+
 /**
- * Claim the terminal orb, creating it in `state` if it is not up yet. Every
- * call must be paired with a stopThinkingOrb().
+ * Open the terminal mark in `state` if it is not up yet. Every call must be
+ * paired with a stopThinkingOrb().
  */
-function startThinkingOrb(state) {
+function startThinkingOrb(term, state) {
   thinkingCallers++;
   if (thinking) return;
+  if (typeof term?.registerMarker !== 'function' || typeof term.registerDecoration !== 'function') return;
 
-  const host = document.getElementById('terminal-container');
-  if (!host) return;
+  const session = { state, canvas: null, orb: null, marker: null, decoration: null, closed: false };
+  thinking = session;
 
-  const canvas = document.createElement('canvas');
-  canvas.className = 'thinking-orb';
-  canvas.setAttribute('role', 'img');
-  canvas.setAttribute('aria-label', 'Thinking');
-  host.appendChild(canvas);
-  thinking = { canvas, orb: attachOrb(canvas, state) };
+  // The buffer lags behind writes, so open the rows first and anchor the marker
+  // back up to the first of them once the parser has caught up.
+  term.write('\r\n'.repeat(MARK_ROWS), () => {
+    if (session.closed) return;
+
+    // Anything thrown in here escapes into xterm's write queue and takes the
+    // rest of the command's output down with it, so the mark is strictly
+    // optional: on any failure it gives up and leaves the terminal alone.
+    let marker = null;
+    try {
+      marker = term.registerMarker(-MARK_ROWS);
+      const decoration =
+        marker && term.registerDecoration({ marker, x: 0, width: MARK_COLS, height: MARK_ROWS });
+      if (!decoration) throw new Error('decoration unavailable');
+
+      const canvas = document.createElement('canvas');
+      canvas.className = 'thinking-orb';
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', 'Thinking');
+
+      // Fires on every render pass, and the element is rebuilt across some of
+      // them; the orb starts on the first one, once the canvas is in the DOM.
+      decoration.onRender((el) => {
+        if (canvas.parentElement !== el) el.appendChild(canvas);
+        if (!session.orb) session.orb = attachOrb(canvas, session.state);
+      });
+
+      session.canvas = canvas;
+      session.marker = marker;
+      session.decoration = decoration;
+    } catch {
+      marker?.dispose();
+      session.closed = true;
+    }
+  });
 }
 
-/** Switch the orb that is already up — 'searching' → 'composing'. */
+/** Switch the mark that is already up — 'searching' → 'composing'. */
 function setThinkingOrbState(state) {
-  thinking?.orb.setState(state);
+  if (!thinking) return;
+  thinking.state = state;
+  thinking.orb?.setState(state);
 }
 
 function stopThinkingOrb() {
   thinkingCallers = Math.max(0, thinkingCallers - 1);
   if (thinkingCallers > 0 || !thinking) return;
-  thinking.orb.destroy();
-  thinking.canvas.remove();
+
+  const session = thinking;
   thinking = null;
+  session.closed = true;
+  session.orb?.destroy();
+  session.canvas?.remove();
+  session.decoration?.dispose();
+  session.marker?.dispose();
 }
 
 /** Bring the nav bar's mark to life. Every page ships the canvas in markup. */

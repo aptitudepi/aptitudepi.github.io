@@ -145,6 +145,9 @@ function createTerminal(container) {
   term = new window.Terminal({
     cursorBlink: true,
     cursorStyle: 'block',
+    // registerDecoration (js/orb.js anchors the AI thought orb to a buffer
+    // line with it) is behind xterm's proposed-API flag
+    allowProposedApi: true,
     fontSize: 13,
     fontFamily: "'JetBrains Mono', 'SF Mono', 'Menlo', monospace",
     theme: {

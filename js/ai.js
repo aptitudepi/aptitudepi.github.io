@@ -64,7 +64,7 @@ async function generateOutput(prompt, term) {
   // 60s), composing while it generates. The finally is what guarantees it goes
   // away again — loadPipeline swallows its own failures, but generation can
   // still throw or time out under us.
-  startThinkingOrb('searching');
+  startThinkingOrb(term, 'searching');
   try {
     const p = await loadPipeline(term);
     if (!p) return;

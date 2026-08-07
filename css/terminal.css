@@ -77,13 +77,11 @@
   background: transparent !important;
 }
 
-/* Thought orb, shown while the local model loads and while it generates. Sits
-   above the xterm canvases but below the full-screen CRT/noise overlays. */
+/* Thought orb, shown while the local model loads and while it generates. It
+   lives inside an xterm decoration (js/orb.js), which owns the positioning and
+   the stacking — the rows it sits on are part of the buffer, so it scrolls with
+   the output like any other line. */
 .thinking-orb {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  z-index: 3;
   display: block;
   pointer-events: none;
 }
