@@ -1,3 +1,5 @@
+import { startThinkingOrb, setThinkingOrbState, stopThinkingOrb } from './orb.js';
+
 const MODELS = [
   { id: 'onnx-community/SmolLM2-135M-ONNX', name: 'SmolLM2-135M', size: '135MB', dtype: 'q4', desc: 'basic' },
   { id: 'onnx-community/SmolLM2-360M-ONNX', name: 'SmolLM2-360M', size: '360MB', dtype: 'q4', desc: 'balanced' },
@@ -58,14 +60,22 @@ async function generateOutput(prompt, term) {
     term.writeln(`\x1b[2m       ai-model <id>    (switch model, 0-4)\x1b[0m`);
     return;
   }
-  const p = await loadPipeline(term);
-  if (!p) return;
+  // The orb covers the whole wait: searching while the model downloads (up to
+  // 60s), solving while it generates. The finally is what guarantees it goes
+  // away again — loadPipeline swallows its own failures, but generation can
+  // still throw or time out under us.
+  startThinkingOrb('searching');
   try {
+    const p = await loadPipeline(term);
+    if (!p) return;
+    setThinkingOrbState('solving');
     term.writeln(`\x1b[2m\xf0\x9f\x94\x84 Generating...\x1b[0m`);
     const result = await p(prompt, { max_new_tokens: 100, temperature: 0.7, do_sample: true });
     term.writeln(`\x1b[1mAI:\x1b[0m ${result[0].generated_text}`);
   } catch (e) {
     term.writeln(`\x1b[91mGeneration failed: ${e.message}\x1b[0m`);
+  } finally {
+    stopThinkingOrb();
   }
 }
 

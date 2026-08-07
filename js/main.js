@@ -5,6 +5,7 @@ import { createTerminal, startBoot, getTerm } from './terminal.js';
 import { executeCommand } from './shell.js';
 import { bootVM } from './v86-launcher.js';
 import { startMatrixRain, stopMatrixRain, isMatrixActive } from './matrix-rain.js';
+import { mountNavOrb } from './orb.js';
 
 window.bootVM = bootVM;
 window.startMatrixRain = startMatrixRain;
@@ -54,6 +55,7 @@ function init() {
   initParticles();
   initNav();
   initAnimations();
+  mountNavOrb();
   updateClock();
   setInterval(updateClock, 1000);
 

@@ -44,6 +44,17 @@
 }
 .doc-nav-home:hover { color: var(--color-primary); }
 
+/* The animated mark in front of the wordmark. js/orb.js sets its box on
+   mount; the width/height attributes in the markup reserve the same space
+   beforehand. align-self opts the canvas out of the crumb's baseline
+   alignment, which the wordmark and breadcrumb still rely on. */
+.nav-orb {
+  display: block;
+  flex: none;
+  align-self: center;
+  margin-right: var(--space-1);
+}
+
 .doc-nav-sep {
   color: var(--color-text-faint);
   font-size: 0.9rem;

@@ -8,6 +8,7 @@ Personal portfolio featuring a browser-based x86 virtual machine, retro terminal
 - **x86 VM in browser** — Uses the [v86](https://github.com/copy/v86) WebAssembly emulator to boot a Buildroot Linux image. Runs in the terminal with full serial console. Type `vm` to start.
 - **Neofetch-style dashboard** — Displays ASCII art (pixel portrait), system info, resume highlights (education, research, work, skills, certs), and a 16-color block palette on boot and via `neofetch` / `cv`.
 - **Local AI assistant** — Type `ai <prompt>` to run Transformers.js (WASM/WebGPU) models directly in-browser. No server round-trip. `ai-models` lists available models.
+- **Thought orbs** — Dotted 3D marks on a plain 2D canvas, ported from [thinking-orbs](https://github.com/Jakubantalik/thinking-orbs) (MIT). A scan-sweeping globe shows while an `ai` model downloads and a scrambling lattice while it generates; the mark in front of `dvxb.io` in the nav bar alternates between that lattice and an undulating ribbon. Both pause offscreen and fall back to a static frame under `prefers-reduced-motion`.
 - **Hacker News reader** — `hn` fetches and displays the top 30 HN stories with scores and comment counts in a formatted ANSI table.
 - **Weather forecast** — `weather` fetches your location (browser geolocation or IP fallback) and displays current conditions from Open-Meteo. `-f` for Fahrenheit.
 - **Markdown viewer** — `md <url>` opens any markdown URL in a fullscreen rendered viewer (marked + DOMPurify, dark theme, GFM).
@@ -42,6 +43,7 @@ Personal portfolio featuring a browser-based x86 virtual machine, retro terminal
 │   ├── v86-launcher.js     v86 config, boot/stop VM, serial I/O
 │   ├── three-particles.js  Three.js particle system
 │   ├── animations.js       Anime.js scroll reveals, hover effects, skill bars
+│   ├── orb.js              Dotted thought-orb marks (nav bar + AI status)
 │   └── nav.js              Section navigation, scroll spy, mobile menu
 ├── tools/
 │   ├── tex2html.mjs        Custom LaTeX → HTML parser (throws on unknown macros)

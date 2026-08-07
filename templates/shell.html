@@ -39,6 +39,7 @@
     <span class="terminal-dot green"></span>
   </div>
   <div class="doc-crumb">
+    <canvas class="nav-orb" width="24" height="24" aria-hidden="true"></canvas>
     <a class="doc-nav-home" href="/">dvxb.io</a>
     <span class="doc-nav-sep" aria-hidden="true">/</span>
     <a class="doc-nav-crumb" data-text="__CRUMB_TEXT__" href="__CRUMB_HREF__">__CRUMB_TEXT__</a>
@@ -65,6 +66,10 @@ __BODY__
 <script type="module">
   import { initParticles } from '/js/three-particles.js';
   initParticles();
+</script>
+<script type="module">
+  import { mountNavOrb } from '/js/orb.js';
+  mountNavOrb();
 </script>
 <script>
   (function () {
