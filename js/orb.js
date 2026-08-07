@@ -10,18 +10,17 @@
  * projection, the lat/long dot fields, the solve cycle, the band undulation
  * and the z-sorted grayscale painter. This is a partial port; the deviations:
  *
- *   - Three of the nine states (searching, solving, composing), each tuned
+ *   - Three of the nine states (searching, composing, solving), each tuned
  *     for the one size this site renders it at.
  *   - The React component, live theme resolution and the (state × size)
  *     preset cache are replaced by a plain rAF loop and a static table. Dark
  *     ink is pinned, since the site has no light mode.
- *   - Painters append to a caller-owned dot list instead of painting it, so
- *     the nav mark can crossfade solving into composing and back with the two
- *     z-sorted as one body.
  *   - Composing's ghost sphere and its face-on `breathing` variant are
- *     dropped; at 24px the ghost is eight dots at a tenth alpha.
- *   - Composing's 3D tumble, which its own preset freezes, is restored — see
- *     the note on the `logo` state.
+ *     dropped, along with the knobs nothing here varies.
+ *   - Composing's 3D tumble, which its own preset freezes, is restored. The
+ *     renormalisation that keeps the band on its sphere also pins its
+ *     silhouette, so a frozen band reads as a striped barrel with some
+ *     shimmer inside it; tumbling, the band's outline is the animation.
  */
 
 const TAU = Math.PI * 2;
@@ -70,7 +69,7 @@ function radiusScale(size, pow) {
 function paint(ctx, dots) {
   dots.sort((a, b) => a.z - b.z);
   for (const d of dots) {
-    const alpha = d.a;
+    const alpha = d.a ?? 1;
     if (alpha < 0.02) continue;
     const g = Math.round((1 - Math.min(1, Math.max(0, d.white))) * 255);
     ctx.fillStyle = `rgba(${g},${g},${g},${alpha})`;
@@ -82,17 +81,16 @@ function paint(ctx, dots) {
 
 /* ── Globe: a scan meridian sweeps the lattice — searching ── */
 
-function globeDots(dots, size, t, o) {
+function drawGlobe(ctx, size, t, o) {
   const spin = 0.5;
   const half = size / 2;
-  const R = half * 0.82;
   const tilt = 0.4 + 0.06 * Math.sin(t * 0.35);
-  const pt = makeProj(t * spin, tilt, half, half, R);
+  const pt = makeProj(t * spin, tilt, half, half, half * 0.82);
   // the scan sweeps relative to the spin; scanMul scales that relative rate
   const scan = t * (spin + (1.7 - spin) * o.scanMul);
   const rs = radiusScale(size, o.rsPow);
-  const zScale = R / half;
 
+  const dots = [];
   for (let li = 0; li <= o.latRings; li++) {
     const lat = -Math.PI / 2 + (li / o.latRings) * Math.PI;
     const cosLat = Math.cos(lat);
@@ -108,7 +106,7 @@ function globeDots(dots, size, t, o) {
       dots.push({
         x: px,
         y: py,
-        z: z * zScale,
+        z,
         r: Math.max(o.rMin, (o.rBase + o.rDepth * depth + o.rBoost * boost) * rs),
         white: o.inkFar - o.inkSpan * depth,
         // dimBase < 1 fades un-scanned dots so the meridian reads clearly
@@ -116,6 +114,7 @@ function globeDots(dots, size, t, o) {
       });
     }
   }
+  paint(ctx, dots);
 }
 
 /* ── Rubik: bands twist in quarter turns, scramble → solve — solving ── */
@@ -188,15 +187,14 @@ function applyMoves(pt3, moves, sc) {
   return [x, y, z, inActive];
 }
 
-function rubikDots(dots, size, t, o) {
+function drawRubik(ctx, size, t, o) {
   const half = size / 2;
-  const R = half * 0.82;
-  const pt = makeProj(t * 0.55, 0.35 + 0.1 * Math.sin(t * 0.9), half, half, R);
+  const pt = makeProj(t * 0.55, 0.35 + 0.1 * Math.sin(t * 0.9), half, half, half * 0.82);
   const rs = radiusScale(size, o.rsPow);
   const moves = makeMoves(o.moveCount);
   const sc = solveCycle(t, o.moveCount, 0.42, 1.2);
-  const zScale = R / half;
 
+  const dots = [];
   for (let li = 0; li <= o.latRings; li++) {
     const lat = -Math.PI / 2 + (li / o.latRings) * Math.PI;
     const cosLat = Math.cos(lat);
@@ -212,18 +210,18 @@ function rubikDots(dots, size, t, o) {
       dots.push({
         x: px,
         y: py,
-        z: zr * zScale,
+        z: zr,
         r: Math.max(o.rMin, (o.rBase + o.rDepth * depth + (inActive ? o.rActive : 0)) * rs),
         white: o.inkFar - o.inkSpan * depth - (inActive ? 0.14 : 0),
-        a: 1,
       });
     }
   }
+  paint(ctx, dots);
 }
 
-/* ── Sash: an undulating band rides a great circle — composing ── */
+/* ── Sash: an undulating band tumbles on a great circle — composing ── */
 
-function sashDots(dots, size, t, o) {
+function drawSash(ctx, size, t, o) {
   const half = size / 2;
   const R = half * 0.78;
   const camTilt = 0.3;
@@ -244,6 +242,7 @@ function sashDots(dots, size, t, o) {
   const ny = uz * vx - ux * vz;
   const nz = ux * vy - uy * vx;
 
+  const dots = [];
   const lanes = Math.max(1, Math.round(o.lanes * o.bandMul));
   for (let w = 0; w < lanes; w++) {
     const laneOff = (w - (lanes - 1) / 2) * 0.075;
@@ -264,18 +263,19 @@ function sashDots(dots, size, t, o) {
       dots.push({
         x: px,
         y: py,
-        z: zr / half,
+        z: zr,
         r: Math.max(o.rMin, (o.rBase + o.rDepth * depth) * (1 - 0.25 * edge) * rs),
         white: 0.52 - 0.44 * depth + 0.18 * edge,
         a: 0.4 + 0.6 * depth,
       });
     }
   }
+  paint(ctx, dots);
 }
 
 /* ── Profiles and presets ──────────────────── */
 
-const PAINTERS = { globe: globeDots, rubik: rubikDots, sash: sashDots };
+const PAINTERS = { globe: drawGlobe, rubik: drawRubik, sash: drawSash };
 
 // Base (fine) densities per painter, before the per-state multipliers.
 const BASE_PROFILES = {
@@ -341,101 +341,61 @@ function scaleRadii(opts, scale) {
   }
 }
 
-// The nav mark alternates between its two layers on this cycle (seconds of
-// wall clock), crossfading over FADE. A 24px frame only has ink for one of
-// them at a time: composing needs most of its dots on the band to read as a
-// band at all, which leaves nothing to spend on a lattice inside it.
-const CYCLE = 12;
-const FADE = 0.5;
-
-/** Weight for a layer held over [from, to) of the cycle, fading either end. */
-function holdWeight(t, from, to) {
-  const wrap = (x) => ((x % CYCLE) + CYCLE) % CYCLE;
-  const elapsed = wrap(t - from);
-  const span = wrap(to - from);
-  if (elapsed < FADE) return elapsed / FADE;
-  if (elapsed < span) return 1;
-  if (elapsed < span + FADE) return 1 - (elapsed - span) / FADE;
-  return 0;
-}
-
 /**
- * The shipped tunings. `count` and `size` are multipliers over the base
- * profiles, `speed` multiplies the shared clock, `extra` is merged verbatim
- * after scaling, and `hold` is the layer's window in the crossfade cycle.
- * Every state is baked for the single `size` (CSS px) it is rendered at — the
- * upstream presets are separate designs per size, not a scale factor, so
- * there is no size knob here.
+ * The shipped tunings. `count` scales the dot count and `dotScale` the dot
+ * radii, both as multipliers over the base profile; `speed` multiplies the
+ * clock; `extra` is merged verbatim after scaling. `size` is the rendered size
+ * in CSS px, baked per state — the upstream presets are separate designs per
+ * size rather than one design times a scale factor.
  */
 const STATES = {
-  // 64px, bottom-right of the terminal while the model downloads
+  // bottom-right of the terminal while the model downloads
   searching: {
     size: 64,
-    layers: [
-      {
-        painter: 'globe',
-        speed: 2.015,
-        count: 0.42,
-        size: 1.15,
-        extra: { scanMul: 4.08, dimBase: 0.45 },
-      },
-    ],
+    painter: 'globe',
+    speed: 2.015,
+    count: 0.42,
+    dotScale: 1.15,
+    extra: { scanMul: 4.08, dimBase: 0.45 },
   },
 
-  // 64px, same spot while tokens are being generated
-  solving: {
+  // same spot, while the model is generating
+  composing: {
     size: 64,
-    layers: [{ painter: 'rubik', speed: 1.82, count: 0.35, size: 1.05 }],
+    painter: 'sash',
+    speed: 2.34,
+    count: 0.25,
+    dotScale: 0.85,
+    extra: { bandMul: 2.0 },
   },
 
-  // 24px nav mark: solving's twisting lattice for half the cycle, composing's
-  // sash for the other half. The sash keeps the 3D tumble that composing's
-  // own preset freezes — a fixed band is pinned to its silhouette by the
-  // renormalisation, so at this size it reads as a static striped barrel
-  // rather than a ribbon. Tumbling, the band's outline is the animation.
-  logo: {
+  // the nav bar mark
+  solving: {
     size: 24,
-    layers: [
-      {
-        painter: 'rubik',
-        speed: 1.95,
-        count: 0.18,
-        size: 1.9,
-        hold: [0, CYCLE / 2],
-      },
-      {
-        painter: 'sash',
-        speed: 3.12,
-        count: 0.09,
-        size: 1.073,
-        hold: [CYCLE / 2, CYCLE],
-        extra: { bandMul: 2.2 },
-      },
-    ],
+    painter: 'rubik',
+    speed: 1.95,
+    count: 0.18,
+    dotScale: 1.9,
   },
 };
 
 const resolved = new Map();
 
-/** Resolve a state to its size + fully-scaled layer draw options. */
+/** Resolve a state to its size, tempo and fully-scaled draw options. */
 function resolve(state) {
   const hit = resolved.get(state);
   if (hit) return hit;
 
   const def = STATES[state];
+  const opts = { ...BASE_PROFILES[def.painter] };
+  if (def.count !== 1) scaleCounts(opts, def.count);
+  if (def.dotScale !== 1) scaleRadii(opts, def.dotScale);
+
   const out = {
     size: def.size,
-    layers: def.layers.map((layer) => {
-      const opts = { ...BASE_PROFILES[layer.painter] };
-      if (layer.count !== 1) scaleCounts(opts, layer.count);
-      if (layer.size !== 1) scaleRadii(opts, layer.size);
-      return {
-        draw: PAINTERS[layer.painter],
-        speed: layer.speed,
-        hold: layer.hold,
-        opts: { ...opts, ...layer.extra },
-      };
-    }),
+    speed: def.speed,
+    draw: PAINTERS[def.painter],
+    opts: { ...opts, ...def.extra },
   };
   resolved.set(state, out);
   return out;
@@ -444,7 +404,7 @@ function resolve(state) {
 /* ── Runtime ───────────────────────────────── */
 
 // The frame reduced-motion users get instead of the animation. Mid-scramble
-// for the solver, mid-undulation for the sash — representative, not resting.
+// for the solver, mid-tumble for the sash — representative, not resting.
 const STATIC_T = 0.6;
 
 /**
@@ -470,22 +430,10 @@ function attachOrb(canvas, state) {
     canvas.height = Math.round(current.size * dpr);
   };
 
-  // `t` is seconds on the shared clock, which each layer scales by its own
-  // tempo; `tempo: false` passes it through as painter time instead.
-  const frame = (t, tempo = true) => {
+  const frame = (t) => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, current.size, current.size);
-    const dots = [];
-    for (const layer of current.layers) {
-      const weight = layer.hold ? holdWeight(t, layer.hold[0], layer.hold[1]) : 1;
-      if (weight < 0.02) continue;
-      const first = dots.length;
-      layer.draw(dots, current.size, tempo ? t * layer.speed : t, layer.opts);
-      if (weight < 1) {
-        for (let i = first; i < dots.length; i++) dots[i].a *= weight;
-      }
-    }
-    paint(ctx, dots);
+    current.draw(ctx, current.size, t, current.opts);
   };
 
   const stop = () => {
@@ -494,7 +442,7 @@ function attachOrb(canvas, state) {
   };
 
   const loop = () => {
-    frame(performance.now() / 1000);
+    frame((performance.now() / 1000) * current.speed);
     if (running) raf = requestAnimationFrame(loop);
   };
 
@@ -502,7 +450,7 @@ function attachOrb(canvas, state) {
     if (!visible || document.visibilityState === 'hidden') return;
     if (reduceMq && reduceMq.matches) {
       stop();
-      frame(STATIC_T, false);
+      frame(STATIC_T);
       return;
     }
     if (running) return;
@@ -572,7 +520,7 @@ function startThinkingOrb(state) {
   thinking = { canvas, orb: attachOrb(canvas, state) };
 }
 
-/** Switch the orb that is already up — 'searching' → 'solving'. */
+/** Switch the orb that is already up — 'searching' → 'composing'. */
 function setThinkingOrbState(state) {
   thinking?.orb.setState(state);
 }
@@ -588,7 +536,7 @@ function stopThinkingOrb() {
 /** Bring the nav bar's mark to life. Every page ships the canvas in markup. */
 function mountNavOrb() {
   const canvas = document.querySelector('canvas.nav-orb');
-  if (canvas) attachOrb(canvas, 'logo');
+  if (canvas) attachOrb(canvas, 'solving');
 }
 
 export { startThinkingOrb, setThinkingOrbState, stopThinkingOrb, mountNavOrb };

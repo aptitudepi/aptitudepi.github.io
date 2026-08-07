@@ -61,14 +61,14 @@ async function generateOutput(prompt, term) {
     return;
   }
   // The orb covers the whole wait: searching while the model downloads (up to
-  // 60s), solving while it generates. The finally is what guarantees it goes
+  // 60s), composing while it generates. The finally is what guarantees it goes
   // away again — loadPipeline swallows its own failures, but generation can
   // still throw or time out under us.
   startThinkingOrb('searching');
   try {
     const p = await loadPipeline(term);
     if (!p) return;
-    setThinkingOrbState('solving');
+    setThinkingOrbState('composing');
     term.writeln(`\x1b[2m\xf0\x9f\x94\x84 Generating...\x1b[0m`);
     const result = await p(prompt, { max_new_tokens: 100, temperature: 0.7, do_sample: true });
     term.writeln(`\x1b[1mAI:\x1b[0m ${result[0].generated_text}`);
