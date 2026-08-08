@@ -76,6 +76,11 @@ jobs:
       - name: Remove Full-CV checkout from artifact
         run: rm -rf full-cv
 
+      # sitemap.xml from the shared URL list (tools/site-urls.mjs); lastmod is
+      # this deploy. Same list feeds the IndexNow submit after Pages is live.
+      - name: Generate sitemap.xml
+        run: bun tools/sitemap.mjs
+
       # IndexNow ownership proof — key lives only in secrets, never committed.
       # Served at https://dvxb.io/{INDEXNOW_KEY}.txt after deploy.
       # https://www.indexnow.org/documentation.html

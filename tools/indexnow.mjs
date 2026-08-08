@@ -5,21 +5,10 @@
 // Submit once to the global endpoint; participating engines share the ping.
 // See https://www.indexnow.org/documentation.html
 
-const HOST = 'dvxb.io';
+import { HOST, URL_LIST } from './site-urls.mjs';
+
 const ENDPOINT = 'https://api.indexnow.org/indexnow';
 const KEY = process.env.INDEXNOW_KEY?.trim();
-
-// Canonical public URLs — keep aligned with tools/build.mjs + the home page.
-const URLS = [
-  'https://dvxb.io/',
-  'https://dvxb.io/resume',
-  'https://dvxb.io/cv',
-  'https://dvxb.io/man/',
-  'https://dvxb.io/man/resume',
-  'https://dvxb.io/man/dvxb.io.7',
-  'https://dvxb.io/assets/resume.pdf',
-  'https://dvxb.io/assets/cv.pdf',
-];
 
 if (!KEY) {
   console.error('INDEXNOW_KEY is not set; skipping IndexNow submit');
@@ -52,7 +41,7 @@ const payload = {
   host: HOST,
   key: KEY,
   keyLocation: keyUrl,
-  urlList: URLS,
+  urlList: URL_LIST,
 };
 
 const res = await fetch(ENDPOINT, {
@@ -70,4 +59,4 @@ if (res.status !== 200 && res.status !== 202) {
   process.exit(1);
 }
 
-console.log(`submitted ${URLS.length} URLs`);
+console.log(`submitted ${URL_LIST.length} URLs`);
