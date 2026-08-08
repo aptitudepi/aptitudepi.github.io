@@ -1,6 +1,6 @@
 # Ideas
 
-> **Append-only rule:** Never delete ideas from this file unless they have been **implemented** (then annotate as shipped — date + commit — or move to a short Shipped log). Ideation accumulates; pruning unfinished thoughts is forbidden.
+> **Append-only rule:** Never delete *unimplemented* ideas. When an idea is **fully** implemented, **move** it to [`DONE.md`](./DONE.md) (with pointers to commits / paths). Do not leave strikethrough “shipped” ghosts here. Partial progress stays in this file (optional short note). Ideation accumulates otherwise.
 
 ## Terminal Commands
 
@@ -9,7 +9,6 @@
 | Command | Description | Effort | Impact |
 |---------|-------------|--------|--------|
 | `figlet <text>` | ASCII art text (bundle 1 font ~2KB) | Low | Medium |
-| `weather [city]` | Live weather via wttr.in or Worker proxy | Low | High |
 | `gh [activity/repos]` | GitHub recent activity via public API + Worker cache | Medium | High |
 | `calc <expr>` | Safe math evaluator | Low | Medium |
 | `man <cmd>` | Man page for each command (already have help text) | Low | Medium |
@@ -19,7 +18,6 @@
 | `hollywood` | Fake hacking frenzy — scrolling hex dump + random syslog lines | Low | High |
 | `sl` | Steam locomotive when you type `sl` instead of `ls` | Low | Medium |
 | `sudo <cmd>` | Comedic "permission denied" messages | Very Low | Low |
-| `history` | Show command history | Very Low | Medium |
 | `ping [host]` | Fake ping with animated TTL display | Low | Medium |
 | `ssh [user@host]` | Fake SSH connection animation then return to shell | Low | Medium |
 | `password` | Generate random secure password | Very Low | Low |
@@ -50,14 +48,12 @@
 
 ### UX Enhancements
 
-- **Tab completion** — autocomplete commands on Tab with cycling through matches. Override xterm.js default Tab behavior. Medium effort, high impact.
 - **`Ctrl+R` reverse search** — incremental search through CMD_HISTORY. Standard bash behavior. Medium effort, high impact.
 - **Command auto-suggest** — ghost text showing most likely completion (like fish shell). Right arrow or Ctrl+F accepts. Medium effort.
 - **`stats` command** — commands run, uptime, keys pressed, fortune count. localStorage-persisted counters. Low effort.
 - **Keyboard shortcut cheat sheet** — `Ctrl+H` overlay listing all shortcuts (Tab, Ctrl+R, Ctrl+C, Ctrl+L, Ctrl+D, arrow keys, etc.). Low effort.
 - **Command palette** — `⌘K` / `Ctrl+K` opens a fuzzy-search overlay listing every command with live filtering. Execute any command directly from the palette. Medium effort, very high impact (sourced from khriztianmoreno).
-- **Auto-correction on typos** — Mistype `pojects` → "Did you mean `projects`?" Uses Levenshtein distance against command list. Low effort (sourced from RajdeepKushwaha5).
-- **Suggestion panel** — Live dropdown of matching commands + arguments as you type. Navigate with Tab/arrows, Esc to dismiss. Already listed as Tab completion but upgraded to a persistent panel. (sourced from terminal-portfolio-website).
+- **Suggestion panel** — Live dropdown of matching commands + arguments as you type. Navigate with Tab/arrows, Esc to dismiss. Upgrade beyond shipped Tab cycling. (sourced from terminal-portfolio-website).
 - **Paste auto-clean** — Automatically strips leading `$ `, `❯ `, `root@host:~# ` from pasted commands. Low effort, reduces friction for copy-paste visitors (sourced from RajdeepKushwaha5).
 - **Copy button on output** — Hovering any command output block shows a copy icon. Click to copy that output to clipboard. Low effort.
 - **Multiple terminal sessions** — tmux-style split panes: `Ctrl+B %` splits vertically, `Ctrl+B "` splits horizontally. Each pane has independent state. High effort, very high impact.
@@ -74,9 +70,9 @@ Transform the terminal from a command-dispatch facade into a real-feeling shell 
 | **Output redirection** | `>`, `>>`, `2>` operators for stdout/stderr. `echo "note" > ~/notes.txt` actually writes to VFS. | Medium | High |
 | **Scripting mode** | Multi-line input with `\` continuation or `for i in 1 2 3; do ... done` blocks. | High | Medium |
 | **Command substitution** | `$(cmd)` or backtick expansion: `echo "Today is $(date)"`. | Medium | Medium |
-| **`cowsay`/`ponysay`** | Classic ASCII art speech bubble. Pipe-friendly: `fortune \| cowsay`. | Low | Medium |
-| **`fortune -l`** | Long fortunes. `fortune -c` shows category. Categories: wisdom, code, philosophy, humor. | Low | Low |
-| **`cmatrix`** | Matrix rain in the terminal (already have full-screen overlay, but in-terminal version is different). | Low | Medium |
+| **`cowsay` piping / `ponysay`** | Basic `cowsay` shipped — still open: pipe-friendly `fortune \| cowsay`, ponysay. | Low | Medium |
+| **`fortune -l`** | Long fortunes. `fortune -c` shows category. Categories: wisdom, code, philosophy, humor. (basic `fortune` shipped) | Low | Low |
+| **`cmatrix`** | Matrix rain *in* the terminal (full-screen `matrix` overlay already shipped). | Low | Medium |
 | **`yes <text>`** | Repeatedly outputs text until Ctrl+C. | Very Low | Low |
 | **`banner <text>`** | Large ASCII banner text (hash-based). | Low | Medium |
 | **`watch <cmd>`** | Run command repeatedly, clear screen between runs. `watch -n 2 date`. | Low | Medium |
@@ -609,9 +605,7 @@ Surface portfolio content directly through the terminal — not just links to it
 
 ### Sitemap & Robots
 
-- ~~Auto-generated `sitemap.xml`~~ — **shipped**: CI writes it from `tools/site-urls.mjs` with deploy `lastmod`; IndexNow uses the same list.
-- ~~`robots.txt` pointing to sitemap~~ — **shipped** at origin; Cloudflare managed robots.txt prepends Content Signals + AI-bot `Disallow`s (keep origin lean: `Allow` + `Sitemap` only).
-- `humans.txt` — standard "built by" file. Trivial.
+- `humans.txt` — standard "built by" file. Trivial. (`sitemap.xml` / origin `robots.txt` / IndexNow → [`DONE.md`](./DONE.md))
 - `security.txt` — `/.well-known/security.txt` with contact + GPG. Trivial, on-brand for a systems person.
 
 ### RSS Feed
@@ -660,40 +654,34 @@ Surface portfolio content directly through the terminal — not just links to it
 
 ---
 
-## Top 10 by Impact/Effort
+## Top ideas by Impact/Effort (open only)
+
+Shipped rows (`weather`, tab completion, `hn`, `md`, CRT/noise, tilt cards, boot, auto-correct, …) live in [`DONE.md`](./DONE.md).
 
 | # | Idea | Effort | Impact |
 |---|------|--------|--------|
 | 1 | Glitch text on title | Very Low | High |
-| 2 | CRT scanline overlay | Very Low | Medium |
-| 3 | Typewriter boot sequence | Low | High |
-| 4 | 3D tilt cards on projects | Medium | Very High |
-| 5 | `weather` command | Low | High |
-| 6 | Last.fm now playing | Medium | High |
-| 7 | Tab completion | Medium | High |
-| 8 | `figlet` command | Low | Medium |
-| 9 | `hollywood` command | Low | High |
-| 10 | Multiple color themes | Medium | High |
-| 11 | Shell variables + piping | High | Very High |
-| 12 | `hn` — Hacker News reader | Low | High |
-| 13 | Guestbook + live visitor counter | Medium | High |
-| 14 | Resume `cat resume.md` | Low | Medium |
-| 15 | Markdown rendering engine | Low | Very High |
-| 16 | CRT static transition (VHS noise) | Low | Medium |
-| 17 | Performance budget + CI | Low | Medium |
-| 18 | Accessibility pass (a11y) | Medium | High |
-| 19 | Secret 2048 game | Medium | Medium |
-| 20 | Easter egg commands | Low | Medium |
-| 21 | Command palette (`⌘K`) | Medium | Very High |
-| 22 | PWA + service worker | Medium | High |
-| 23 | Particle text playground | Medium | High |
-| 24 | Auto-correction on typos | Low | Medium |
-| 25 | Data saver mode | Low | Medium |
-| 26 | Hero WebGL displacement shader | High | Very High |
-| 27 | Interactive adventure game | High | Very High |
-| 28 | Animated SVG blobs | Medium | High |
-| 29 | Ghost cursor trails | Low | Medium |
-| 30 | `/now` live activity page | Medium | Medium |
+| 2 | Last.fm now playing | Medium | High |
+| 3 | `figlet` command | Low | Medium |
+| 4 | `◔` command | Low | High |
+| 5 | Multiple color themes / site light-dark | Medium | High |
+| 6 | Shell variables + piping | High | Very High |
+| 7 | Guestbook + live visitor counter | Medium | High |
+| 8 | Resume `cat resume.md` in VFS | Low | Medium |
+| 9 | CRT static transition (VHS noise) beyond toggle | Low | Medium |
+| 10 | Performance budget + CI | Low | Medium |
+| 11 | Accessibility pass (a11y) | Medium | High |
+| 12 | Secret 2048 game | Medium | Medium |
+| 13 | Easter egg commands | Low | Medium |
+| 14 | Command palette (`⌘K`) | Medium | Very High |
+| 15 | PWA + service worker | Medium | High |
+| 16 | Particle text playground | Medium | High |
+| 17 | Data saver mode | Low | Medium |
+| 18 | Hero WebGL displacement shader | High | Very High |
+| 19 | Interactive adventure game | High | Very High |
+| 20 | Animated SVG blobs | Medium | High |
+| 21 | Ghost cursor trails | Low | Medium |
+| 22 | `/now` live activity page | Medium | Medium |
 
 ---
 
