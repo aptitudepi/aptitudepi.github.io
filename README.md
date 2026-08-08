@@ -168,6 +168,11 @@ out `aptitudepi/Full-CV` (needs the `FULL_CV_PAT` secret, a fine-grained PAT wit
 `Contents: Read` on that repo only), runs the generators, and uploads the result.
 A daily schedule rebuilds so the resume/CV track Full-CV changes without a site push.
 
+After each successful deploy, CI publishes an [IndexNow](https://www.indexnow.org/)
+key file from the `INDEXNOW_KEY` secret and POSTs the site’s canonical URLs to
+`api.indexnow.org` (Bing, Yandex, and other partners — not Google). `robots.txt`
+and `sitemap.xml` cover crawl discovery for every engine, including Google.
+
 ---
 
 Built with [v86](https://github.com/copy/v86), [xterm.js](https://xtermjs.org/), [Three.js](https://threejs.org/), [Anime.js](https://animejs.com/), and [Cloudflare Workers](https://workers.cloudflare.com/).

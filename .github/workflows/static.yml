@@ -76,6 +76,19 @@ jobs:
       - name: Remove Full-CV checkout from artifact
         run: rm -rf full-cv
 
+      # IndexNow ownership proof — key lives only in secrets, never committed.
+      # Served at https://dvxb.io/{INDEXNOW_KEY}.txt after deploy.
+      # https://www.indexnow.org/documentation.html
+      - name: Write IndexNow key file
+        env:
+          INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+        run: |
+          if [ -z "$INDEXNOW_KEY" ]; then
+            echo "INDEXNOW_KEY not set; skipping key file"
+            exit 0
+          fi
+          printf '%s' "$INDEXNOW_KEY" > "${INDEXNOW_KEY}.txt"
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -89,3 +102,10 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # Ping IndexNow partners after the key file is live. Google does not
+      # participate; Bing/Yandex/etc. share submissions from this endpoint.
+      - name: Submit URLs to IndexNow
+        env:
+          INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+        run: bun tools/indexnow.mjs
