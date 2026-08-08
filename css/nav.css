@@ -1,5 +1,21 @@
 /* nav.css — shared terminal-bar navigation, used on every page on the site. */
 
+/* The site's blue↔red cycle (`blueRedColor` in components.css), carried as an
+   inheritable colour instead of applied per element. The clock runs on the bar
+   from page load so every consumer — the ambient nav orb, and on hover the
+   wordmark, crumb, and page buttons — picks the hue up mid-stride and stays in
+   phase with the rest of the page. Animating `color` on :hover instead would
+   restart the cycle at blue on every pointer entry. */
+@property --nav-cycle {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #0000ff;
+}
+@keyframes navCycle {
+  0%, 100% { --nav-cycle: #0000ff; }
+  50% { --nav-cycle: #ff0000; }
+}
+
 .doc-nav {
   position: sticky;
   top: 0;
@@ -13,6 +29,7 @@
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--color-terminal-border);
   user-select: none;
+  animation: navCycle 6s ease-in-out infinite;
 }
 
 .terminal-dots {
@@ -35,23 +52,28 @@
   font-family: var(--font-mono);
 }
 
+/* The mark and the wordmark are one link. The orb ambient-cycles via
+   js/orb.js; on hover that same module paints the wordmark from the live
+   --nav-cycle clock so the two stay locked. No `transition: color` here —
+   transitioning toward an animated @property snapshots/lags and the text
+   stops reading as a cycle. The hover rule is the no-JS fallback. */
 .doc-nav-home {
+  display: inline-block;
+  white-space: nowrap;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 1rem;
   color: var(--color-text);
-  transition: color var(--transition-interactive);
 }
-.doc-nav-home:hover { color: var(--color-primary); }
+.doc-nav-home:hover,
+.doc-nav-home:focus-visible { color: var(--nav-cycle); }
 
-/* The animated mark in front of the wordmark. js/orb.js sets its box on
-   mount; the width/height attributes in the markup reserve the same space
-   beforehand. align-self opts the canvas out of the crumb's baseline
-   alignment, which the wordmark and breadcrumb still rely on. */
+/* The animated mark in front of the wordmark. js/orb.js sets its box on mount;
+   the width/height attributes in the markup reserve the same space beforehand.
+   It has to stay inline-level for the anchor to keep a single line box. */
 .nav-orb {
-  display: block;
-  flex: none;
-  align-self: center;
+  display: inline-block;
+  vertical-align: middle;
   margin-right: var(--space-1);
 }
 
@@ -64,9 +86,9 @@
   position: relative;
   font-size: 0.8125rem;
   color: var(--color-text-muted);
-  transition: color var(--transition-interactive);
 }
-.doc-nav-crumb:hover { color: var(--color-primary); }
+.doc-nav-crumb:hover,
+.doc-nav-crumb:focus-visible { color: var(--nav-cycle); }
 
 /* RGB-split glitch on the current-page crumb (from terminal.css). */
 .doc-nav-crumb::before,
@@ -106,14 +128,6 @@
   95% { opacity: 0.4; transform: translate(-1px, 0); clip-path: inset(15% 0 60% 0); }
 }
 
-/* The site's blue↔red color cycle, applied to hovered nav buttons. Same
-   duration/keyframes as `blueRedColor` in components.css so the hue stays
-   in phase with the rest of the page. */
-@keyframes docColorCycle {
-  0%, 100% { color: #0000ff; }
-  50% { color: #ff0000; }
-}
-
 .doc-nav-links {
   margin-left: auto;
   display: flex;
@@ -129,9 +143,10 @@
   border: 1px solid transparent;
   transition: border-color var(--transition-interactive);
 }
-.doc-nav-links a:hover {
+.doc-nav-links a:hover,
+.doc-nav-links a:focus-visible {
   border-color: var(--color-glass-border);
-  animation: docColorCycle 6s ease-in-out infinite;
+  color: var(--nav-cycle);
 }
 
 .terminal-clock {
@@ -145,4 +160,10 @@
   .doc-nav { flex-wrap: wrap; gap: var(--space-2); }
   .doc-nav-links { margin-left: 0; width: 100%; }
   .terminal-clock { margin-left: auto; }
+}
+
+/* Freeze the bar's colour clock; the orb then holds rest blue (see CYCLE_STATIC
+   in js/orb.js) and hover text lands on a static hue instead of a moving one. */
+@media (prefers-reduced-motion: reduce) {
+  .doc-nav { animation: none; }
 }

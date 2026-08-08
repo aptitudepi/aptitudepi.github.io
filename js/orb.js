@@ -15,6 +15,9 @@
  *   - The React component, live theme resolution and the (state × size)
  *     preset cache are replaced by a plain rAF loop and a static table. Dark
  *     ink is pinned, since the site has no light mode.
+ *   - Dots can be tinted, which upstream has no notion of: the nav mark always
+ *     takes the site's blue↔red cycle off `--nav-cycle`; the wordmark joins
+ *     that ink on hover.
  *   - Composing's ghost sphere and its face-on `breathing` variant are
  *     dropped, along with the knobs nothing here varies.
  *   - Composing's 3D tumble, which its own preset freezes, is restored. The
@@ -62,17 +65,23 @@ function radiusScale(size, pow) {
 }
 
 /**
- * Z-sort far→near and fill matte grayscale dots. Ink is mirrored for the
- * dark substrate (1 - white) so near dots read bright. Plain 2D fills only:
- * no ctx.filter, no SVG filters, so it renders identically everywhere.
+ * Z-sort far→near and fill matte dots. Ink is mirrored for the dark substrate
+ * (1 - white) so near dots read bright. Plain 2D fills only: no ctx.filter, no
+ * SVG filters, so it renders identically everywhere.
+ *
+ * `tint` is an optional per-channel scale in [0, 1]. Scaling the gray level
+ * rather than replacing it keeps the near/far ink ramp — and with it the sense
+ * of depth — intact under any hue.
  */
-function paint(ctx, dots) {
+function paint(ctx, dots, tint) {
   dots.sort((a, b) => a.z - b.z);
   for (const d of dots) {
     const alpha = d.a ?? 1;
     if (alpha < 0.02) continue;
     const g = Math.round((1 - Math.min(1, Math.max(0, d.white))) * 255);
-    ctx.fillStyle = `rgba(${g},${g},${g},${alpha})`;
+    ctx.fillStyle = tint
+      ? `rgba(${Math.round(g * tint[0])},${Math.round(g * tint[1])},${Math.round(g * tint[2])},${alpha})`
+      : `rgba(${g},${g},${g},${alpha})`;
     ctx.beginPath();
     ctx.arc(d.x, d.y, d.r, 0, TAU);
     ctx.fill();
@@ -81,7 +90,7 @@ function paint(ctx, dots) {
 
 /* ── Globe: a scan meridian sweeps the lattice — searching ── */
 
-function drawGlobe(ctx, size, t, o) {
+function drawGlobe(ctx, size, t, o, tint) {
   const spin = 0.5;
   const half = size / 2;
   const tilt = 0.4 + 0.06 * Math.sin(t * 0.35);
@@ -114,7 +123,7 @@ function drawGlobe(ctx, size, t, o) {
       });
     }
   }
-  paint(ctx, dots);
+  paint(ctx, dots, tint);
 }
 
 /* ── Rubik: bands twist in quarter turns, scramble → solve — solving ── */
@@ -187,7 +196,7 @@ function applyMoves(pt3, moves, sc) {
   return [x, y, z, inActive];
 }
 
-function drawRubik(ctx, size, t, o) {
+function drawRubik(ctx, size, t, o, tint) {
   const half = size / 2;
   const pt = makeProj(t * 0.55, 0.35 + 0.1 * Math.sin(t * 0.9), half, half, half * 0.82);
   const rs = radiusScale(size, o.rsPow);
@@ -216,12 +225,12 @@ function drawRubik(ctx, size, t, o) {
       });
     }
   }
-  paint(ctx, dots);
+  paint(ctx, dots, tint);
 }
 
 /* ── Sash: an undulating band tumbles on a great circle — composing ── */
 
-function drawSash(ctx, size, t, o) {
+function drawSash(ctx, size, t, o, tint) {
   const half = size / 2;
   const R = half * 0.78;
   const camTilt = 0.3;
@@ -270,7 +279,7 @@ function drawSash(ctx, size, t, o) {
       });
     }
   }
-  paint(ctx, dots);
+  paint(ctx, dots, tint);
 }
 
 /* ── Profiles and presets ──────────────────── */
@@ -386,14 +395,21 @@ const STATES = {
 
 const resolved = new Map();
 
-/** Resolve a state to its size, tempo and fully-scaled draw options. */
-function resolve(state) {
-  const hit = resolved.get(state);
-  if (hit) return hit;
+/**
+ * Resolve a state to its size, tempo and fully-scaled draw options.
+ * `countOverride` skips the cache so a density preview can re-tune the lattice
+ * without poisoning the named-state table the rest of the site shares.
+ */
+function resolve(state, countOverride) {
+  if (countOverride == null) {
+    const hit = resolved.get(state);
+    if (hit) return hit;
+  }
 
   const def = STATES[state];
+  const count = countOverride ?? def.count;
   const opts = { ...BASE_PROFILES[def.painter] };
-  if (def.count !== 1) scaleCounts(opts, def.count);
+  if (count !== 1) scaleCounts(opts, count);
   if (def.dotScale !== 1) scaleRadii(opts, def.dotScale);
 
   const out = {
@@ -402,7 +418,7 @@ function resolve(state) {
     draw: PAINTERS[def.painter],
     opts: { ...opts, ...def.extra },
   };
-  resolved.set(state, out);
+  if (countOverride == null) resolved.set(state, out);
   return out;
 }
 
@@ -415,13 +431,17 @@ const STATIC_T = 0.6;
 /**
  * Drive an existing canvas. Pauses while offscreen or on a hidden tab, and
  * renders a single static frame when the user prefers reduced motion.
+ *
+ * `tint` is called once a frame for a per-channel ink scale, or null to stay
+ * gray. It is a pull rather than a setter so a caller can hand back a colour
+ * that is still moving under it — see mountNavOrb.
  */
-function attachOrb(canvas, state) {
+function attachOrb(canvas, state, { tint = null, count = null } = {}) {
   const ctx = canvas.getContext('2d');
-  if (!ctx) return { setState() {}, destroy() {} };
+  if (!ctx) return { setState() {}, repaint() {}, destroy() {} };
 
   const reduceMq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-  let current = resolve(state);
+  let current = resolve(state, count);
   let dpr = 1;
   let raf = 0;
   let running = false;
@@ -438,7 +458,7 @@ function attachOrb(canvas, state) {
   const frame = (t) => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, current.size, current.size);
-    current.draw(ctx, current.size, t, current.opts);
+    current.draw(ctx, current.size, t, current.opts, tint ? tint() : null);
   };
 
   const stop = () => {
@@ -491,6 +511,11 @@ function attachOrb(canvas, state) {
       current = resolve(next);
       measure();
       if (!running) start();
+    },
+    // For the paused cases — reduced motion draws one frame and stops, so a
+    // change of ink has nothing to pick it up otherwise.
+    repaint() {
+      if (!running) frame(STATIC_T);
     },
     destroy() {
       stop();
@@ -581,10 +606,108 @@ function stopThinkingOrb() {
   session.marker?.dispose();
 }
 
-/** Bring the nav bar's mark to life. Every page ships the canvas in markup. */
-function mountNavOrb() {
-  const canvas = document.querySelector('canvas.nav-orb');
-  if (canvas) attachOrb(canvas, 'solving');
+/* ── The nav mark's ambient ink ─────────────── */
+
+/**
+ * How far the hue is allowed to pull the ink off gray. The cycle's own colours
+ * are dark in absolute terms — pure blue especially — so the tint is normalised
+ * to full brightness (below) and then held short of a full channel cut, or
+ * sub-pixel dots would drop out at the blue and red ends of the cycle.
+ */
+const TINT_DEPTH = 0.8;
+
+// Keyframe rest of --nav-cycle / blueRedColor — the frozen hue under
+// prefers-reduced-motion, when the bar's colour clock is stopped.
+const CYCLE_STATIC = '#0000ff';
+
+let probeCtx = null;
+let lastColorStr = '';
+let lastColorRGB = null;
+
+/**
+ * Computed colours are all but always `rgb(...)`, but an interpolated one can
+ * serialise in another space; anything unrecognised goes through a 1px canvas
+ * and lets the browser do the conversion.
+ */
+function readRGB(str) {
+  if (str === lastColorStr) return lastColorRGB;
+  let rgb = null;
+
+  const m = /^rgba?\(([^)]+)\)/.exec(str);
+  if (m) {
+    const parts = m[1].split(/[\s,/]+/).filter(Boolean).map(Number).slice(0, 3);
+    if (parts.length === 3 && parts.every(Number.isFinite)) rgb = parts;
+  }
+
+  if (!rgb) {
+    probeCtx ??= document
+      .createElement('canvas')
+      .getContext('2d', { willReadFrequently: true });
+    if (probeCtx) {
+      probeCtx.clearRect(0, 0, 1, 1);
+      probeCtx.fillStyle = str;
+      probeCtx.fillRect(0, 0, 1, 1);
+      const d = probeCtx.getImageData(0, 0, 1, 1).data;
+      rgb = [d[0], d[1], d[2]];
+    }
+  }
+
+  lastColorStr = str;
+  lastColorRGB = rgb;
+  return rgb;
 }
 
-export { startThinkingOrb, setThinkingOrbState, stopThinkingOrb, mountNavOrb };
+/** Per-channel ink scale for a CSS colour string, or null if unreadable. */
+function tintFromColor(str) {
+  const rgb = readRGB(str);
+  if (!rgb) return null;
+  const peak = Math.max(rgb[0], rgb[1], rgb[2]);
+  if (!peak) return null;
+  return rgb.map((c) => 1 - TINT_DEPTH + (TINT_DEPTH * c) / peak);
+}
+
+/**
+ * Bring the nav bar's mark to life. Every page ships the canvas in markup,
+ * inside the `dvxb.io` link, so the two are one hover group for free.
+ *
+ * Design B: the lattice always takes the bar's `--nav-cycle` ink. On
+ * :hover/:focus-visible the wordmark is painted from that same clock each
+ * frame — CSS `color: var(--nav-cycle)` with `transition: color` was
+ * re-interpolating toward a moving target and never looked like a cycle.
+ * Under reduced motion the clock freezes and both hold rest blue.
+ */
+function mountNavOrb() {
+  const canvas = document.querySelector('canvas.nav-orb');
+  if (!canvas) return;
+
+  const bar = canvas.closest('.doc-nav');
+  const group = canvas.closest('a');
+  const reduceMq = window.matchMedia
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null;
+
+  const cycleColor = () => {
+    if (reduceMq?.matches || !bar) return CYCLE_STATIC;
+    return getComputedStyle(bar).getPropertyValue('--nav-cycle').trim() || CYCLE_STATIC;
+  };
+
+  const orb = attachOrb(canvas, 'solving', {
+    tint() {
+      const cycle = cycleColor();
+      // Read :hover each frame (not an event latch) so the text stays locked
+      // to the same ink the lattice is using right now.
+      if (group) {
+        if (group.matches(':hover, :focus-visible')) group.style.color = cycle;
+        else if (group.style.color) group.style.color = '';
+      }
+      return tintFromColor(cycle);
+    },
+  });
+
+  // Reduced-motion can flip after mount; the lattice loop already restarts, but
+  // a paused static frame needs an explicit redraw to drop animated ink.
+  const onReduce = () => orb.repaint();
+  reduceMq?.addEventListener('change', onReduce);
+}
+
+export { attachOrb, startThinkingOrb, setThinkingOrbState, stopThinkingOrb, mountNavOrb };
