@@ -12,6 +12,8 @@ window.startMatrixRain = startMatrixRain;
 window.stopMatrixRain = stopMatrixRain;
 window.isMatrixActive = isMatrixActive;
 
+mountNavOrb();
+
 const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
 let konamiIdx = 0;
 
@@ -55,7 +57,6 @@ function init() {
   initParticles();
   initNav();
   initAnimations();
-  mountNavOrb();
   updateClock();
   setInterval(updateClock, 1000);
 

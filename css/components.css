@@ -379,6 +379,7 @@
 .cert-badge:hover::after { opacity: 0.2; }
 .cert-badge img { width: 72px; height: 72px; border-radius: var(--radius-sm); transition: transform 250ms var(--ease-out-expo); }
 .cert-badge:hover img { transform: scale(1.08); }
+.cert-badge.hubspot img { width: 84px; height: auto; }
 .cert-badge .cert-name { font-size: 0.625rem; color: var(--color-text-faint); text-align: center; line-height: 1.3; }
 
 /* ── Resume ────────────────────────────────── */
