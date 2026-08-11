@@ -440,6 +440,31 @@
 
 .certs-section, .resume-section { content-visibility: auto; contain-intrinsic-size: 1px; }
 
+/* ── Galaxy UI Mechanical Card & Button Feedback (galaxy) ── */
+.spotlight-card,
+.cert-badge,
+.social-link {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.social-link:active,
+.cert-badge:active,
+.spotlight-card:active {
+  transform: scale(0.97) translateY(1px);
+}
+.cyber-loader {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: cyberSpin 700ms linear infinite;
+}
+@keyframes cyberSpin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── Terminal Scrollbar ────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
