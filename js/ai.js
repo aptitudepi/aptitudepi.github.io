@@ -102,7 +102,9 @@ async function streamGroq(prompt, context, term) {
             const json = JSON.parse(dataStr);
             const token = json.choices[0]?.delta?.content || '';
             if (token) term.write(token);
-          } catch (e) { /* ignore partial chunk */ }
+          } catch (_err) {
+            // Ignore incomplete SSE chunk payload
+          }
         }
       }
     }

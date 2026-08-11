@@ -1,7 +1,7 @@
 // Inspired by bklit-ui ParticleBadge component
 // WebGL particle border emitter for certification badges & interactive cards
 
-const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const prefersReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 class WebGLParticleBadge {
   constructor(el, options = {}) {
@@ -19,20 +19,13 @@ class WebGLParticleBadge {
 
   init() {
     this.container = document.createElement('div');
-    this.container.style.cssText = `
-      position: absolute;
-      inset: -${this.bleed}px;
-      pointer-events: none;
-      z-index: 1;
-      overflow: hidden;
-      border-radius: inherit;
-    `;
+    this.container.style.cssText = `position:absolute;inset:-${this.bleed}px;pointer-events:none;z-index:1;overflow:hidden;border-radius:inherit;`;
 
     this.canvas = document.createElement('canvas');
-    this.canvas.style.cssText = 'position: absolute; inset: 0; pointer-events: none; width: 100%; height: 100%;';
+    this.canvas.style.cssText = 'position:absolute;inset:0;pointer-events:none;width:100%;height:100%;';
     this.container.appendChild(this.canvas);
 
-    if (this.el.style.position === '' || this.el.style.position === 'static') {
+    if (!this.el.style.position || this.el.style.position === 'static') {
       this.el.style.position = 'relative';
     }
     this.el.appendChild(this.container);
@@ -72,8 +65,7 @@ class WebGLParticleBadge {
       void main() {
         vec2 center = gl_PointCoord - vec2(0.5);
         float dist = length(center);
-        float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
-        alpha *= v_color.a;
+        float alpha = (1.0 - smoothstep(0.0, 0.5, dist)) * v_color.a;
         float glow = exp(-dist * 4.0) * 0.6;
         gl_FragColor = vec4(v_color.rgb, alpha + glow * v_color.a);
       }
@@ -124,20 +116,16 @@ class WebGLParticleBadge {
 
     for (let i = 0; i < count; i++) {
       const edge = Math.floor(Math.random() * 4);
-      let x = 0, y = 0;
-      if (edge === 0) { x = Math.random() * w; y = this.bleed; }
+      let x = this.bleed;
+      let y = this.bleed;
+      if (edge === 0) { x = Math.random() * w; }
       else if (edge === 1) { x = w - this.bleed; y = Math.random() * h; }
       else if (edge === 2) { x = Math.random() * w; y = h - this.bleed; }
-      else { x = this.bleed; y = Math.random() * h; }
+      else { y = Math.random() * h; }
 
       const angle = Math.random() * Math.PI * 2;
       const speed = 0.4 + Math.random() * 1.2;
-
-      // Cyan to Blue-Red particle palette (matching bklit-ui theme)
       const isRed = Math.random() > 0.5;
-      const r = isRed ? 255 : 0;
-      const g = isRed ? 80 : 180;
-      const b = 255;
 
       this.particles.push({
         x, y,
@@ -146,7 +134,9 @@ class WebGLParticleBadge {
         life: 50 + Math.random() * 40,
         maxLife: 90,
         size: 2.0 + Math.random() * 3.5,
-        r: r / 255, g: g / 255, b: b / 255
+        r: (isRed ? 255 : 0) / 255,
+        g: (isRed ? 80 : 180) / 255,
+        b: 1.0
       });
     }
 
@@ -156,7 +146,6 @@ class WebGLParticleBadge {
   }
 
   startLoop() {
-    let tick = 0;
     this.interval = setInterval(() => {
       this.burst(this.isHovering ? 3 : 1);
     }, 120);
@@ -172,7 +161,7 @@ class WebGLParticleBadge {
         p.x += p.vx;
         p.y += p.vy;
         p.vy += 0.01;
-        p.life--;
+        p.life -= 1;
         return p.life > 0;
       });
 
