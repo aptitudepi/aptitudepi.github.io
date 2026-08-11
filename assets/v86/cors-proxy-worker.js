@@ -1,4 +1,4 @@
-// Cloudflare Worker — CORS proxy for v86 VM networking
+// Cloudflare Worker — CORS proxy + Groq AI Gateway
 // Deploy: wrangler deploy cors-proxy-worker.js --name 0
 
 const ALLOWED_ORIGINS = [
@@ -15,7 +15,7 @@ const CORS_HEADERS = {
   'access-control-max-age': '86400',
 };
 
-async function handleRequest(request) {
+async function handleRequest(request, env) {
   // Block unauthorized origins
   const origin = request.headers.get('Origin');
   if (origin && !ALLOWED_ORIGINS.some(r => r.test(origin))) {
@@ -28,10 +28,54 @@ async function handleRequest(request) {
   }
 
   const url = new URL(request.url);
-  const target = url.searchParams.get('url');
 
+  // ── 1. Groq AI Gateway Handler (/ai or POST to worker) ──
+  if (url.pathname === '/ai' || (request.method === 'POST' && !url.searchParams.get('url'))) {
+    try {
+      const body = await request.json();
+      const apiKey = (env && env.GROQ_API_KEY) || (typeof GROQ_API_KEY !== 'undefined' ? GROQ_API_KEY : '');
+      if (!apiKey) {
+        return new Response(JSON.stringify({ error: 'GROQ_API_KEY secret missing in Cloudflare worker configuration' }), {
+          status: 500,
+          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const groqResp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: body.model || 'llama-3.1-8b-instant',
+          messages: body.messages,
+          stream: true,
+          max_tokens: body.max_tokens || 384,
+          temperature: body.temperature || 0.2,
+        }),
+      });
+
+      return new Response(groqResp.body, {
+        status: groqResp.status,
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        },
+      });
+    } catch (err) {
+      return new Response(JSON.stringify({ error: err.message }), {
+        status: 500,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  // ── 2. Existing v86 CORS Proxy Handler (?url=...) ──
+  const target = url.searchParams.get('url');
   if (!target) {
-    return new Response('Missing ?url= parameter', { status: 400 });
+    return new Response('Missing ?url= parameter or /ai endpoint', { status: 400 });
   }
 
   const headers = new Headers(request.headers);
@@ -68,6 +112,8 @@ async function handleRequest(request) {
   });
 }
 
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request));
-});
+export default {
+  async fetch(request, env) {
+    return handleRequest(request, env);
+  }
+};
