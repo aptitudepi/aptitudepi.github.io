@@ -15,7 +15,6 @@ function initAnimations() {
 
   initMotionIntegration();
   initScrollProgress();
-  initInfiniteSliders();
   initHeroTimeline();
   initRevealObserver();
   initCardTracking();
@@ -78,6 +77,20 @@ function initRevealObserver() {
           ease: 'out(3)',
           delay: idx * 100,
           composition: 'blend',
+        });
+        observer.unobserve(el);
+        return;
+      }
+
+      if (el.classList.contains('certs-grid')) {
+        const badges = el.querySelectorAll('.cert-badge');
+        const cols = window.innerWidth < 768 ? 2 : 4;
+        anime.animate(badges, {
+          opacity: [0, 1],
+          translateY: [12, 0],
+          duration: 300,
+          ease: 'out(3)',
+          delay: anime.stagger(30, { grid: [cols, Math.ceil(badges.length / cols)], from: 'center' }),
         });
         observer.unobserve(el);
         return;
@@ -149,6 +162,7 @@ function initRevealObserver() {
 
   document.querySelectorAll('.section-header').forEach(el => observer.observe(el));
 
+  document.querySelectorAll('.certs-grid').forEach(el => observer.observe(el));
   document.querySelectorAll('.social-link').forEach(el => observer.observe(el));
   const resumeCta = document.querySelector('.resume-download');
   if (resumeCta) observer.observe(resumeCta);
@@ -161,7 +175,7 @@ function initCardTracking() {
     let gx = 0, gy = 0, tx = 0, ty = 0;
     let rx = 0, ry = 0, trx = 0, trY = 0;
     let raf = null;
-    const noTilt = card.classList.contains('bento-card') || card.classList.contains('cert-badge') || card.closest('.infinite-slider');
+    const noTilt = card.classList.contains('bento-card') || card.classList.contains('cert-badge');
 
     const tick = () => {
       gx += (tx - gx) * 0.18;
@@ -405,61 +419,7 @@ function initParticleBurst() {
 
 export { initAnimations };
 
-function initInfiniteSliders() {
-  const sliders = [...document.querySelectorAll('[data-infinite-slider]')];
-  if (!sliders.length) return;
 
-  const start = slider => {
-    const track = slider.querySelector('.is-track');
-    const group = slider.querySelector('.is-group');
-    if (!track || !group || slider.dataset.started) return false;
-
-    const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
-    const width = group.getBoundingClientRect().width;
-    if (!(width > 0)) return false;
-    slider.dataset.started = 'true';
-
-    const speed = parseFloat(slider.dataset.speed || '60') || 60;
-    const to = -(width + gap);
-    const controls = window.Motion.animate(0, to, {
-      ease: 'linear',
-      duration: (width + gap) / speed,
-      repeat: Infinity,
-      repeatType: 'loop',
-      onUpdate: v => { track.style.transform = `translateX(${v.toFixed(2)}px)`; },
-      onRepeat: () => { track.style.transform = 'translateX(0px)'; },
-    });
-
-    slider.addEventListener('mouseenter', () => { if (controls.pause) controls.pause(); });
-    slider.addEventListener('mouseleave', () => { if (controls.play) controls.play(); });
-    return true;
-  };
-
-  const setupAll = () => {
-    let pending = sliders.filter(s => !start(s));
-    if (pending.length) {
-      requestAnimationFrame(() => {
-        pending = pending.filter(s => !start(s));
-        if (pending.length && 'IntersectionObserver' in window) {
-          const io = new IntersectionObserver(entries => {
-            entries.forEach(en => {
-              if (!en.isIntersecting) return;
-              if (start(en.target)) io.unobserve(en.target);
-            });
-          }, { rootMargin: '400px 0px' });
-          pending.forEach(s => io.observe(s));
-        }
-      });
-    }
-  };
-
-  const check = setInterval(() => {
-    if (window.Motion) {
-      clearInterval(check);
-      setupAll();
-    }
-  }, 200);
-}
 
 function initStatFlow() {
   const grid = document.querySelector('[data-stats-grid]');

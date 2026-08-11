@@ -190,7 +190,6 @@
 }
 .spotlight-card:hover {
   border-color: currentColor;
-  box-shadow: 0 0 0 1px currentColor, 0 0 24px currentColor;
 }
 .spotlight-card:hover::before {
   opacity: 1;
@@ -318,7 +317,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-6);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   color: var(--color-text-muted);
   font-family: var(--font-display);
@@ -328,12 +327,21 @@
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
 .view-more-cta a:hover {
+  border-color: currentColor;
   color: currentColor;
   background: color-mix(in srgb, currentColor 18%, transparent);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
 }
 
 /* ── Certifications ────────────────────────── */
+.certs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-8) 0;
+  max-width: 640px;
+  margin: 0 auto;
+}
 .cert-badge {
   display: flex;
   flex-direction: column;
@@ -348,6 +356,7 @@
   transition: all 250ms var(--ease-out-expo);
   cursor: pointer;
   overflow: hidden;
+  opacity: 0;
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
 .cert-badge::after {
@@ -366,7 +375,7 @@
   transition: opacity 400ms;
   will-change: translate;
 }
-.cert-badge:hover { transform: translateY(-3px); border-color: currentColor; box-shadow: 0 0 0 1px currentColor, 0 0 18px currentColor; }
+.cert-badge:hover { transform: translateY(-3px); border-color: currentColor; }
 .cert-badge:hover::after { opacity: 0.2; }
 .cert-badge img { width: 72px; height: 72px; border-radius: var(--radius-sm); transition: transform 250ms var(--ease-out-expo); }
 .cert-badge:hover img { transform: scale(1.08); }
@@ -394,6 +403,7 @@
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
 .resume-download a:hover {
+  border-color: currentColor;
   background: color-mix(in srgb, currentColor 18%, transparent);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
   transform: translateY(-2px) scale(1.02);
@@ -414,7 +424,7 @@
   width: 52px;
   height: 52px;
   border-radius: var(--radius-full);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border);
   background: var(--color-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -423,19 +433,12 @@
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite;
 }
-.social-link:nth-child(1) { animation-delay: -4.8s; }
-.social-link:nth-child(2) { animation-delay: -3.6s; }
-.social-link:nth-child(3) { animation-delay: -2.4s; }
-.social-link:nth-child(4) { animation-delay: -1.2s; }
-.social-link:nth-child(5) { animation-delay: 0s; }
-.social-link.border-glow::before { background: currentColor; animation: none; }
-.social-link:hover { background: color-mix(in srgb, currentColor 18%, transparent); transform: translateY(-2px); }
+.social-link:hover { border-color: currentColor; background: color-mix(in srgb, currentColor 18%, transparent); transform: translateY(-2px); }
 .social-link svg { width: 22px; height: 22px; }
 
 .footer { text-align: center; padding: var(--space-6); background: var(--color-glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--color-text-faint); font-size: 0.75rem; }
 
-.certs-section, .resume-section { content-visibility: visible; }
-#projects, #certifications { min-height: auto; }
+.certs-section, .resume-section { content-visibility: auto; contain-intrinsic-size: 1px; }
 
 /* ── Terminal Scrollbar ────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -551,61 +554,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-terminal-border) tran
   transition: none;
 }
 
-/* ── Infinite Slider (motion-primitives port) ─────── */
-.infinite-slider {
-  --slider-gap: var(--space-5);
-  overflow: hidden;
-}
-.is-track {
-  display: flex;
-  width: max-content;
-  gap: var(--slider-gap);
-  will-change: transform;
-}
-.is-group {
-  display: flex;
-  flex-shrink: 0;
-  gap: var(--slider-gap);
-}
-.certs-slider .is-group { align-items: center; }
-.projects-slider .is-group { align-items: stretch; }
-.projects-slider .spotlight-card { flex: 0 0 min(380px, 82vw); min-height: 340px; }
-.certs-slider .cert-badge { min-height: 145px; }
-.certs-slider {
-  -webkit-mask: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
-  mask: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
-}
-.projects-slider {
-  -webkit-mask: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
-  mask: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
-}
 
-/* ── Gradient Border (blue→red sweep) ─────────────── */
-.border-glow {
-  position: relative;
-  isolation: isolate;
-  border: 1px solid transparent;
-}
-.border-glow::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(90deg, #0000FF, #FF0000, #0000FF);
-  background-size: 200% 100%;
-  animation: borderSweep 4s linear infinite;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-}
-@keyframes borderSweep {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
 
 /* ── Stats (NumberFlow) ──────────────────────────── */
 .stats-grid {
