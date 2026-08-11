@@ -429,6 +429,7 @@
 .footer { text-align: center; padding: var(--space-6); background: var(--color-glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--color-text-faint); font-size: 0.75rem; }
 
 .certs-section, .resume-section { content-visibility: visible; }
+#projects, #certifications { min-height: auto; }
 
 /* ── Terminal Scrollbar ────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -562,14 +563,15 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-terminal-border) tran
 }
 .certs-slider .is-group { align-items: center; }
 .projects-slider .is-group { align-items: stretch; }
-.projects-slider .spotlight-card { flex: 0 0 min(380px, 82vw); }
+.projects-slider .spotlight-card { flex: 0 0 min(380px, 82vw); min-height: 340px; }
+.certs-slider .cert-badge { min-height: 145px; }
 .certs-slider {
-  -webkit-mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
-  mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
 }
 .projects-slider {
-  -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-  mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
 }
 
 /* ── Gradient Border (blue→red sweep) ─────────────── */
