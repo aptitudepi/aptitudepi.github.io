@@ -40,6 +40,9 @@
   .is-track { transform: none !important; }
   .is-group[aria-hidden="true"] { display: none; }
   .infinite-slider { overflow-x: auto; }
-  .hero-rail { animation: none; background: linear-gradient(90deg, transparent, var(--color-primary-dim), transparent); }
+  .border-glow::before { animation: none; background-size: 100% 100%; }
   .stats-grid number-flow { font-variant-numeric: tabular-nums; }
+}
+@media (max-width: 1024px) {
+  .github-stats { grid-template-columns: 1fr; }
 }

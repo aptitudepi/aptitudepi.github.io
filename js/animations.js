@@ -409,36 +409,54 @@ function initInfiniteSliders() {
   const sliders = [...document.querySelectorAll('[data-infinite-slider]')];
   if (!sliders.length) return;
 
-  const setup = () => {
-    sliders.forEach(slider => {
-      const track = slider.querySelector('.is-track');
-      const group = slider.querySelector('.is-group');
-      if (!track || !group) return;
+  const start = slider => {
+    const track = slider.querySelector('.is-track');
+    const group = slider.querySelector('.is-group');
+    if (!track || !group || slider.dataset.started) return false;
 
-      const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
-      const contentSize = group.getBoundingClientRect().width + gap;
-      if (!contentSize) return;
+    const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+    const width = group.getBoundingClientRect().width;
+    if (!(width > 0)) return false;
+    slider.dataset.started = 'true';
 
-      const speed = parseFloat(slider.dataset.speed || '60') || 60;
-      const to = -contentSize;
-      const controls = Motion.animate(0, to, {
-        ease: 'linear',
-        duration: contentSize / speed,
-        repeat: Infinity,
-        repeatType: 'loop',
-        onUpdate: v => { track.style.transform = `translateX(${v.toFixed(2)}px)`; },
-        onRepeat: () => { track.style.transform = 'translateX(0px)'; },
-      });
-
-      slider.addEventListener('mouseenter', () => { if (controls.pause) controls.pause(); });
-      slider.addEventListener('mouseleave', () => { if (controls.play) controls.play(); });
+    const speed = parseFloat(slider.dataset.speed || '60') || 60;
+    const to = -(width + gap);
+    const controls = Motion.animate(0, to, {
+      ease: 'linear',
+      duration: (width + gap) / speed,
+      repeat: Infinity,
+      repeatType: 'loop',
+      onUpdate: v => { track.style.transform = `translateX(${v.toFixed(2)}px)`; },
+      onRepeat: () => { track.style.transform = 'translateX(0px)'; },
     });
+
+    slider.addEventListener('mouseenter', () => { if (controls.pause) controls.pause(); });
+    slider.addEventListener('mouseleave', () => { if (controls.play) controls.play(); });
+    return true;
+  };
+
+  const setupAll = () => {
+    let pending = sliders.filter(s => !start(s));
+    if (pending.length) {
+      requestAnimationFrame(() => {
+        pending = pending.filter(s => !start(s));
+        if (pending.length && 'IntersectionObserver' in window) {
+          const io = new IntersectionObserver(entries => {
+            entries.forEach(en => {
+              if (!en.isIntersecting) return;
+              if (start(en.target)) io.unobserve(en.target);
+            });
+          }, { rootMargin: '400px 0px' });
+          pending.forEach(s => io.observe(s));
+        }
+      });
+    }
   };
 
   const check = setInterval(() => {
     if (window.Motion) {
       clearInterval(check);
-      setup();
+      setupAll();
     }
   }, 200);
 }

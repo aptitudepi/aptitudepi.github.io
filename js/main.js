@@ -1,5 +1,6 @@
 import { initParticles, setKonami } from './three-particles.js';
 import { initAnimations } from './animations.js';
+import { initGitHubStats } from './github-stats.js';
 import { initNav } from './nav.js';
 import { createTerminal, startBoot, getTerm } from './terminal.js';
 import { executeCommand } from './shell.js';
@@ -57,6 +58,7 @@ function init() {
   initParticles();
   initNav();
   initAnimations();
+  initGitHubStats();
   updateClock();
   setInterval(updateClock, 1000);
 
