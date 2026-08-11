@@ -421,7 +421,7 @@ function initInfiniteSliders() {
 
     const speed = parseFloat(slider.dataset.speed || '60') || 60;
     const to = -(width + gap);
-    const controls = Motion.animate(0, to, {
+    const controls = window.Motion.animate(0, to, {
       ease: 'linear',
       duration: (width + gap) / speed,
       repeat: Infinity,
