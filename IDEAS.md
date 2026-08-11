@@ -896,6 +896,7 @@ Rainchecked components and deep-dive research into high-synergy external compone
 |---------------------|--------|------------------------|-----------------------------------|--------|--------|
 | **Thinking Orbs** | `thinking-orbs` | WebGL/Canvas 2D generative glowing ambient state orbs (Lattice, Morph, Braid, Ribbon, Orbits engines). | **Terminal AI Status Indicator:** Replace/augment `<canvas class="nav-orb">` in top terminal bar or beside `ai` assistant prompt. Dynamically transitions between `idle`, `thinking`, `listening`, and `processing` states upon CLI input. | Medium | High |
 | **Lightweight Charts** | `lightweight-charts` | High-performance TradingView Canvas charting library with zero dependencies. | **Lab Data & Activity Visualizer:** Interactive Canvas timeline charts in the Research & About section for transcriptome dataset distributions (PCPG Analyzer / MD Anderson) or 365-day commit velocity sparklines with tooltip inspectors. | Medium | High |
+| **Three.js GeoIP Globe** | Custom / `cobe` | 3D interactive spinning Earth sphere mesh with atmospheric glow shaders, lat/long marker vectors, and public IP lookup (`ipapi.co` / Worker proxy). | **Opt-In Playground / CLI `globe` Command:** Deferred from main page DOM to prevent GPU performance degradation (dual WebGL context cost alongside Three.js particles background). Can be loaded lazily via terminal `globe` command or modal, pinpointing visitor city coordinates with a pulsing laser beacon. | High | High |
 
 ### 2. Deep-Dive Research: 4 High-Synergy Component Repositories
 
