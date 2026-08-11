@@ -423,11 +423,12 @@
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite;
 }
-.social-link:nth-child(1) { animation-delay: 0s; }
-.social-link:nth-child(2) { animation-delay: -1.2s; }
+.social-link:nth-child(1) { animation-delay: -4.8s; }
+.social-link:nth-child(2) { animation-delay: -3.6s; }
 .social-link:nth-child(3) { animation-delay: -2.4s; }
-.social-link:nth-child(4) { animation-delay: -3.6s; }
-.social-link:nth-child(5) { animation-delay: -4.8s; }
+.social-link:nth-child(4) { animation-delay: -1.2s; }
+.social-link:nth-child(5) { animation-delay: 0s; }
+.social-link.border-glow::before { background: currentColor; animation: none; }
 .social-link:hover { background: color-mix(in srgb, currentColor 18%, transparent); transform: translateY(-2px); }
 .social-link svg { width: 22px; height: 22px; }
 
