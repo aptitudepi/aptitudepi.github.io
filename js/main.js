@@ -54,11 +54,14 @@ function updateClock() {
   if (el) el.textContent = new Date().toLocaleTimeString();
 }
 
+import { initParticleBadges } from './particle-badge.js';
+
 function init() {
   initParticles();
   initNav();
   initAnimations();
   initGitHubStats();
+  initParticleBadges();
   updateClock();
   setInterval(updateClock, 1000);
 
