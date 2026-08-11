@@ -886,6 +886,47 @@ All pure CSS/HTML — zero JavaScript. Sourced from [Uiverse.io](https://uiverse
 
 ---
 
+## Component Library Exploration & Rainchecked Ideas (Aug 2026)
+
+Rainchecked components and deep-dive research into high-synergy external component repositories for future site features.
+
+### 1. Rainchecked Component Deep-Dives
+
+| Component / Library | Source | Concept & Architecture | Synergy & Implementation Strategy | Effort | Impact |
+|---------------------|--------|------------------------|-----------------------------------|--------|--------|
+| **Thinking Orbs** | `thinking-orbs` | WebGL/Canvas 2D generative glowing ambient state orbs (Lattice, Morph, Braid, Ribbon, Orbits engines). | **Terminal AI Status Indicator:** Replace/augment `<canvas class="nav-orb">` in top terminal bar or beside `ai` assistant prompt. Dynamically transitions between `idle`, `thinking`, `listening`, and `processing` states upon CLI input. | Medium | High |
+| **Lightweight Charts** | `lightweight-charts` | High-performance TradingView Canvas charting library with zero dependencies. | **Lab Data & Activity Visualizer:** Interactive Canvas timeline charts in the Research & About section for transcriptome dataset distributions (PCPG Analyzer / MD Anderson) or 365-day commit velocity sparklines with tooltip inspectors. | Medium | High |
+
+### 2. Deep-Dive Research: 4 High-Synergy Component Repositories
+
+#### A. React Bits (`react-bits`) — Demoscene & Creative Visual Effects
+- **`ASCIIText`**: Three.js WebGL fragment shader rendering 3D text as dynamic ASCII characters (`.`, `:`, `-`, `#`, `@`). Ideal for terminal boot title banner or interactive header art.
+- **`GlitchText`**: Chromatic aberration & noise glitch distortion on hover via SVG filter / CSS text-shadow offsets.
+- **`PixelTrail`**: Interactive cursor canvas trail leaving temporary retro pixel footprints that fade with inertia.
+- **`SplashCursor`**: WebGL fluid dynamics simulation responding to cursor movement with glowing colorful smoke.
+- **`Magnet`**: Magnetic attraction effect pulling text or buttons toward the cursor when hovering within threshold radius.
+- **`Aurora` & `Waves`**: Animated GLSL background shaders for dynamic ambient backdrops.
+
+#### B. MagicUI (`magicui`) — WebGL & Interactive UI Primitives
+- **`FlickeringGrid`**: Canvas grid with random opacity flickering cells, perfectly mimicking a cybernetic monitor or terminal diagnostic grid.
+- **`RetroGrid`**: 3D perspective grid canvas with horizon fade and animated scanline velocity.
+- **`HyperText`**: Text scramble/unscramble reveal animation on hover, randomly cycling ANSI characters before settling.
+- **`IconCloud`**: Interactive 3D tag cloud rendered on a Fibonacci sphere canvas, showcasing tech stack icons (TypeScript, Next.js, Python, FastAPI, WebGL).
+- **`InteractiveGridPattern`**: SVG grid pattern where individual tiles light up on mouse hover with smooth fade-out.
+
+#### C. Galaxy UI (`galaxy`) — Zero-JS Pure CSS Mechanical & Cyberpunk Elements
+- **`Loaders`**: Pure CSS 3D isometric block assembly loaders, radar scanners, and typing indicators (zero runtime JS footprint).
+- **`Glowing Action Buttons`**: Multi-layer 3D extrude buttons with metallic shimmer, cyan-purple liquid bubbles, and animated border draws.
+- **`25-Zone 3D Tilt Cards`**: Pure CSS 3D perspective card tilt powered by a 5x5 grid of hover zones (`:nth-child` grid targeting), completely bypassing JS `mousemove` listeners.
+- **`Glassmorphism Radios & Switches`**: Skeuomorphic metallic toggles and frosted glass panels for terminal setting toggles.
+
+#### D. Native View Transitions (`transitions.dev`) — Platform-Native Route Morphing
+- **`document.startViewTransition()`**: Native browser API for smooth morphing animations between site subpages (`/`, `/resume`, `/man`, `/cv`).
+- **Shared Element Morphing**: Hero text, terminal shell, and section headings seamlessly transition across routes without loading heavy SPA frameworks.
+- **Fallbacks & Reduced Motion**: Gracefully falls back to instant navigation on browsers without View Transitions support or when `prefers-reduced-motion` is active.
+
+---
+
 ## Playground System
 
 Interactive canvas demos accessible from the terminal (inspired by simoneraffaelli's portfolio).
