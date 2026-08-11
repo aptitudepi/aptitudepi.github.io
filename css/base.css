@@ -7,6 +7,25 @@
   animation: blueRedDrift 6s ease-in-out infinite;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ── View Transitions API (transitions.dev) ─────── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 350ms;
+  animation-timing-function: var(--ease-out-expo);
+}
+
 .gradient-border {
   position: relative;
 }

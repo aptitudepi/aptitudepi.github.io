@@ -51,18 +51,26 @@ const sectionIds = ['hero-target', 'about', 'projects', 'certifications', 'resum
 function scrollToSection(id) {
   const target = document.getElementById(id);
   if (!target) return;
-  const y = target.getBoundingClientRect().top + window.scrollY;
-  isAnimatingScroll = true;
-  if (!noAnim()) {
-    anime.animate(document.scrollingElement, {
-      scrollTop: y,
-      duration: 1200,
-      ease: 'inOut(2)',
-    });
-    setTimeout(() => { isAnimatingScroll = false; }, 1300);
+  const performScroll = () => {
+    const y = target.getBoundingClientRect().top + window.scrollY;
+    isAnimatingScroll = true;
+    if (!noAnim()) {
+      anime.animate(document.scrollingElement, {
+        scrollTop: y,
+        duration: 1200,
+        ease: 'inOut(2)',
+      });
+      setTimeout(() => { isAnimatingScroll = false; }, 1300);
+    } else {
+      window.scrollTo({ top: y, behavior: 'smooth' });
+      setTimeout(() => { isAnimatingScroll = false; }, 400);
+    }
+  };
+
+  if (typeof document.startViewTransition === 'function' && !noAnim()) {
+    document.startViewTransition(() => performScroll());
   } else {
-    window.scrollTo({ top: y, behavior: 'smooth' });
-    setTimeout(() => { isAnimatingScroll = false; }, 400);
+    performScroll();
   }
 }
 
