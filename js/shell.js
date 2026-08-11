@@ -548,9 +548,9 @@ function helpText(term) {
     ['md <url>', 'Render markdown from URL'],
     ['matrix', 'Toggle matrix rain overlay'],
     ['vm', 'Boot Buildroot Linux VM'],
-    ['ai <prompt>', 'Talk to local AI'],
+    ['ai <prompt>', 'Talk to AI (Groq cloud default / local RAG)'],
     ['ai-models', 'List AI models'],
-    ['ai-model <id>', 'Switch AI model (0-4)'],
+    ['ai-model <id>', 'Switch AI model (0-5)'],
     ['help', 'Show this help'],
   ];
   term.writeln(`${ANSI_BOLD}${SITE_WHITE}Available commands${ANSI_RESET}`);
