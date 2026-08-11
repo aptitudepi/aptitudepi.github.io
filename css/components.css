@@ -334,14 +334,6 @@
 }
 
 /* ── Certifications ────────────────────────── */
-.certs-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-4);
-  padding: var(--space-8) 0;
-  max-width: 640px;
-  margin: 0 auto;
-}
 .cert-badge {
   display: flex;
   flex-direction: column;
@@ -552,4 +544,75 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-terminal-border) tran
 } 
 [data-magnetic].magnetic-active {
   transition: none;
+}
+
+/* ── Infinite Slider (motion-primitives port) ─────── */
+.infinite-slider {
+  --slider-gap: var(--space-5);
+  overflow: hidden;
+}
+.is-track {
+  display: flex;
+  width: max-content;
+  gap: var(--slider-gap);
+  will-change: transform;
+}
+.is-group {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--slider-gap);
+}
+.certs-slider .is-group { align-items: center; }
+.projects-slider .is-group { align-items: stretch; }
+.projects-slider .spotlight-card { flex: 0 0 min(380px, 82vw); }
+.certs-slider {
+  -webkit-mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.projects-slider {
+  -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* ── Hero Scanline (bottom hairline) ─────────────── */
+.hero-rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(90deg, transparent, #0000FF 30%, #FF0000 70%, transparent);
+  background-size: 200% 100%;
+  animation: heroScan 5s linear infinite;
+}
+@keyframes heroScan {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Stats (NumberFlow) ──────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-6);
+  margin-top: var(--space-10);
+}
+.stat-item { text-align: center; }
+.stat-item number-flow {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+.stat-label {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-faint);
 }

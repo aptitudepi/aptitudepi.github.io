@@ -2,6 +2,8 @@ const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').mat
 const noAnim = () => prefersReduced || typeof anime === 'undefined';
 
 function initAnimations() {
+  initStatFlow();
+
   if (noAnim()) {
     document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
     document.querySelectorAll('.spotlight-card, .bento-card, .cert-badge, .social-link, .section-header, .about-text').forEach(el => {
@@ -13,6 +15,7 @@ function initAnimations() {
 
   initMotionIntegration();
   initScrollProgress();
+  initInfiniteSliders();
   initHeroTimeline();
   initRevealObserver();
   initCardTracking();
@@ -75,20 +78,6 @@ function initRevealObserver() {
           ease: 'out(3)',
           delay: idx * 100,
           composition: 'blend',
-        });
-        observer.unobserve(el);
-        return;
-      }
-
-      if (el.classList.contains('certs-grid')) {
-        const badges = el.querySelectorAll('.cert-badge');
-        const cols = window.innerWidth < 768 ? 2 : 4;
-        anime.animate(badges, {
-          opacity: [0, 1],
-          translateY: [12, 0],
-          duration: 300,
-          ease: 'out(3)',
-          delay: anime.stagger(30, { grid: [cols, Math.ceil(badges.length / cols)], from: 'center' }),
         });
         observer.unobserve(el);
         return;
@@ -160,7 +149,6 @@ function initRevealObserver() {
 
   document.querySelectorAll('.section-header').forEach(el => observer.observe(el));
 
-  document.querySelectorAll('.certs-grid').forEach(el => observer.observe(el));
   document.querySelectorAll('.social-link').forEach(el => observer.observe(el));
   const resumeCta = document.querySelector('.resume-download');
   if (resumeCta) observer.observe(resumeCta);
@@ -173,7 +161,7 @@ function initCardTracking() {
     let gx = 0, gy = 0, tx = 0, ty = 0;
     let rx = 0, ry = 0, trx = 0, trY = 0;
     let raf = null;
-    const noTilt = card.classList.contains('bento-card') || card.classList.contains('cert-badge');
+    const noTilt = card.classList.contains('bento-card') || card.classList.contains('cert-badge') || card.closest('.infinite-slider');
 
     const tick = () => {
       gx += (tx - gx) * 0.18;
@@ -416,3 +404,87 @@ function initParticleBurst() {
 }
 
 export { initAnimations };
+
+function initInfiniteSliders() {
+  const sliders = [...document.querySelectorAll('[data-infinite-slider]')];
+  if (!sliders.length) return;
+
+  const setup = () => {
+    sliders.forEach(slider => {
+      const track = slider.querySelector('.is-track');
+      const group = slider.querySelector('.is-group');
+      if (!track || !group) return;
+
+      const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+      const contentSize = group.getBoundingClientRect().width + gap;
+      if (!contentSize) return;
+
+      const speed = parseFloat(slider.dataset.speed || '60') || 60;
+      const to = -contentSize;
+      const controls = Motion.animate(0, to, {
+        ease: 'linear',
+        duration: contentSize / speed,
+        repeat: Infinity,
+        repeatType: 'loop',
+        onUpdate: v => { track.style.transform = `translateX(${v.toFixed(2)}px)`; },
+        onRepeat: () => { track.style.transform = 'translateX(0px)'; },
+      });
+
+      slider.addEventListener('mouseenter', () => { if (controls.pause) controls.pause(); });
+      slider.addEventListener('mouseleave', () => { if (controls.play) controls.play(); });
+    });
+  };
+
+  const check = setInterval(() => {
+    if (window.Motion) {
+      clearInterval(check);
+      setup();
+    }
+  }, 200);
+}
+
+function initStatFlow() {
+  const grid = document.querySelector('[data-stats-grid]');
+  if (!grid) return;
+  const items = [...grid.querySelectorAll('.stat-item')];
+  if (!items.length) return;
+
+  const setFinal = item => {
+    const nf = item.querySelector('number-flow');
+    const target = item.dataset.count;
+    if (!nf || !target) return;
+    if (typeof nf.update === 'function') {
+      const n = Number(target);
+      if (nf.value === n) return;
+      if (!nf.dataset.hydrated) {
+        nf.update(0);
+        nf.dataset.hydrated = 'true';
+      }
+      nf.update(n);
+    } else {
+      nf.setAttribute('value', target);
+    }
+  };
+
+  if (noAnim() || typeof IntersectionObserver === 'undefined') {
+    items.forEach(setFinal);
+    return;
+  }
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      setFinal(entry.target);
+      io.unobserve(entry.target);
+    });
+  }, { threshold: 0.4 });
+  items.forEach(item => io.observe(item));
+
+  setTimeout(() => {
+    items.forEach(item => {
+      const rect = item.getBoundingClientRect();
+      const visible = rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+      if (visible) setFinal(item);
+    });
+  }, 2000);
+}

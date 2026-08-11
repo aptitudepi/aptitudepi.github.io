@@ -131,6 +131,7 @@
       <span class="terminal-clock" id="headerClock"></span>
     </nav>
     <div class="terminal-body" id="terminal-container"></div>
+    <div class="hero-rail" aria-hidden="true"></div>
   </div>
 </section>
 
@@ -148,6 +149,24 @@
         <p>If you'd like to connect, collaborate, or discuss exciting projects, please do not hesitate to reach out!</p>
       </div>
     </div>
+    <div class="stats-grid" data-stats-grid>
+      <div class="stat-item" data-count="16">
+        <number-flow value="0" isolate><span>16</span></number-flow>
+        <span class="stat-label">Certifications</span>
+      </div>
+      <div class="stat-item" data-count="150">
+        <number-flow value="0" suffix="+" isolate><span>150+</span></number-flow>
+        <span class="stat-label">Credentials</span>
+      </div>
+      <div class="stat-item" data-count="17">
+        <number-flow value="0" isolate><span>17</span></number-flow>
+        <span class="stat-label">Projects on GitHub</span>
+      </div>
+      <div class="stat-item" data-count="5">
+        <number-flow value="0" isolate><span>5</span></number-flow>
+        <span class="stat-label">Research Labs</span>
+      </div>
+    </div>
   </section>
 
   <div class="section-divider" aria-hidden="true"><svg viewBox="0 0 200 1" preserveAspectRatio="none"><path d="M 0 .5 L 200 .5"/></svg></div>
@@ -155,7 +174,9 @@
   <!-- ── Projects ────────────────────────── -->
   <section id="projects" data-auras="3">
     <div class="section-header"><h2 data-magnetic>Projects</h2></div>
-    <div class="spotlight-grid">
+    <div class="infinite-slider projects-slider" data-infinite-slider data-speed="45" aria-label="Projects">
+      <div class="is-track">
+        <div class="is-group">
       <div class="spotlight-card reveal" data-index="0">
         <div class="tags"><span>Next.js</span><span>FastAPI</span><span>TypeScript</span></div>
         <h3>TheAggieMap</h3>
@@ -180,6 +201,34 @@
         <p>Implementations of neural network architectures built from scratch using only NumPy, demonstrating a deep understanding of fundamental ML concepts and backpropagation.</p>
         <a href="https://github.com/aptitudepi/Neural-Networks-From-Scratch" class="project-link" target="_blank" rel="noopener noreferrer">View Project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>
       </div>
+        </div>
+        <div class="is-group" aria-hidden="true">
+      <div class="spotlight-card reveal" data-index="0">
+        <div class="tags"><span>Next.js</span><span>FastAPI</span><span>TypeScript</span></div>
+        <h3>TheAggieMap</h3>
+        <p>Monorepo with a Next.js 14 frontend and FastAPI backend serving as Aggieland's interactive campus map. Built for HowdyHack 2025.</p>
+        <a href="https://github.com/aptitudepi/TheAggieMap" class="project-link" target="_blank" rel="noopener noreferrer">View Project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>
+      </div>
+      <div class="spotlight-card reveal" data-index="1">
+        <div class="tags"><span>Python</span><span>Streamlit</span><span>Pandas</span></div>
+        <h3>PCPG Analyzer</h3>
+        <p>Web-based framework for dynamic analysis and visualization of Pheochromocytoma &amp; Paraganglioma transcriptome data to support cancer researchers worldwide.</p>
+        <a href="https://github.com/aptitudepi/pcpg-analyzer" class="project-link" target="_blank" rel="noopener noreferrer">View Project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>
+      </div>
+      <div class="spotlight-card reveal" data-index="2">
+        <div class="tags"><span>Groq</span><span>XGBoost</span><span>Streamlit</span></div>
+        <h3>Doctor-Robot (TIDALHack)</h3>
+        <p>Maps natural-language symptom descriptions to structured medical data and classifies into 40+ diseases using an XGBoost classifier with Groq-hosted LLMs.</p>
+        <a href="https://github.com/aptitudepi/TIDALHack" class="project-link" target="_blank" rel="noopener noreferrer">View Project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>
+      </div>
+      <div class="spotlight-card reveal" data-index="3">
+        <div class="tags"><span>Python</span><span>NumPy</span><span>Deep Learning</span></div>
+        <h3>Neural-Networks-From-Scratch</h3>
+        <p>Implementations of neural network architectures built from scratch using only NumPy, demonstrating a deep understanding of fundamental ML concepts and backpropagation.</p>
+        <a href="https://github.com/aptitudepi/Neural-Networks-From-Scratch" class="project-link" target="_blank" rel="noopener noreferrer">View Project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>
+      </div>
+        </div>
+      </div>
     </div>
     <div class="view-more-cta">
       <a href="https://github.com/aptitudepi" target="_blank" rel="noopener noreferrer">View More on GitHub <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>
@@ -191,7 +240,9 @@
   <!-- ── Certifications ─────────────────── -->
   <section id="certifications" class="certs-section" data-auras="2">
     <div class="section-header"><h2 data-magnetic>Certifications</h2></div>
-    <div class="certs-grid">
+    <div class="infinite-slider certs-slider" data-infinite-slider data-speed="70" aria-label="Certifications">
+      <div class="is-track">
+        <div class="is-group">
       <a href="https://www.credly.com/badges/20cadea9-02a5-4cc4-bb19-0031a93f6fc2" class="cert-badge" target="_blank" rel="noopener noreferrer">
         <img src="images/certs/giac-advisory-board.png" alt="GIAC Advisory Board" width="72" height="72" loading="lazy" decoding="async">
         <span class="cert-name">GIAC Advisory Board</span>
@@ -256,6 +307,74 @@
         <img src="images/certs/microsoft.png" alt="Microsoft Certification" width="72" height="72" loading="lazy" decoding="async">
         <span class="cert-name">Microsoft</span>
       </a>
+        </div>
+        <div class="is-group" aria-hidden="true">
+      <a href="https://www.credly.com/badges/20cadea9-02a5-4cc4-bb19-0031a93f6fc2" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/giac-advisory-board.png" alt="GIAC Advisory Board" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">GIAC Advisory Board</span>
+      </a>
+      <a href="https://credly.com/badges/e2e642f7-fd5d-43ac-a162-1fae3feba20f" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/giac-security-essentials-certification-gsec.png" alt="GIAC Security Essentials (GSEC)" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">GSEC</span>
+      </a>
+      <a href="https://credly.com/badges/66c3c457-5bf5-412a-889b-061211f3fd16" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/giac-foundational-cybersecurity-technologies-gfact.png" alt="GIAC Foundational Cybersecurity (GFACT)" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">GFACT</span>
+      </a>
+      <a href="https://app-na2.hubspot.com/academy/achievements/p134zwf6/en/1/devkumar-banerjee/digital-marketing-certified" class="cert-badge hubspot" target="_blank" rel="noopener noreferrer">
+        <img src="https://hubspot-credentials-na1.s3.amazonaws.com/prod/badges/user/6c25672f3510437f950cfe4be94a78d2.png" alt="HubSpot Digital Marketing Certified" width="84" height="45" loading="lazy" decoding="async">
+        <span class="cert-name">HubSpot Digital Marketing</span>
+      </a>
+      <a href="https://credly.com/badges/0f9675bf-a575-4990-8efd-1844ba9b1593" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/microsoft-certified-azure-fundamentals.png" alt="Azure Fundamentals" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">Azure Fundamentals</span>
+      </a>
+      <a href="https://credly.com/badges/0a2d15ce-9227-4568-88b2-96c71e769eea" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/microsoft-certified-azure-ai-fundamentals.png" alt="Azure AI Fundamentals" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">Azure AI</span>
+      </a>
+      <a href="https://credly.com/badges/92a8a5d9-1358-42ef-94bc-1c81d9aad300" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/microsoft-certified-security-compliance-and-identity-fundamentals.png" alt="Microsoft Security" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">Microsoft Security</span>
+      </a>
+      <a href="https://www.credly.com/badges/1f2dd211-7ce7-47ad-9883-80368658e31d" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/microsoft.png" alt="Microsoft Certification" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">Microsoft</span>
+      </a>
+      <a href="https://www.credly.com/badges/d1efd53d-5b41-4e82-be70-51e11191e2fc" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/ccst-networking.png" alt="CCST Networking" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">CCST Networking</span>
+      </a>
+      <a href="https://www.credly.com/badges/57077f9b-c05b-4359-ac06-f34f07e4614f" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/ccst-cybersecurity.png" alt="CCST Cybersecurity" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">CCST Cybersecurity</span>
+      </a>
+      <a href="https://www.credly.com/badges/0fb12054-8189-4684-89b1-6c7f27e7dd7c" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/github.png" alt="GitHub Foundations" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">GitHub Foundations</span>
+      </a>
+      <a href="https://www.credly.com/badges/5288f0a9-94a0-4979-b9d8-dd78de1b8b4a" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/microsoft.png" alt="Microsoft Certification" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">Microsoft</span>
+      </a>
+      <a href="https://www.credly.com/badges/dc561a6f-6f8e-4094-9768-a4eec4487e0c" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/testout-linux-pro.png" alt="TestOut Linux Pro" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">TestOut Linux Pro</span>
+      </a>
+      <a href="https://certiport.pearsonvue.com/Certifications/Certiport/Master-Certification/Verify.aspx?certificate=318e1072-e54b-4bdb-907b-4a4b5f1ada4a" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/master-certification-in-entrepreneurship.png" alt="Entrepreneurship Certification" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">Entrepreneurship</span>
+      </a>
+      <a href="https://www.credly.com/badges/0ba52840-0b02-488e-84d4-cb7c38b68d08" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/pmi-project-management-ready.png" alt="PMI Project Management Ready" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">PMI Ready</span>
+      </a>
+      <a href="https://www.linkedin.com/learning/certificates/318e1072e54bdb12171ea468aff6dfb11f73de80a75915178c9c2df1cd884060?u=74650722" class="cert-badge" target="_blank" rel="noopener noreferrer">
+        <img src="images/certs/microsoft.png" alt="Microsoft Certification" width="72" height="72" loading="lazy" decoding="async">
+        <span class="cert-name">Microsoft</span>
+      </a>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -306,6 +425,7 @@
 <script src="https://cdn.jsdelivr.net/npm/animejs@4.5.0/dist/bundles/anime.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm/lib/xterm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit/lib/addon-fit.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/number-flow@0.6.2/+esm"></script>
 
 <!-- ── Entry Point ─────────────────────── -->
 <script type="module" src="js/main.js"></script>
