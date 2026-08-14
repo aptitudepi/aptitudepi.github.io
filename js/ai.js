@@ -58,10 +58,48 @@ async function loadPipeline(term) {
   }
 }
 
+import { buildMemoryPromptContext, appendHistoryTurn } from './memory.js';
+
+const BASELINE_SYSTEM_PROMPT = `You are Devkumar Banerjee's portfolio AI assistant on dvxb.io.
+Current portfolio year: 2026.
+Role & Summary: CS & Engineering student @ Texas A&M University (College Station, TX), AI Systems / SRE Intern @ Lockheed Martin, Data Research Intern @ UT MD Anderson Cancer Center.
+Assistant & Terminal Scope: You answer questions about Devkumar's experiences, projects, research, publications, skills, and certifications.
+Tool Calling & Site Actions:
+If the user asks to perform an action on the site or shell (e.g. view HackerNews news, launch matrix rain, check weather, view resume, clear screen, view guestbook wall, ping server), you can execute terminal commands! Emit a tool call tag:
+[[TOOL: exec("command_name")]]
+Examples:
+- User: "show me news" -> emit [[TOOL: exec("hn")]]
+- User: "start matrix rain" -> emit [[TOOL: exec("matrix")]]
+- User: "check weather" -> emit [[TOOL: exec("weather")]]
+- User: "show guestbook" -> emit [[TOOL: exec("wall")]]
+- User: "show resume" -> emit [[TOOL: exec("cat resume.md")]]
+Real-Time / Time Queries: If asked about current time/date, state that you operate within the current portfolio timeline (2026).
+Answer concisely, accurately, and naturally based on the baseline profile, memory history, and retrieved context below.`;
+
+function processToolCalls(fullText, term) {
+  const toolRegex = /\[\[TOOL:\s*exec\("([^"]+)"\)]\]/g;
+  let match;
+  let cleanText = fullText;
+  while ((match = toolRegex.exec(fullText)) !== null) {
+    const cmdToExec = match[1];
+    cleanText = cleanText.replace(match[0], '').trim();
+    if (term) term.writeln(`\x1b[32m\x1b[1m[Executing Tool: ${cmdToExec}]\x1b[0m`);
+    if (typeof window !== 'undefined' && typeof window.executeTerminalCommand === 'function') {
+      setTimeout(() => window.executeTerminalCommand(cmdToExec, term), 100);
+    }
+  }
+  return cleanText;
+}
+
 async function streamGroq(prompt, context, term) {
   const workerUrl = 'https://0.supernovadkb.workers.dev/ai';
   
   term.write(`\x1b[1mAI:\x1b[0m `);
+
+  const memoryContext = buildMemoryPromptContext();
+  const fullSystemContent = `${BASELINE_SYSTEM_PROMPT}\n\n${memoryContext}Retrieved Context:\n${context}`;
+
+  let fullResponse = '';
 
   try {
     const response = await fetch(workerUrl, {
@@ -70,7 +108,7 @@ async function streamGroq(prompt, context, term) {
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: [
-          { role: 'system', content: `You are Devkumar's portfolio assistant. Give helpful, accurate responses using ONLY this context:\n${context}` },
+          { role: 'system', content: fullSystemContent },
           { role: 'user', content: prompt }
         ],
         stream: true,
@@ -101,7 +139,10 @@ async function streamGroq(prompt, context, term) {
           try {
             const json = JSON.parse(dataStr);
             const token = json.choices[0]?.delta?.content || '';
-            if (token) term.write(token);
+            if (token) {
+              fullResponse += token;
+              term.write(token);
+            }
           } catch (_err) {
             // Ignore incomplete SSE chunk payload
           }
@@ -109,6 +150,11 @@ async function streamGroq(prompt, context, term) {
       }
     }
     term.writeln('');
+    
+    // Save to persistent memory & check for tool action execution
+    appendHistoryTurn('user', prompt);
+    appendHistoryTurn('assistant', fullResponse);
+    processToolCalls(fullResponse, term);
   } catch (e) {
     term.writeln(`\r\x1b[91mGroq cloud stream error: ${e.message}\x1b[0m`);
     term.writeln(`\x1b[2mTip: Switch to local in-browser model using \`ai-model 1\`\x1b[0m`);
@@ -120,12 +166,17 @@ async function streamLocal(p, prompt, context, term) {
   
   term.write(`\x1b[1mAI:\x1b[0m `);
 
+  let fullResponse = '';
   const streamer = new TextStreamer(p.tokenizer, {
     skip_prompt: true,
-    callback_function: (text) => term.write(text)
+    callback_function: (text) => {
+      fullResponse += text;
+      term.write(text);
+    }
   });
 
-  const fullPrompt = `<|im_start|>system\nYou are Devkumar's portfolio assistant.\nContext:\n${context}<|im_end|>\n<|im_start|>user\n${prompt}<|im_end|>\n<|im_start|>assistant\n`;
+  const memoryContext = buildMemoryPromptContext();
+  const fullPrompt = `<|im_start|>system\n${BASELINE_SYSTEM_PROMPT}\n\n${memoryContext}Retrieved Context:\n${context}<|im_end|>\n<|im_start|>user\n${prompt}<|im_end|>\n<|im_start|>assistant\n`;
 
   await p(fullPrompt, {
     max_new_tokens: 256,
@@ -134,20 +185,50 @@ async function streamLocal(p, prompt, context, term) {
     streamer
   });
   term.writeln('');
+
+  appendHistoryTurn('user', prompt);
+  appendHistoryTurn('assistant', fullResponse);
+  processToolCalls(fullResponse, term);
+}
+
+export async function fetchWebSearch(query) {
+  try {
+    const res = await fetch(`https://0.supernovadkb.workers.dev/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results || [];
+  } catch (e) {
+    console.warn('Web search request error:', e);
+    return [];
+  }
 }
 
 async function generateOutput(prompt, term) {
   if (!prompt) {
     term.writeln(`\x1b[2mUsage: ai <prompt>\x1b[0m`);
+    term.writeln(`\x1b[2m       ai web <query>   (live web search + LLM generation)\x1b[0m`);
     term.writeln(`\x1b[2m       ai-models        (list models)\x1b[0m`);
     term.writeln(`\x1b[2m       ai-model <id>    (switch model, 0-5)\x1b[0m`);
     return;
   }
 
-  startThinkingOrb(term, 'searching');
+  const isWebSearch = prompt.startsWith('web ') || prompt.startsWith('search ') || prompt.includes('--web');
+  const cleanQuery = prompt.replace(/^(web|search)\s+/, '').replace(/\s+--web/, '').trim();
+
+  startThinkingOrb(term, isWebSearch ? 'searching web' : 'searching');
   try {
-    // 1. Retrieve RAG vector context using BAAI/bge-small-en-v1.5
-    const context = await retrieveContext(prompt, term);
+    let context = await retrieveContext(cleanQuery, term);
+
+    if (isWebSearch) {
+      if (term) term.writeln(`\x1b[2mFetching live web results via Cloudflare Worker...\x1b[0m`);
+      const webResults = await fetchWebSearch(cleanQuery);
+      if (webResults.length) {
+        const webStr = webResults.map((r, i) => `[Web Result ${i + 1}: ${r.title}]\nURL: ${r.url}\n${r.snippet}`).join('\n\n');
+        context = `[Live Web Search Context]\n${webStr}\n\n${context}`;
+      } else {
+        if (term) term.writeln(`\x1b[2mNo live web results returned, relying on RAG portfolio context...\x1b[0m`);
+      }
+    }
 
     // 2. Load model pipeline (Cloud Groq or Local ONNX)
     const p = await loadPipeline(term);
@@ -157,9 +238,9 @@ async function generateOutput(prompt, term) {
     term.writeln(`\x1b[2m\xf0\x9f\x94\x84 Generating (real-time stream)...\x1b[0m`);
 
     if (activeModel === 0 || p === 'groq') {
-      await streamGroq(prompt, context, term);
+      await streamGroq(cleanQuery, context, term);
     } else {
-      await streamLocal(p, prompt, context, term);
+      await streamLocal(p, cleanQuery, context, term);
     }
   } catch (e) {
     term.writeln(`\x1b[91mGeneration failed: ${e.message}\x1b[0m`);

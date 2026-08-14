@@ -419,6 +419,18 @@ Very Low effort. Subtle, thematic retro effect.
 - System prompt: "You are a Unix terminal assistant..."
 - Medium effort, very high impact.
 
+### In-Browser Code Interpreter (`ai run <code>` / `ai exec <prompt>`)
+- Combine Pyodide (WASM Python) or QuickJS with the LLM inside the terminal.
+- User asks `ai calculate the first 20 fibonacci primes`: LLM outputs Python code block, terminal automatically executes it inside WASM sandbox, and prints stdout/ASCII visualization in xterm.js.
+
+### Speech-to-Text & Voice Assistant Mode (`ai voice`)
+- Web Audio API MediaRecorder captures speech in browser -> Cloudflare Worker proxies to Groq Whisper API (`whisper-large-v3`) -> streams text prompt to LLM -> optional browser SpeechSynthesis audio playback.
+- Hands-free interactive terminal assistant mode.
+
+### Interactive Resume Tailoring & Match Engine (`ai match <job_desc>`)
+- Visitors paste a job description into terminal.
+- RAG system runs semantic cosine similarity against Devkumar's projects/skills and outputs a tailored match report with bullet points highlighting top aligned experiences.
+
 ### `chat` mode
 - Persistent chat session in the terminal
 - Alternate between command mode and chat mode; `/exit` returns to shell

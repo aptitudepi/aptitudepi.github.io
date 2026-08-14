@@ -27,7 +27,13 @@ Format: **what** — where it lives · commit(s) / notes
 - **`matrix`** — full-screen matrix rain overlay (`js/matrix-rain.js`)
 - **`fortune` / `cowsay`** — basic commands (piping / `fortune -l` categories still open in IDEAS)
 - **`vm`** — v86 Buildroot guest
-- **`ai` / `ai-models` / `ai-model`** — Transformers.js local inference (WebGPU/WASM quality still constrained — see IDEAS deferred notes)
+- **`search <q>` & `ai web <q>`** — Live web-augmented search via Cloudflare Worker proxy (`/search` endpoint + DuckDuckGo parser) · `cors-proxy-worker.js`, `js/ai.js`, `js/shell.js`
+- **`wall` / `guestbook`** — Global AI-assisted visitor guestbook & signature reply wall backed by Cloudflare Worker API (`/wall` endpoint) · `cors-proxy-worker.js`, `js/shell.js`
+- **`myip` / `ping`** — Client network diagnostics, geolocation, ASN, and gateway ping response time · `cors-proxy-worker.js`, `js/shell.js`
+- **Terminal Function-Calling Agent** — AI tool-calling execution over shell commands (`hn`, `matrix`, `weather`, `cat`, `theme`) via `[[TOOL: exec("...")]]` action dispatch · `js/ai.js`, `js/shell.js`
+- **RAG Cross-Encoder Re-Ranking Pass** — Secondary relevance re-ranking pass (`rerankChunks`) filtering top candidate vector chunks · `js/rag.js`
+- **Persistent AI Assistant Memory** — LocalStorage-backed conversation history & user memory context engine · `js/memory.js`, `js/ai.js`
+- **`ai` / `ai-models` / `ai-model`** — Transformers.js local inference + Groq Cloud streaming + multi-model fallback (`js/ai.js`)
 - **`neofetch` / `resfetch` / `cv` / `about`** — resume-oriented shell surfaces
 - Core Unix toys: `whoami`, `hostname`, `date`, `uptime`, `uname`, `pwd`, `cat`, `ls`, `echo`, `clear`, `help`
 

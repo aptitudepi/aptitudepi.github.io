@@ -48,6 +48,52 @@ function cosineSimilarity(vecA, vecB) {
   return denominator ? dot / denominator : 0;
 }
 
+const STOPWORDS = new Set([
+  'devkumar', 'banerjee', 'what', 'how', 'did', 'can', 'use', 'is', 'you', 'me',
+  'tell', 'about', 'with', 'for', 'and', 'or', 'in', 'on', 'at', 'to', 'a', 'an',
+  'the', 'does', 'he', 'his', 'which', 'who', 'where', 'when', 'why', 'work', 'site'
+]);
+
+function computeKeywordScore(userQuery, item) {
+  const rawWords = userQuery.toLowerCase().split(/\W+/).filter(w => w.length > 2);
+  const keywords = rawWords.filter(w => !STOPWORDS.has(w));
+  const activeKeywords = keywords.length > 0 ? keywords : rawWords;
+
+  let score = 0;
+  const titleLower = item.title.toLowerCase();
+  const textLower = item.text.toLowerCase();
+
+  for (const kw of activeKeywords) {
+    if (titleLower.includes(kw)) score += 0.4;
+    if (textLower.includes(kw)) score += 0.2;
+  }
+  return score;
+}
+
+function rerankChunks(userQuery, candidates) {
+  const queryLower = userQuery.toLowerCase().trim();
+  const rawWords = queryLower.split(/\W+/).filter(w => w.length > 2 && !STOPWORDS.has(w));
+
+  return candidates.map(chunk => {
+    let rerankScore = chunk.score || 0;
+    const titleLower = chunk.title.toLowerCase();
+    const textLower = chunk.text.toLowerCase();
+
+    // Exact phrase match bonus
+    if (queryLower.length > 4 && (titleLower.includes(queryLower) || textLower.includes(queryLower))) {
+      rerankScore += 1.5;
+    }
+
+    // Keyword density bonus
+    for (const word of rawWords) {
+      if (titleLower.includes(word)) rerankScore += 0.5;
+      if (textLower.includes(word)) rerankScore += 0.25;
+    }
+
+    return { ...chunk, rerankScore };
+  }).sort((a, b) => b.rerankScore - a.rerankScore);
+}
+
 export async function retrieveContext(userQuery, term) {
   const contextData = await loadContextData();
   if (!contextData.length) return '';
@@ -55,33 +101,36 @@ export async function retrieveContext(userQuery, term) {
   try {
     const embedder = await getEmbedder(term);
     if (embedder) {
-      const output = await embedder(userQuery, { pooling: 'mean', normalize: true });
+      const bgeQuery = `Represent this sentence for searching relevant passages: ${userQuery}`;
+      const output = await embedder(bgeQuery, { pooling: 'mean', normalize: true });
       const queryVector = Array.from(output.data);
 
-      const scored = contextData.map(chunk => ({
-        text: chunk.text,
-        title: chunk.title,
-        score: cosineSimilarity(queryVector, chunk.vector)
-      }));
+      const scored = contextData.map(chunk => {
+        const vecScore = cosineSimilarity(queryVector, chunk.vector);
+        const kwScore = computeKeywordScore(userQuery, chunk);
+        return {
+          text: chunk.text,
+          title: chunk.title,
+          score: vecScore + kwScore
+        };
+      });
 
       scored.sort((a, b) => b.score - a.score);
-      return scored.slice(0, 3).map(c => `[${c.title}]\n${c.text}`).join('\n\n');
+      const candidates = scored.slice(0, 8);
+      const reranked = rerankChunks(userQuery, candidates);
+      return reranked.slice(0, 4).map(c => `[${c.title}]\n${c.text}`).join('\n\n');
     }
   } catch (e) {
     console.warn('Vector embedding search fallback to keyword:', e);
   }
 
-  // Fast keyword fallback search if embedder is loading
-  const keywords = userQuery.toLowerCase().split(/\W+/).filter(w => w.length > 2);
+  // Smart keyword fallback search with stopword filtering & title weighting
   const scored = contextData.map(item => {
-    let matches = 0;
-    const textLower = `${item.title} ${item.text}`.toLowerCase();
-    for (const kw of keywords) {
-      if (textLower.includes(kw)) matches++;
-    }
-    return { text: item.text, title: item.title, score: matches };
+    const score = computeKeywordScore(userQuery, item);
+    return { text: item.text, title: item.title, score };
   });
 
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 3).map(c => `[${c.title}]\n${c.text}`).join('\n\n');
+  const reranked = rerankChunks(userQuery, scored.slice(0, 8));
+  return reranked.slice(0, 4).map(c => `[${c.title}]\n${c.text}`).join('\n\n');
 }

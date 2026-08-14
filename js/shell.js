@@ -548,7 +548,11 @@ function helpText(term) {
     ['md <url>', 'Render markdown from URL'],
     ['matrix', 'Toggle matrix rain overlay'],
     ['vm', 'Boot Buildroot Linux VM'],
-    ['ai <prompt>', 'Talk to local AI'],
+    ['ai <prompt>', 'Portfolio AI assistant (Groq/Local)'],
+    ['ai web <q>', 'Live Web-augmented AI search'],
+    ['search <q>', 'Live web search via Cloudflare Worker'],
+    ['myip', 'Show public IP, geo location & latency'],
+    ['weather [city]', 'Live weather via Worker proxy'],
     ['ai-models', 'List AI models'],
     ['ai-model <id>', 'Switch AI model (0-5)'],
     ['help', 'Show this help'],
@@ -989,6 +993,58 @@ function executeCommand(input, term) {
         showModelSelector(term);
       }
       break;
+    case 'search':
+    case 'google':
+    case 'ddg': {
+      const q = args.join(' ');
+      if (!q) {
+        term.writeln(`${SITE_MUTED}Usage: search <query>${ANSI_RESET}`);
+        break;
+      }
+      term.writeln(`${SITE_FAINT}Searching web via Cloudflare Worker...${ANSI_RESET}`);
+      fetch(`https://0.supernovadkb.workers.dev/search?q=${encodeURIComponent(q)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.results || !data.results.length) {
+            term.writeln(`${SITE_MUTED}No search results found.${ANSI_RESET}`);
+          } else {
+            term.writeln(`${SITE_GREEN}\x1b[1mSearch Results for "${q}":\x1b[0m${ANSI_RESET}`);
+            data.results.forEach((r, i) => {
+              term.writeln(`  ${SITE_GREEN}[${i + 1}] ${r.title}${ANSI_RESET}`);
+              term.writeln(`      ${SITE_FAINT}${r.snippet}${ANSI_RESET}`);
+              term.writeln(`      \x1b[34m\x1b[4m${r.url}\x1b[0m\n`);
+            });
+          }
+          writePrompt(term);
+        })
+        .catch(err => {
+          term.writeln(`${SITE_ERR}Search error: ${err.message}${ANSI_RESET}`);
+          writePrompt(term);
+        });
+      return;
+    }
+    case 'myip':
+    case 'ping': {
+      term.writeln(`${SITE_FAINT}Pinging Cloudflare Worker gateway...${ANSI_RESET}`);
+      const t0 = performance.now();
+      fetch('https://0.supernovadkb.workers.dev/ip')
+        .then(res => res.json())
+        .then(info => {
+          const latency = Math.round(performance.now() - t0);
+          term.writeln(`${SITE_GREEN}\x1b[1mNetwork Diagnostics & IP Location:\x1b[0m${ANSI_RESET}`);
+          term.writeln(`  \x1b[36mPublic IP:\x1b[0m ${info.ip}`);
+          term.writeln(`  \x1b[36mLocation:\x1b[0m ${info.city}, ${info.country} (${info.continent})`);
+          term.writeln(`  \x1b[36mISP / ASN:\x1b[0m ${info.asOrganization} (AS${info.asn})`);
+          term.writeln(`  \x1b[36mLatency:\x1b[0m ${latency}ms`);
+          term.writeln(`  \x1b[36mRay ID:\x1b[0m ${info.ray}`);
+          writePrompt(term);
+        })
+        .catch(err => {
+          term.writeln(`${SITE_ERR}Ping error: ${err.message}${ANSI_RESET}`);
+          writePrompt(term);
+        });
+      return;
+    }
     case 'history':
       if (CMD_HISTORY.length === 0) {
         term.writeln(`${SITE_MUTED}No commands in history${ANSI_RESET}`);
@@ -1033,12 +1089,74 @@ function executeCommand(input, term) {
         term.writeln(`${SITE_ERR}${cmd}: command not found${ANSI_RESET}`);
         term.writeln(`${SITE_MUTED}Did you mean \`${SITE_WHITE}${suggestion}${SITE_MUTED}\`?${ANSI_RESET}`);
       } else {
-        term.writeln(`${SITE_ERR}${cmd}: command not found${ANSI_RESET}`);
+        term.    case 'wall':
+    case 'guestbook': {
+      const msg = args.join(' ');
+      if (!msg) {
+        term.writeln(`${SITE_FAINT}Fetching global visitor wall...${ANSI_RESET}`);
+        fetch('https://0.supernovadkb.workers.dev/wall')
+          .then(res => res.json())
+          .then(data => {
+            const posts = data.posts || [];
+            term.writeln(`${SITE_GREEN}\x1b[1mdvxb.io Global Visitor Guestbook & AI Wall:\x1b[0m${ANSI_RESET}`);
+            if (!posts.length) {
+              term.writeln(`${SITE_MUTED}No entries yet. Be the first to leave a message using: wall <your message>${ANSI_RESET}`);
+            } else {
+              posts.forEach(p => {
+                term.writeln(`  ${SITE_CYAN}[${p.timestamp}] ${p.name}:${ANSI_RESET} "${p.message}"`);
+                if (p.aiReply) {
+                  term.writeln(`      ${SITE_GREEN}AI Signature Reply:${ANSI_RESET} ${SITE_FAINT}${p.aiReply}${ANSI_RESET}`);
+                }
+              });
+            }
+            term.writeln(`\n${SITE_MUTED}Tip: Leave your own message using: wall <message>${ANSI_RESET}`);
+            writePrompt(term);
+          })
+          .catch(err => {
+            term.writeln(`${SITE_ERR}Failed to load wall: ${err.message}${ANSI_RESET}`);
+            writePrompt(term);
+          });
+        return;
       }
-      break;
+      term.writeln(`${SITE_FAINT}Posting message to global wall & generating AI reply...${ANSI_RESET}`);
+      fetch('https://0.supernovadkb.workers.dev/wall', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Terminal Visitor', message: msg })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.post) {
+            term.writeln(`${SITE_GREEN}\x1b[1mMessage posted to global wall!${ANSI_RESET}`);
+            term.writeln(`  ${SITE_CYAN}${data.post.name}:${ANSI_RESET} "${data.post.message}"`);
+            term.writeln(`  ${SITE_GREEN}AI Reply:${ANSI_RESET} ${data.post.aiReply}`);
+          } else {
+            term.writeln(`${SITE_ERR}Failed to post: ${data.error || 'Unknown error'}${ANSI_RESET}`);
+          }
+          writePrompt(term);
+        })
+        .catch(err => {
+          term.writeln(`${SITE_ERR}Wall post error: ${err.message}${ANSI_RESET}`);
+          writePrompt(term);
+        });
+      return;
     }
-  }
-  writePrompt(term);
-}
+    case 'ai-memory': {
+      import('./memory.js').then(mem => {
+        const history = mem.getStoredHistory();
+        term.writeln(`${SITE_GREEN}\x1b[1mPortfolio AI Assistant Memory & Conversation Turns:\x1b[0m${ANSI_RESET}`);
+        if (!history.length) {
+          term.writeln(`${SITE_MUTED}No conversation history stored.${ANSI_RESET}`);
+        } else {
+          history.forEach((h, i) => {
+            term.writeln(`  ${SITE_FAINT}[${i + 1}] ${h.role.toUpperCase()}:${ANSI_RESET} ${h.content}`);
+          });
+        }
+        writePrompt(term);
+      });
+      return;
+    }
+
+window.executeTerminalCommand = executeCommand;
 
 export { ASCII_ART, vfs, RESUME, CMD_HISTORY, BOOT_MSGS, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS };
