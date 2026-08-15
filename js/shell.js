@@ -1083,13 +1083,7 @@ function executeCommand(input, term) {
     case 'md':
       mdCommand(term, args);
       return;
-    default: {
-      const suggestion = suggestCommand(cmd);
-      if (suggestion) {
-        term.writeln(`${SITE_ERR}${cmd}: command not found${ANSI_RESET}`);
-        term.writeln(`${SITE_MUTED}Did you mean \`${SITE_WHITE}${suggestion}${SITE_MUTED}\`?${ANSI_RESET}`);
-      } else {
-        term.    case 'wall':
+    case 'wall':
     case 'guestbook': {
       const msg = args.join(' ');
       if (!msg) {
@@ -1156,6 +1150,19 @@ function executeCommand(input, term) {
       });
       return;
     }
+    default: {
+      const suggestion = suggestCommand(cmd);
+      if (suggestion) {
+        term.writeln(`${SITE_ERR}${cmd}: command not found${ANSI_RESET}`);
+        term.writeln(`${SITE_MUTED}Did you mean \`${SITE_WHITE}${suggestion}${SITE_MUTED}\`?${ANSI_RESET}`);
+      } else {
+        term.writeln(`${SITE_ERR}${cmd}: command not found${ANSI_RESET}`);
+      }
+      break;
+    }
+  }
+  writePrompt(term);
+}
 
 window.executeTerminalCommand = executeCommand;
 
