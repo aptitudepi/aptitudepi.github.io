@@ -22,12 +22,13 @@ const JOBS = [
   { tex: 'cv.tex', pdf: 'cv.pdf' },
 ];
 
-// pdfTeX-only lines that must not reach Tectonic.
+// pdfTeX-only lines that must not reach Tectonic, plus XeTeX hyperref font patch.
 function stripPdfTexOnly(src) {
-  return src
+  const filtered = src
     .split('\n')
     .filter((line) => !/^\s*\\pdfgentounicode\s*=/.test(line) && !/^\s*\\input\{\s*glyphtounicode\s*\}/.test(line))
     .join('\n');
+  return `\\def\\XeTeXLink@font{}\n` + filtered;
 }
 
 mkdirSync(BUILD_DIR, { recursive: true });
@@ -39,7 +40,7 @@ for (const job of JOBS) {
   const tmpTex = join(BUILD_DIR, job.tex);
   writeFileSync(tmpTex, cleaned);
 
-  const res = spawnSync('tectonic', ['--keep-logs', job.tex], {
+  const res = spawnSync('tectonic', ['--keep-logs', '-Z', 'continue-on-errors', job.tex], {
     cwd: BUILD_DIR,
     stdio: 'inherit',
   });
