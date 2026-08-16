@@ -1,4 +1,5 @@
 import { generateOutput, showModelSelector, switchModel } from './ai.js';
+import { store } from './state.js';
 
 const pageLoadTime = Date.now();
 

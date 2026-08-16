@@ -42,6 +42,12 @@ Format: **what** — where it lives · commit(s) / notes
 - **Tab completion** — commands, VFS paths, `./` files; cycles on Tab
 - **Auto-correction on typos** — Levenshtein ≤ 2 → “Did you mean …?”
 
+## Architecture & Framework Integrations
+
+- **Kyoto Component Primitives (`js/component.js`)** — Non-blocking async futures & component lifecycles inspired by `github.com/yznts/kyoto`
+- **Kyoto Universal Reactive State (`js/state.js`)** — Unified state store (`component.Universal` pattern) synced across sessions & tabs via `localStorage`
+- **Kyoto Hypermedia Partial Swapper (`js/htmx-lite.js`)** — Dynamic partial DOM swapping library inspired by `kyoto/htmx`
+
 ## Site chrome / content pipeline
 
 - **Three.js particle background** — `js/three-particles.js`
