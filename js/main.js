@@ -89,7 +89,7 @@ function init() {
   // Mount components via Kyoto component registry
   mountComponent(document.body, 'ThinkingOrb');
   mountComponent('#headerClock', 'Clock');
-  mountComponent('#github-stats-container', 'GitHubStats');
+  mountComponent('[data-github-stats]', 'GitHubStats');
 
   const container = document.getElementById('terminal-container');
   if (container && typeof Terminal !== 'undefined') {
