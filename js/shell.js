@@ -426,7 +426,7 @@ function levenshtein(a, b) {
   return dp[m][n];
 }
 
-const COMMANDS = ['whoami', 'hostname', 'date', 'uptime', 'uname', 'pwd', 'cat', 'ls', 'echo', 'clear', 'neofetch', 'resfetch', 'about', 'fortune', 'cowsay', 'help', 'matrix', 'vm', 'ai', 'ai-models', 'ai-model', 'history', 'crt', 'noise', 'weather', 'hn', 'md', 'cv'];
+const COMMANDS = ['whoami', 'hostname', 'date', 'uptime', 'uname', 'pwd', 'cat', 'ls', 'echo', 'clear', 'neofetch', 'resfetch', 'about', 'fortune', 'cowsay', 'help', 'matrix', 'vm', 'ai', 'ai-models', 'ai-model', 'ai-memory', 'history', 'crt', 'noise', 'weather', 'hn', 'md', 'wall', 'cv', 'search', 'google', 'ddg', 'myip', 'ping'];
 
 function suggestCommand(input) {
   let best = null, bestDist = Infinity;
@@ -465,31 +465,8 @@ function neofetch(term) {
     { label: 'Shell', value: `fish 3.7` },
     { label: 'Uptime', value: uptimeStr() },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
-    { label: '', value: `${ANSI_BOLD}${SITE_WHITE}Available commands${ANSI_RESET}` },
-    { label: 'whoami', value: 'Display current user' },
-    { label: 'hostname', value: 'Show system hostname' },
-    { label: 'date', value: 'Show current date/time' },
-    { label: 'uptime', value: 'Show session uptime' },
-    { label: 'uname', value: 'Print system information' },
-    { label: 'pwd', value: 'Print working directory' },
-    { label: 'cat', value: 'Display file contents' },
-    { label: 'ls', value: 'List directory contents' },
-    { label: 'echo', value: 'Print text' },
-    { label: 'clear', value: 'Clear terminal' },
-    { label: 'neofetch', value: 'Display system & resume info' },
-    { label: 'about', value: 'Show a longer bio about me' },
-    { label: 'cv', value: 'Alias for neofetch' },
-    { label: 'fortune', value: 'Random programming quote' },
-    { label: 'cowsay', value: 'Cow says your message' },
-    { label: 'crt', value: 'Toggle CRT scanline overlay' },
-    { label: 'noise', value: 'Toggle noise texture overlay' },
-    { label: 'history', value: 'Show command history' },
-    { label: 'weather [-f]', value: 'Weather forecast (-f for °F)' },
-    { label: 'hn', value: 'Show Hacker News top stories' },
-    { label: 'md', value: 'Render markdown from URL' },
-    { label: 'matrix', value: 'Toggle matrix rain overlay' },
-    { label: 'vm', value: 'Boot Buildroot Linux VM' },
-    { label: 'help', value: 'Show this help' },
+    { label: '', value: `${ANSI_BOLD}${SITE_WHITE}Try:${ANSI_RESET} matrix · vm · ai · weather · hn · md · wall` },
+    { label: '', value: `${SITE_MUTED}type${ANSI_RESET} \`${SITE_WHITE}help${ANSI_RESET}\` ${SITE_MUTED}for the full command list${ANSI_RESET}` },
   ];
 
   for (let i = 0; i < Math.max(artHeight + 2, infoLines.length + 2); i++) {
@@ -539,23 +516,26 @@ function helpText(term) {
     ['clear', 'Clear terminal'],
     ['neofetch', 'Display system & resume info'],
     ['about', 'Show a longer bio about me'],
+    ['cv', 'Alias for neofetch'],
+    ['resfetch', 'Alias for neofetch'],
     ['fortune', 'Random programming quote'],
     ['cowsay <msg>', 'Cow says your message'],
+    ['matrix', 'Toggle matrix rain overlay'],
+    ['vm', 'Boot Buildroot Linux VM'],
     ['crt', 'Toggle CRT scanline overlay'],
     ['noise', 'Toggle noise texture overlay'],
     ['history', 'Show command history'],
-    ['weather [-f]', 'Weather forecast (-f for °F)'],
+    ['weather [-f] [city]', 'Live weather via Worker proxy (-f °F)'],
     ['hn', 'Show Hacker News top stories'],
     ['md <url>', 'Render markdown from URL'],
-    ['matrix', 'Toggle matrix rain overlay'],
-    ['vm', 'Boot Buildroot Linux VM'],
+    ['wall [msg]', 'View/post on global guestbook wall'],
     ['ai <prompt>', 'Portfolio AI assistant (Groq/Local)'],
     ['ai web <q>', 'Live Web-augmented AI search'],
-    ['search <q>', 'Live web search via Cloudflare Worker'],
+    ['search <q>', 'Live web search via Worker'],
     ['myip', 'Show public IP, geo location & latency'],
-    ['weather [city]', 'Live weather via Worker proxy'],
     ['ai-models', 'List AI models'],
     ['ai-model <id>', 'Switch AI model (0-5)'],
+    ['ai-memory', 'Show AI assistant conversation memory'],
     ['help', 'Show this help'],
   ];
   term.writeln(`${ANSI_BOLD}${SITE_WHITE}Available commands${ANSI_RESET}`);

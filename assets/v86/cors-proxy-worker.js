@@ -143,10 +143,7 @@ async function handleRequest(request, env) {
   }
 
   // In-memory fallback array for global guestbook entries
-  let WALL_POSTS = typeof globalThis._WALL_POSTS !== 'undefined' ? globalThis._WALL_POSTS : [
-    { id: 1, name: 'Alex M.', message: 'Awesome terminal portfolio! Love the particle effects.', aiReply: 'Thanks Alex! Glad you enjoyed the xterm.js & Three.js setup.', timestamp: '2026-08-10' },
-    { id: 2, name: 'TAMU Coder', message: 'Gig \'em Aggies! Great research work at DIVE Lab.', aiReply: 'Gig \'em! Thanks for checking out the physics-informed GNN work.', timestamp: '2026-08-12' }
-  ];
+  let WALL_POSTS = typeof globalThis._WALL_POSTS !== 'undefined' ? globalThis._WALL_POSTS : [];
   globalThis._WALL_POSTS = WALL_POSTS;
 
   // ── 5. Global AI Wall & Guestbook Endpoint (/wall) ──
