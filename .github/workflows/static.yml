@@ -16,6 +16,11 @@ on:
         description: "Full-CV git ref to build from (branch, tag, or SHA)"
         required: false
         default: "main"
+      use_gh_hosted:
+        description: "Run on GitHub-hosted ubuntu-latest instead (consumes Actions minutes)"
+        required: false
+        default: "false"
+        type: boolean
 
   # Keep resume/cv in sync with Full-CV even without site changes.
   schedule:
@@ -38,7 +43,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.use_gh_hosted == 'true' && 'ubuntu-latest' || 'self-hosted' }}
     steps:
       - name: Checkout site
         uses: actions/checkout@v5
@@ -87,8 +92,15 @@ jobs:
       # Experience, Skills and Honors sections while the job "passed").
       - name: Verify PDFs contain required sections
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq poppler-utils >/dev/null
+          if command -v apt-get >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq poppler-utils >/dev/null
+          elif command -v pacman >/dev/null; then
+            command -v pdftotext >/dev/null || sudo pacman -S --noconfirm poppler
+          else
+            echo "no known package manager; assuming poppler present"
+          fi
+          command -v pdftotext >/dev/null || { echo "pdftotext unavailable"; exit 1; }
           for f in assets/resume.pdf assets/cv.pdf; do
             [ -s "$f" ] || { echo "MISSING $f"; exit 1; }
           done
