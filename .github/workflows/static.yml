@@ -59,9 +59,18 @@ jobs:
       - name: Install Tectonic
         run: |
           curl -fL -o tectonic.tar.gz \
-            "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.16.9/tectonic-0.16.9-x86_64-unknown-linux-musl.tar.gz"
+            "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz"
           tar xzf tectonic.tar.gz
           sudo install -m 755 tectonic /usr/local/bin/
+
+      # Tectonic downloads fonts/packages from its remote bundle on demand.
+      # Cache the bundle so builds are offline once populated and flaky
+      # font fetches can no longer tear the PDF (see tools/build-pdf.mjs).
+      - name: Cache Tectonic bundle
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/Tectonic
+          key: ${{ runner.os }}-tectonic-bundle-0.17.0
 
       - name: Build HTML
         run: bun tools/build.mjs
@@ -72,6 +81,24 @@ jobs:
         run: bun tools/build-pdf.mjs
         env:
           FULL_CV_DIR: ${{ github.workspace }}/full-cv
+
+      # Guard against silent content loss (the Aug 2026 incident: missing
+      # fonts + continue-on-errors shipped a resume stripped of its Education,
+      # Experience, Skills and Honors sections while the job "passed").
+      - name: Verify PDFs contain required sections
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils >/dev/null
+          for f in assets/resume.pdf assets/cv.pdf; do
+            [ -s "$f" ] || { echo "MISSING $f"; exit 1; }
+          done
+          text=$(pdftotext assets/resume.pdf -)
+          for s in "Texas A&M" "National Merit" "C/C++" "HowdyHack"; do
+            printf '%s' "$text" | grep -F -q "$s" \
+              || { echo "resume.pdf missing content: $s"; exit 1; }
+          done
+          pdftotext assets/cv.pdf - | grep -F -q "Texas A&M" \
+            || { echo "cv.pdf missing content: Texas A&M"; exit 1; }
 
       - name: Remove Full-CV checkout from artifact
         run: rm -rf full-cv

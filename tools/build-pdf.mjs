@@ -4,6 +4,12 @@
 // (\pdfgentounicode, \input{glyphtounicode}) that Tectonic rejects, so they
 // are stripped before compiling.
 //
+// IMPORTANT: this build must FAIL LOUD. Tectonic downloads fonts/packages
+// from its remote bundle on demand; a flaky fetch previously combined with
+// `-Z continue-on-errors` to silently drop resume sections while still
+// exiting 0. We therefore run WITHOUT continue-on-errors and retry the whole
+// compile on transient network failures.
+//
 //   FULL_CV_DIR=/path/to/Full-CV bun tools/build-pdf.mjs
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -31,6 +37,26 @@ function stripPdfTexOnly(src) {
   return `\\def\\XeTeXLink@font{}\n` + filtered;
 }
 
+// Compile with Tectonic. Tectonic fetches fonts/packages from its remote
+// bundle on demand; transient failures are retried. NO `continue-on-errors`:
+// a missing font must abort the build so a torn PDF can never be produced.
+const MAX_ATTEMPTS = 3;
+
+function runTectonic(job) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const res = spawnSync('tectonic', ['--keep-logs', job.tex], {
+      cwd: BUILD_DIR,
+      stdio: 'inherit',
+    });
+    if (res.status === 0) return;
+    if (attempt < MAX_ATTEMPTS) {
+      console.error(`tectonic failed for ${job.tex} (attempt ${attempt}/${MAX_ATTEMPTS}); retrying transient bundle fetch`);
+    }
+  }
+  console.error(`tectonic failed for ${job.tex} after ${MAX_ATTEMPTS} attempts`);
+  process.exit(1);
+}
+
 mkdirSync(BUILD_DIR, { recursive: true });
 mkdirSync(OUT_DIR, { recursive: true });
 
@@ -40,14 +66,7 @@ for (const job of JOBS) {
   const tmpTex = join(BUILD_DIR, job.tex);
   writeFileSync(tmpTex, cleaned);
 
-  const res = spawnSync('tectonic', ['--keep-logs', '-Z', 'continue-on-errors', job.tex], {
-    cwd: BUILD_DIR,
-    stdio: 'inherit',
-  });
-  if (res.status !== 0) {
-    console.error(`tectonic failed for ${job.tex}`);
-    process.exit(res.status ?? 1);
-  }
+  runTectonic(job);
 
   const built = join(BUILD_DIR, job.pdf);
   writeFileSync(join(OUT_DIR, job.pdf), readFileSync(built));
