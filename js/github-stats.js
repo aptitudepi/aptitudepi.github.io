@@ -48,7 +48,7 @@ async function fetchRadarAxes() {
       stars: stars > 0 ? stars : DEFAULT_RADAR.stars,
       followers: user && Number.isFinite(user.followers) ? user.followers : DEFAULT_RADAR.followers,
     };
-  } catch (e) {
+  } catch {
     return DEFAULT_RADAR;
   }
 }
@@ -97,7 +97,7 @@ function generateFallbackContributions() {
     }
     contributions.push({ date: dateStr, count });
     totalCount += count;
-    cursor.setDate(cursor.getDate() + 1);
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1);
   }
 
   return {

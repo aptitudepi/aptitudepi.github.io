@@ -17,13 +17,13 @@ window.stopMatrixRain = stopMatrixRain;
 window.isMatrixActive = isMatrixActive;
 
 // Register Kyoto-inspired components
-defineComponent('ThinkingOrb', (ctx) => ({
+defineComponent('ThinkingOrb', () => ({
   init() {
     mountNavOrb();
   }
 }));
 
-defineComponent('GitHubStats', (ctx) => ({
+defineComponent('GitHubStats', () => ({
   fetch() {
     return new Promise(resolve => {
       initGitHubStats();
