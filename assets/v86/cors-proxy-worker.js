@@ -48,10 +48,10 @@ async function handleRequest(request, env) {
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: body.model || 'llama-3.1-8b-instant',
+          model: body.model || 'qwen/qwen3.6-27b',
           messages: body.messages,
           stream: true,
-          max_tokens: body.max_tokens || 384,
+          max_tokens: body.max_tokens || 1024,
           temperature: body.temperature || 0.2,
         }),
       });
@@ -184,18 +184,19 @@ async function handleRequest(request, env) {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
               body: JSON.stringify({
-                model: 'llama-3.1-8b-instant',
+                model: 'qwen/qwen3.6-27b',
                 messages: [
                   { role: 'system', content: 'You are Devkumar Banerjee. Write a friendly, 1-2 sentence response to a guestbook entry on your personal portfolio website. Be warm and concise.' },
                   { role: 'user', content: `${authorName} wrote: "${userMsg}"` }
                 ],
-                max_tokens: 100,
+                max_tokens: 256,
                 temperature: 0.7
               })
             });
             if (aiResp.ok) {
               const resJson = await aiResp.json();
-              aiReply = resJson.choices[0]?.message?.content || aiReply;
+              const rawReply = resJson.choices[0]?.message?.content || aiReply;
+              aiReply = rawReply.replace(/<think>[\s\S]*?<\/think>/g, '').trim() || aiReply;
             }
           } catch (_e) {}
         }

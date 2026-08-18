@@ -2,7 +2,7 @@ import { startThinkingOrb, setThinkingOrbState, stopThinkingOrb } from './orb.js
 import { retrieveContext } from './rag.js';
 
 const MODELS = [
-  { id: 'groq/llama-3.1-8b-instant', name: 'groq-llama-3.1', size: '0MB (Cloud)', dtype: 'api', desc: 'llama-3.1-8b + bge-small-en (default)' },
+  { id: 'qwen/qwen3.6-27b', name: 'qwen3.6-27b', size: '0MB (Cloud)', dtype: 'api', desc: 'qwen3.6-27b + bge-small-en (default)' },
   { id: 'onnx-community/SmolLM2-135M-ONNX', name: 'SmolLM2-135M', size: '135MB', dtype: 'q4', desc: 'lightweight local' },
   { id: 'onnx-community/SmolLM2-360M-ONNX', name: 'SmolLM2-360M', size: '360MB', dtype: 'q4', desc: 'balanced local' },
   { id: 'onnx-community/Qwen2.5-0.5B-Instruct', name: 'Qwen2.5-0.5B', size: '350MB', dtype: 'q4', desc: 'smart local' },
@@ -100,19 +100,71 @@ async function streamGroq(prompt, context, term) {
   const fullSystemContent = `${BASELINE_SYSTEM_PROMPT}\n\n${memoryContext}Retrieved Context:\n${context}`;
 
   let fullResponse = '';
+  let inThink = false;
+  let hold = '';
+  const OPEN = '\n<think>\n';
+  const CLOSE = '\n</think>\n';
+
+  function emitText(text) {
+    const str = hold + text;
+    hold = '';
+    let cursor = 0;
+    while (cursor < str.length) {
+      if (!inThink) {
+        const start = str.indexOf(OPEN, cursor);
+        if (start === -1) {
+          const tail = str.slice(cursor);
+          let k = Math.min(OPEN.length, tail.length);
+          while (k > 0 && !tail.endsWith(OPEN.slice(0, k))) k--;
+          if (k > 0) {
+            const emit = tail.slice(0, tail.length - k);
+            if (emit) {
+              fullResponse += emit;
+              term.write(emit);
+            }
+            hold = tail.slice(tail.length - k);
+            return;
+          }
+          if (tail) {
+            fullResponse += tail;
+            term.write(tail);
+          }
+          return;
+        }
+        const before = str.slice(cursor, start);
+        if (before) {
+          fullResponse += before;
+          term.write(before);
+        }
+        inThink = true;
+        cursor = start + OPEN.length;
+      } else {
+        const end = str.indexOf(CLOSE, cursor);
+        if (end === -1) {
+          const tail = str.slice(cursor);
+          let k = Math.min(CLOSE.length, tail.length);
+          while (k > 0 && !tail.endsWith(CLOSE.slice(0, k))) k--;
+          if (k > 0) hold = tail.slice(tail.length - k);
+          return;
+        }
+        inThink = false;
+        cursor = end + CLOSE.length;
+      }
+    }
+  }
 
   try {
     const response = await fetch(workerUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model: 'qwen/qwen3.6-27b',
         messages: [
           { role: 'system', content: fullSystemContent },
           { role: 'user', content: prompt }
         ],
         stream: true,
-        max_tokens: 384,
+        max_tokens: 1024,
         temperature: 0.3
       })
     });
@@ -140,8 +192,7 @@ async function streamGroq(prompt, context, term) {
             const json = JSON.parse(dataStr);
             const token = json.choices[0]?.delta?.content || '';
             if (token) {
-              fullResponse += token;
-              term.write(token);
+              emitText(token);
             }
           } catch (_err) {
             // Ignore incomplete SSE chunk payload
