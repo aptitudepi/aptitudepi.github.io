@@ -66,7 +66,9 @@ jobs:
           curl -fL -o tectonic.tar.gz \
             "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz"
           tar xzf tectonic.tar.gz
-          sudo install -m 755 tectonic /usr/local/bin/
+          mkdir -p "$HOME/.local/bin"
+          install -m 755 tectonic "$HOME/.local/bin/"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       # Tectonic downloads fonts/packages from its remote bundle on demand.
       # Cache the bundle so builds are offline once populated and flaky
