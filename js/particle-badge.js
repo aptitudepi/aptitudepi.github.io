@@ -1,46 +1,93 @@
 // Inspired by bklit-ui ParticleBadge component
-// WebGL particle border emitter for certification badges & interactive cards
+// WebGL particle border emitter for certification badges & interactive cards.
+//
+// Originally every badge got its own WebGL context, its own render loop and
+// its own spawn timer — twenty-ish live contexts and loops that ran flat out
+// whether or not anything was on screen. That alone could push a weak GPU
+// over the edge.
+//
+// Now the whole page shares ONE fixed overlay canvas and ONE WebGL context.
+// Each registered badge is an "emitter": a cached viewport rect that spawns
+// particles along its border while it is intersecting the viewport. Particles
+// are clipped to their emitter's rect (+bleed), preserving the per-card
+// `overflow: hidden` look the old containers gave, without the contexts.
+//
+// Everything scales continuously against perf.quality() (see perf.js): spawn
+// rate, tick cadence and the global particle budget all shrink smoothly as
+// quality drops — the effect stays present, just lighter.
+
+import perf from './perf.js';
 
 const prefersReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-class WebGLParticleBadge {
-  constructor(el, options = {}) {
-    this.el = el;
-    this.bleed = options.bleed || 32;
+const BLEED = 32;
+const MAX_DPR = 2;
+
+class SharedParticleField {
+  constructor() {
+    this.emitters = [];            // { el, rect, visible, hovering }
     this.particles = [];
-    this.maxParticles = 200;
-    this.isHovering = false;
     this.animFrame = null;
     this.interval = null;
-
-    if (prefersReduced) return;
-    this.init();
-  }
-
-  init() {
-    this.container = document.createElement('div');
-    this.container.style.cssText = `position:absolute;inset:-${this.bleed}px;pointer-events:none;z-index:1;overflow:hidden;border-radius:inherit;`;
+    this.rectsDirty = true;
+    this.render = this.render.bind(this);
 
     this.canvas = document.createElement('canvas');
-    this.canvas.style.cssText = 'position:absolute;inset:0;pointer-events:none;width:100%;height:100%;';
-    this.container.appendChild(this.canvas);
-
-    if (!this.el.style.position || this.el.style.position === 'static') {
-      this.el.style.position = 'relative';
-    }
-    this.el.appendChild(this.container);
+    this.canvas.style.cssText =
+      'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;';
+    document.body.appendChild(this.canvas);
 
     this.gl = this.canvas.getContext('webgl', { alpha: true, antialias: true });
-    if (!this.gl) return;
+    if (!this.gl) {
+      this.canvas.remove();
+      return;
+    }
 
     this.initShaders();
     this.resize();
 
-    window.addEventListener('resize', () => this.resize(), { passive: true });
-    this.el.addEventListener('mouseenter', () => { this.isHovering = true; this.burst(6); });
-    this.el.addEventListener('mouseleave', () => { this.isHovering = false; });
+    window.addEventListener('resize', () => { this.resize(); this.rectsDirty = true; }, { passive: true });
+    window.addEventListener(
+      'scroll',
+      () => {
+        // Rects are read at most once per frame, batched across scroll events.
+        this.rectsDirty = true;
+        if (!this.rectRaf) {
+          this.rectRaf = requestAnimationFrame(() => {
+            this.rectRaf = null;
+            this.refreshRects();
+          });
+        }
+      },
+      { passive: true }
+    );
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this.pause();
+      else this.resume();
+    });
 
-    this.startLoop();
+    // Only emitters near/inside the viewport spawn and track hover.
+    this.io = new IntersectionObserver(
+      entries => {
+        let changed = false;
+        for (const entry of entries) {
+          const em = this.emitters.find(e => e.el === entry.target);
+          if (em && em.visible !== entry.isIntersecting) {
+            em.visible = entry.isIntersecting;
+            changed = true;
+          }
+        }
+        if (changed) {
+          // Newly visible emitters may have stale cached rects (anchor jumps).
+          this.rectsDirty = true;
+          this.syncLoopState();
+        }
+      },
+      { rootMargin: `${BLEED * 2}px` }
+    );
+
+    this.startSpawning();
+    this.syncLoopState();
   }
 
   initShaders() {
@@ -103,25 +150,50 @@ class WebGLParticleBadge {
 
   resize() {
     if (!this.canvas || !this.gl) return;
-    const rect = this.container.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = rect.width * dpr;
-    this.canvas.height = rect.height * dpr;
+    const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    this.dpr = dpr;
+    this.canvas.width = window.innerWidth * dpr;
+    this.canvas.height = window.innerHeight * dpr;
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  burst(count = 4) {
-    const w = this.canvas.width / (window.devicePixelRatio || 1);
-    const h = this.canvas.height / (window.devicePixelRatio || 1);
+  addEmitter(el) {
+    if (!this.gl) return;
+    const em = { el, rect: null, visible: false, hovering: false };
+    this.emitters.push(em);
+    el.addEventListener('mouseenter', () => { em.hovering = true; });
+    el.addEventListener('mouseleave', () => { em.hovering = false; });
+    this.io.observe(el);
+    this.rectsDirty = true;
+  }
+
+  /** Re-read viewport rects for everything currently marked visible. */
+  refreshRects() {
+    this.rectsDirty = false;
+    for (const em of this.emitters) {
+      if (em.visible || em.rect == null) em.rect = em.el.getBoundingClientRect();
+    }
+  }
+
+  /**
+   * Spawn along an emitter's border, in viewport coordinates. Density scales
+   * continuously with quality; hovering multiplies it like the old code did.
+   */
+  burst(em) {
+    const q = perf.quality();
+    const m = 0.3 + 0.7 * q;
+    const count = Math.max(1, Math.round((em.hovering ? 3 : 1) * m));
+    const rect = em.rect;
+    if (!rect) return;
 
     for (let i = 0; i < count; i++) {
       const edge = Math.floor(Math.random() * 4);
-      let x = this.bleed;
-      let y = this.bleed;
-      if (edge === 0) { x = Math.random() * w; }
-      else if (edge === 1) { x = w - this.bleed; y = Math.random() * h; }
-      else if (edge === 2) { x = Math.random() * w; y = h - this.bleed; }
-      else { y = Math.random() * h; }
+      let x = rect.left;
+      let y = rect.top;
+      if (edge === 0) { x = rect.left + Math.random() * rect.width; }
+      else if (edge === 1) { x = rect.right; y = rect.top + Math.random() * rect.height; }
+      else if (edge === 2) { x = rect.left + Math.random() * rect.width; y = rect.bottom; }
+      else { y = rect.top + Math.random() * rect.height; }
 
       const angle = Math.random() * Math.PI * 2;
       const speed = 0.4 + Math.random() * 1.2;
@@ -136,82 +208,131 @@ class WebGLParticleBadge {
         size: 2.0 + Math.random() * 3.5,
         r: (isRed ? 255 : 0) / 255,
         g: (isRed ? 80 : 180) / 255,
-        b: 1.0
+        b: 1.0,
+        em,
       });
     }
 
-    if (this.particles.length > this.maxParticles) {
-      this.particles = this.particles.slice(-this.maxParticles);
+    // Global budget across all emitters, scaled with quality; trim oldest.
+    const budget = Math.round(perf.lerp(120, 600));
+    if (this.particles.length > budget) {
+      this.particles.splice(0, this.particles.length - budget);
     }
   }
 
-  startLoop() {
-    this.interval = setInterval(() => {
-      this.burst(this.isHovering ? 3 : 1);
-    }, 120);
+  startSpawning() {
+    const tickSpawn = () => {
+      if (document.visibilityState === 'hidden') return;
+      if (this.rectsDirty) this.refreshRects();
+      const anyVisible = this.emitters.some(e => e.visible);
+      if (!anyVisible) return;
+      for (const em of this.emitters) {
+        if (em.visible) this.burst(em);
+      }
+    };
+    const schedule = () => {
+      clearInterval(this.interval);
+      const delay = Math.round(perf.lerp(240, 120));
+      this.interval = setInterval(tickSpawn, delay);
+    };
+    schedule();
+    // Re-cadence the spawner when quality shifts materially.
+    perf.onChange(() => schedule());
+  }
 
-    const render = () => {
-      const gl = this.gl;
-      if (!gl || !this.program) return;
+  syncLoopState() {
+    const want = !document.hidden && this.emitters.some(e => e.visible);
+    if (want && this.animFrame == null) {
+      this.animFrame = requestAnimationFrame(this.render);
+    } else if (!want && this.animFrame != null) {
+      cancelAnimationFrame(this.animFrame);
+      this.animFrame = null;
+    }
+  }
 
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+  pause() {
+    if (this.animFrame != null) {
+      cancelAnimationFrame(this.animFrame);
+      this.animFrame = null;
+    }
+  }
 
-      this.particles = this.particles.filter(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.01;
-        p.life -= 1;
-        return p.life > 0;
-      });
+  resume() {
+    this.syncLoopState();
+  }
 
-      if (this.particles.length > 0) {
-        const dpr = window.devicePixelRatio || 1;
-        const positions = [];
-        const sizes = [];
-        const colors = [];
+  render() {
+    const gl = this.gl;
+    if (!gl || !this.program) return;
 
-        for (const p of this.particles) {
-          const alpha = (p.life / p.maxLife) * 0.85;
-          positions.push(p.x * dpr, p.y * dpr);
-          sizes.push(p.size * dpr * (p.life / p.maxLife + 0.4));
-          colors.push(p.r, p.g, p.b, alpha);
-        }
+    if (this.rectsDirty) this.refreshRects();
 
-        gl.useProgram(this.program);
-        gl.uniform2f(this.uRes, this.canvas.width, this.canvas.height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
-        gl.enableVertexAttribArray(this.aPos);
-        gl.vertexAttribPointer(this.aPos, 2, gl.FLOAT, false, 0, 0);
+    const dpr = this.dpr || 1;
+    this.particles = this.particles.filter(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.01;
+      p.life -= 1;
+      if (p.life <= 0) return false;
+      // Clip to the emitting card's rect + bleed — the visual equivalent of
+      // the old per-card overflow:hidden container.
+      const r = p.em.rect;
+      if (!r || !p.em.visible) return false;
+      if (
+        p.x < r.left - BLEED || p.x > r.right + BLEED ||
+        p.y < r.top - BLEED || p.y > r.bottom + BLEED
+      ) return false;
+      return true;
+    });
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.DYNAMIC_DRAW);
-        gl.enableVertexAttribArray(this.aSize);
-        gl.vertexAttribPointer(this.aSize, 1, gl.FLOAT, false, 0, 0);
+    if (this.particles.length > 0) {
+      const positions = [];
+      const sizes = [];
+      const colors = [];
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.DYNAMIC_DRAW);
-        gl.enableVertexAttribArray(this.aColor);
-        gl.vertexAttribPointer(this.aColor, 4, gl.FLOAT, false, 0, 0);
-
-        gl.drawArrays(gl.POINTS, 0, this.particles.length);
+      for (const p of this.particles) {
+        const alpha = (p.life / p.maxLife) * 0.85;
+        positions.push(p.x * dpr, p.y * dpr);
+        sizes.push(p.size * dpr * (p.life / p.maxLife + 0.4));
+        colors.push(p.r, p.g, p.b, alpha);
       }
 
-      this.animFrame = requestAnimationFrame(render);
-    };
+      gl.useProgram(this.program);
+      gl.uniform2f(this.uRes, this.canvas.width, this.canvas.height);
 
-    this.animFrame = requestAnimationFrame(render);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(this.aPos);
+      gl.vertexAttribPointer(this.aPos, 2, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(this.aSize);
+      gl.vertexAttribPointer(this.aSize, 1, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(this.aColor);
+      gl.vertexAttribPointer(this.aColor, 4, gl.FLOAT, false, 0, 0);
+
+      gl.drawArrays(gl.POINTS, 0, this.particles.length);
+    }
+
+    this.animFrame = requestAnimationFrame(this.render);
   }
 }
 
+let field = null;
+
 export function initParticleBadges() {
   if (prefersReduced) return;
-  document.querySelectorAll('.cert-badge, .spotlight-card').forEach(el => {
-    if (!el.dataset.particleBadge) {
-      el.dataset.particleBadge = 'true';
-      new WebGLParticleBadge(el);
-    }
-  });
+  const targets = document.querySelectorAll('.cert-badge, .spotlight-card');
+
+  field = new SharedParticleField();
+  targets.forEach(el => field.addEmitter(el));
+
+  if (!field.gl) field = null;
 }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import perf from './perf.js';
 let uRainbow = 0;
 
 function detectHz(cb) {
@@ -103,12 +104,17 @@ function initParticles() {
 
   const PR_raw = window.devicePixelRatio;
   let PR = Math.min(PR_raw, 2);
-  let SZ = 256;
-  let targetFPS = 60;
-  let frameInterval = 1000 / 60;
+  let displayHz = 60;                // native refresh, learned once via detectHz
+  let targetInterval = 1000 / 60;    // frame budget, derived from quality + displayHz
   let lastFrameTime = 0;
-  let gpuTier = 1;
   let scrollOffset = 0;
+
+  // How much of the 256×256 field actually draws, and the chromatic-aberration
+  // strength in the post pass — both continuous functions of perf.quality().
+  // These are recomputed whenever quality moves (see perf.onChange below).
+  const N_MAX = 256 * 256;
+  let activeCount = N_MAX;
+  let caStrength = 1;
 
   window.addEventListener('scroll', () => { scrollOffset = window.scrollY; }, { passive: true });
 
@@ -122,12 +128,31 @@ function initParticles() {
   R.setSize(W(), H());
   R.autoClear = false;
 
-  function applyQuality(tier) {
-    gpuTier = tier;
-    if (tier === 0) { SZ = 128; PR = Math.min(PR_raw, 1); }
-    else if (tier === 1) { SZ = 192; PR = Math.min(PR_raw, 1.5); }
-    else { SZ = 256; PR = Math.min(PR_raw, 2); }
-    R.setPixelRatio(PR);
+  // Map the shared quality scalar to this system's knobs, continuously:
+  //   • pixel ratio   — fewer physical pixels when we're struggling
+  //   • active count  — how many of the 65k particles draw this frame
+  //   • frame budget   — cap FPS between 30 (q=0) and native-but-≤90 (q=1)
+  //   • CA strength   — dial the chromatic-aberration post effect down, not off
+  // Called once up front and again every time quality drifts meaningfully.
+  function applyQuality(q) {
+    const wantPR = 1 + q; // 1 … 2
+    const nextPR = Math.min(PR_raw, wantPR);
+    if (Math.abs(nextPR - PR) > 0.05) {
+      PR = nextPR;
+      R.setPixelRatio(PR);
+      onResize();
+    }
+    // Keep a floor so the field never looks empty; active count scales
+    // linearly with quality between that floor and the full grid.
+    const frac = 0.35 + 0.65 * q;
+    activeCount = Math.max(1024, Math.round(N_MAX * frac));
+    if (triGeo) triGeo.instanceCount = activeCount;
+
+    caStrength = 0.25 + 0.75 * q;
+
+    const fpsCap = Math.round(30 + 60 * q);              // 30 … 90
+    const target = Math.min(displayHz, fpsCap);
+    targetInterval = 1000 / target;
   }
 
   const scene = new THREE.Scene();
@@ -313,18 +338,20 @@ void main(){
   const postScene = new THREE.Scene();
   const postMat = new THREE.ShaderMaterial({
     uniforms: {
-      uTex: { value: trailB.texture }, uRez: { value: new THREE.Vector2(iW, iH) }, uTime: { value: 0 }
+      uTex: { value: trailB.texture }, uRez: { value: new THREE.Vector2(iW, iH) }, uTime: { value: 0 },
+      uCA: { value: 1 }
     },
     vertexShader: `void main(){gl_Position=vec4(position,1.);}`,
     fragmentShader: `precision highp float;
 uniform sampler2D uTex;
 uniform vec2 uRez;
 uniform float uTime;
+uniform float uCA;
 vec3 aces(vec3 x){float a=2.51,b=.03,c=2.43,e=.59,f=.14;return clamp((x*(a*x+b))/(x*(c*x+e)+f),0.,1.);}
 void main(){
   vec2 uv=gl_FragCoord.xy/uRez;
   vec2 cen=uv-.5;
-  float ca=dot(cen,cen)*.009;
+  float ca=dot(cen,cen)*.009*uCA;
   float rv=texture2D(uTex,uv+cen*ca*1.3).r;
   float gv=texture2D(uTex,uv).g;
   float bv=texture2D(uTex,uv-cen*ca*.9).b;
@@ -365,29 +392,8 @@ void main(){
   }
   window.addEventListener('resize', onResize);
 
-  function probeGPU() {
-    try {
-      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-      let renderer = '';
-      try {
-        renderer = gl.getParameter(gl.RENDERER).toLowerCase();
-      } catch (_) {
-        const ext = gl.getExtension('WEBGL_debug_renderer_info');
-        if (ext) renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL).toLowerCase();
-      }
-      if (/rtx|rx 6|rx 7|m1|m2|m3|a100|4090|3090|3080|radeon pro/i.test(renderer)) {
-        applyQuality(2);
-      } else if (/intel|hd graphics|uhd|mali|adreno 5|adreno 6/i.test(renderer)) {
-        applyQuality(0);
-      } else {
-        applyQuality(1);
-      }
-    } catch (_) { applyQuality(1); }
-  }
-
-  let targetInterval = 1000 / 60;
   const clock = new THREE.Clock();
-  let prevT = 0, ever = false, gpuProbed = false;
+  let prevT = 0, ever = false;
 
   function frame(ts) {
     if (ts - lastFrameTime < targetInterval - 1) { requestAnimationFrame(frame); return; }
@@ -396,8 +402,6 @@ void main(){
     const t = clock.getElapsedTime();
     const dt = Math.min(t - prevT, 0.05);
     prevT = t;
-
-    if (!gpuProbed && ever) { gpuProbed = true; probeGPU(); }
 
     const kH = 1 - Math.pow(0.94, dt * 60);
     hP += ((mouse.active ? 1 : 0) - hP) * kH;
@@ -449,6 +453,7 @@ void main(){
 
     postMat.uniforms.uTex.value = trailB.texture;
     postMat.uniforms.uTime.value = t;
+    postMat.uniforms.uCA.value = caStrength;
     R.setRenderTarget(null);
     R.clear();
     R.render(postScene, flatCam);
@@ -462,11 +467,14 @@ void main(){
     requestAnimationFrame(frame);
   }
 
+  // Learn the display's refresh rate once, seed the quality-driven knobs, then
+  // let perf.onChange keep them in step with the live quality scalar. The FPS
+  // cap is min(displayHz, quality-cap), so a 240Hz panel on a weak GPU still
+  // gets throttled down instead of running the whole pipeline 240×/second.
   detectHz(hz => {
     const knownHz = [60, 90, 120, 144, 165, 240];
-    const snapped = knownHz.reduce((a, b) => Math.abs(b - hz) < Math.abs(a - hz) ? b : a);
-    targetFPS = snapped;
-    targetInterval = 1000 / snapped;
+    displayHz = knownHz.reduce((a, b) => Math.abs(b - hz) < Math.abs(a - hz) ? b : a);
+    perf.onChange(applyQuality); // fires immediately with the current quality
     animFrameId = requestAnimationFrame(frame);
   });
 }

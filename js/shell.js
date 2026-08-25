@@ -339,14 +339,20 @@ function getGPU() {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     if (gl) {
-      if (navigator.userAgent.includes('Firefox')) {
-        return gl.getParameter(gl.RENDERER) || 'Unknown';
+      // Prefer the spec'd plain RENDERER string — real GPU name on modern
+      // engines, so no UA sniff and no deprecated debug-info extension probe
+      // (Firefox logs a warning for it). Fall back to the extension only when
+      // RENDERER is a useless generic placeholder (older engines).
+      let r = '';
+      try { r = String(gl.getParameter(gl.RENDERER) || '').trim(); } catch (_) { r = ''; }
+      if (/^(webkit webgl|mozilla|generic|unknown)/i.test(r)) r = '';
+      if (!r) {
+        try {
+          const ext = gl.getExtension('WEBGL_debug_renderer_info');
+          if (ext) r = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '').trim();
+        } catch (_) { r = ''; }
       }
-      const ext = gl.getExtension('WEBGL_debug_renderer_info');
-      if (ext) {
-        const r = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
-        if (r) return r.replace(/^ANGLE\s*\(/i, '').replace(/\)$/, '') || 'Unknown';
-      }
+      return r.replace(/^ANGLE\s*\(/i, '').replace(/\)$/, '') || 'Unknown';
     }
   } catch (_) {}
   return 'Unknown';

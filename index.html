@@ -28,7 +28,39 @@
 <link rel="shortcut icon" href="favicon.ico">
 <link rel="apple-touch-icon" href="favicon-32.png">
 <script>
-(function(){var e=document.querySelector('link[rel="icon"][type="image/svg+xml"]');if(!e)return;var t,n,i,o,a,r,s,l,c,u,d,h,f,p,m,g,b,y,v,w,k,x,S,E,C,R,T;function A(){var f=Date.now()/1e3,n=Math.sin(f*Math.PI/3)*.5+.5,i=Math.round(n*255).toString(16).padStart(2,"0"),o=Math.round((1-n)*255).toString(16).padStart(2,"0"),a="#"+i+"00"+o,r=Math.sin(f*Math.PI*2/3)*.5+.5,s=(.2+r*.4).toFixed(2),l='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><filter id="g"><feGaussianBlur stdDeviation="1.5"/></filter></defs><text x="16" y="25" text-anchor="middle" font-family="Noto Sans Bengali,Nirmala UI,sans-serif" font-size="24" font-weight="bold" fill="'+a+'" filter="url(#g)" opacity="'+s+'">\u09A6\u09CD\u09AC</text><text x="16" y="25" text-anchor="middle" font-family="Noto Sans Bengali,Nirmala UI,sans-serif" font-size="24" font-weight="bold" fill="'+a+'">\u09A6\u09CD\u09AC</text></svg>';e.href="data:image/svg+xml,"+encodeURIComponent(l);requestAnimationFrame(A)}A()})();
+(function(){
+  var e=document.querySelector('link[rel="icon"][type="image/svg+xml"]');
+  if(!e)return;
+  // The favicon used to regenerate its SVG on EVERY animation frame, forever.
+  // At 32px nobody can perceive the difference between that and ~15fps, so it
+  // now repaints on a timer whose cadence scales with the shared quality
+  // scalar from js/perf.js (loaded later by main.js): roughly 15fps at full
+  // quality down to ~4fps when the device is struggling. Paused entirely
+  // while the tab is hidden; a single static frame under reduced motion.
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function svg(f){
+    var n=Math.sin(f*Math.PI/3)*.5+.5,
+        i=Math.round(n*255).toString(16).padStart(2,"0"),
+        o=Math.round((1-n)*255).toString(16).padStart(2,"0"),
+        a="#"+i+"00"+o,
+        r=Math.sin(f*Math.PI*2/3)*.5+.5,
+        s=(.2+r*.4).toFixed(2);
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><filter id="g"><feGaussianBlur stdDeviation="1.5"/></filter></defs><text x="16" y="25" text-anchor="middle" font-family="Noto Sans Bengali,Nirmala UI,sans-serif" font-size="24" font-weight="bold" fill="'+a+'" filter="url(#g)" opacity="'+s+'">\u09A6\u09CD\u09AC</text><text x="16" y="25" text-anchor="middle" font-family="Noto Sans Bengali,Nirmala UI,sans-serif" font-size="24" font-weight="bold" fill="'+a+'">\u09A6\u09CD\u09AC</text></svg>';
+  }
+
+  function delay(){
+    return window.perf?Math.round(window.perf.lerp(250,66)):120;
+  }
+
+  function tick(){
+    if(!document.hidden)e.href="data:image/svg+xml,"+encodeURIComponent(svg(Date.now()/1e3));
+    if(!reduce)setTimeout(tick,delay());
+  }
+
+  if(reduce){e.href="data:image/svg+xml,"+encodeURIComponent(svg(Date.now()/1e3));}
+  else{tick();}
+})();
 </script>
 <script type="importmap">
 {
