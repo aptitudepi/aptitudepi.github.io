@@ -108,6 +108,9 @@ function initParticles() {
   let targetInterval = 1000 / 60;    // frame budget, derived from quality + displayHz
   let lastFrameTime = 0;
   let scrollOffset = 0;
+  let syncTopo = false;              // when true, particle clock drives topo
+  let currentT = 0;                  // latest particle elapsed time (for topo sync)
+  let topoSpeedMult = 0.15;         // topo evolves at this fraction of particle speed
 
   // How much of the 256×256 field actually draws, and the chromatic-aberration
   // strength in the post pass — both continuous functions of perf.quality().
@@ -156,7 +159,7 @@ function initParticles() {
   }
 
   const scene = new THREE.Scene();
-  const camMain = new THREE.PerspectiveCamera(50, W() / H(), 0.01, 10);
+  const camMain = new THREE.PerspectiveCamera(49, W() / H(), 0.01, 10);
   camMain.position.z = 2.8;
   const flatCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
@@ -315,6 +318,7 @@ void main(){
   float bsLum=vBS*0.55;
   col+=vec3(bsLum*.4, bsLum*.15, bsLum*.05);
   col*=.85+vBS*.3;
+  col*=1.8; // boost luminosity — visible through frosted glass
   gl_FragColor=vec4(clamp(col,0.,1.),a*(.6+vBS*.4));
 }`,
     transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -328,7 +332,7 @@ void main(){
   const trailMat = new THREE.ShaderMaterial({
     uniforms: {
       uPrev: { value: trailA.texture }, uParts: { value: outRT.texture },
-      uTime: { value: 0 }, uDecay: { value: 0.91 }, uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
+      uTime: { value: 0 }, uDecay: { value: 0.99 }, uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
     },
     vertexShader: `void main(){gl_Position=vec4(position,1.);}`,
     fragmentShader: buildTrailFrag(iW, iH)
@@ -339,14 +343,17 @@ void main(){
   const postMat = new THREE.ShaderMaterial({
     uniforms: {
       uTex: { value: trailB.texture }, uRez: { value: new THREE.Vector2(iW, iH) }, uTime: { value: 0 },
-      uCA: { value: 1 }
+      uCA: { value: 1 },
+      uBrightness: { value: 2.6 },
+      uScanline: { value: 0.02 },
+      uVignette: { value: 1.2 },
     },
     vertexShader: `void main(){gl_Position=vec4(position,1.);}`,
     fragmentShader: `precision highp float;
 uniform sampler2D uTex;
 uniform vec2 uRez;
 uniform float uTime;
-uniform float uCA;
+uniform float uCA,uBrightness,uScanline,uVignette;
 vec3 aces(vec3 x){float a=2.51,b=.03,c=2.43,e=.59,f=.14;return clamp((x*(a*x+b))/(x*(c*x+e)+f),0.,1.);}
 void main(){
   vec2 uv=gl_FragCoord.xy/uRez;
@@ -355,9 +362,9 @@ void main(){
   float rv=texture2D(uTex,uv+cen*ca*1.3).r;
   float gv=texture2D(uTex,uv).g;
   float bv=texture2D(uTex,uv-cen*ca*.9).b;
-  vec3 col=aces(vec3(rv,gv,bv)*1.35);
-  col*=1.-dot(cen,cen)*1.1;
-  col*=sin(gl_FragCoord.y*1.5)*.011+1.;
+  vec3 col=aces(vec3(rv,gv,bv)*uBrightness);
+  col*=1.-dot(cen,cen)*uVignette;
+  col*=sin(gl_FragCoord.y*1.5)*uScanline+1.;
   gl_FragColor=vec4(col,1.);
 }`
   });
@@ -400,6 +407,7 @@ void main(){
     lastFrameTime = ts;
 
     const t = clock.getElapsedTime();
+    currentT = t;
     const dt = Math.min(t - prevT, 0.05);
     prevT = t;
 
@@ -446,7 +454,7 @@ void main(){
     trailMat.uniforms.uPrev.value = trailA.texture;
     trailMat.uniforms.uParts.value = outRT.texture;
     trailMat.uniforms.uTime.value = t;
-    trailMat.uniforms.uDecay.value = 0.91 - hP * 0.04;
+    trailMat.uniforms.uDecay.value = 0.99 - hP * 0.04;
     R.setRenderTarget(trailB);
     R.clear();
     R.render(trailScene, flatCam);
@@ -464,6 +472,14 @@ void main(){
 
     canvas.style.transform = `translateY(${-scrollOffset * 0.025}px)`;
 
+    // Drive the topo from the particle clock when sync is on.
+    // The topo's own rAF is paused; setClock() renders it internally.
+    // topoSpeedMult makes the landscape evolve slower than the particles.
+    if (syncTopo) {
+      const topoInstance = window.TopoDev?.getTopo?.();
+      if (topoInstance?.ok) topoInstance.setClock(currentT * topoSpeedMult);
+    }
+
     requestAnimationFrame(frame);
   }
 
@@ -475,6 +491,75 @@ void main(){
     const knownHz = [60, 90, 120, 144, 165, 240];
     displayHz = knownHz.reduce((a, b) => Math.abs(b - hz) < Math.abs(a - hz) ? b : a);
     perf.onChange(applyQuality); // fires immediately with the current quality
+
+    /* ── Dev API — exposed for dev.html sidebar ──── */
+    window.ParticleDev = {
+      setCount(n) {
+        activeCount = Math.max(1024, Math.min(N_MAX, Math.round(n)));
+        if (triGeo) triGeo.instanceCount = activeCount;
+      },
+      getCount() { return activeCount; },
+      setCA(v) { caStrength = Math.max(0, Math.min(1, v)); },
+      getCA() { return caStrength; },
+      setTrailDecay(v) {
+        trailMat.uniforms.uDecay.value = Math.max(0.8, Math.min(0.99, v));
+      },
+      getTrailDecay() { return trailMat.uniforms.uDecay.value; },
+      setRainbow(on) { uRainbow = on ? 1 : 0; },
+      isRainbow() { return uRainbow > 0.5; },
+      getQuality() { return perf.quality(); },
+      setQualityOverride(q) {
+        if (q === null) perf.onChange(applyQuality);
+        else applyQuality(Math.max(0, Math.min(1, q)));
+      },
+      /* Particle size — multiplier on the computed uPS (default ~1.0) */
+      setParticleSize(mult) {
+        const base = W() / (PR * 2000) * 0.65;
+        pMat.uniforms.uPS.value = base * Math.max(0.1, Math.min(5, mult));
+      },
+      getParticleSize() {
+        const base = W() / (PR * 2000) * 0.65;
+        return pMat.uniforms.uPS.value / base;
+      },
+      /* Camera field of view — lower = zoomed in, higher = wider */
+      setFOV(deg) {
+        camMain.fov = Math.max(20, Math.min(120, deg));
+        camMain.updateProjectionMatrix();
+      },
+      getFOV() { return camMain.fov; },
+      /* Post-processing */
+      setBrightness(v) {
+        postMat.uniforms.uBrightness.value = Math.max(0.5, Math.min(3, v));
+      },
+      getBrightness() { return postMat.uniforms.uBrightness.value; },
+      setScanline(v) {
+        postMat.uniforms.uScanline.value = Math.max(0, Math.min(0.05, v));
+      },
+      getScanline() { return postMat.uniforms.uScanline.value; },
+      setVignette(v) {
+        postMat.uniforms.uVignette.value = Math.max(0, Math.min(3, v));
+      },
+      getVignette() { return postMat.uniforms.uVignette.value; },
+      /* Sync topo — particle clock drives topo's setClock(). Topo's own rAF
+         is paused; the particle loop renders it via setClock(t) each frame. */
+      setSyncTopo(on) {
+        syncTopo = on;
+        const topoInstance = window.TopoDev?.getTopo?.();
+        if (!topoInstance?.ok) return;
+        if (on) {
+          topoInstance.pause();          // kill topo's own loop
+          topoInstance.setClock(currentT * topoSpeedMult); // seed from current particle time
+        } else {
+          topoInstance.play();           // resume topo's own loop
+        }
+      },
+      isSyncTopo() { return syncTopo; },
+      /** Topo speed multiplier — fraction of particle time fed to topo clock.
+       *  0.15 = topo evolves ~7× slower than particles. */
+      setTopoSpeed(v) { topoSpeedMult = Math.max(0.01, Math.min(1, v)); },
+      getTopoSpeed() { return topoSpeedMult; },
+    };
+
     animFrameId = requestAnimationFrame(frame);
   });
 }

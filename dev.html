@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Devkumar Banerjee</title>
+<title>Dev — Topolines Controls</title>
 <meta name="description" content="Devkumar Banerjee — CS Honors @ Texas A&M. Terminal-themed portfolio with frosted glass UI built on xterm.js, Three.js particles, and a local AI assistant powered by Transformers.js. Builder, researcher, and systems tinkerer.">
 <script type="application/ld+json">
 {
@@ -31,12 +31,6 @@
 (function(){
   var e=document.querySelector('link[rel="icon"][type="image/svg+xml"]');
   if(!e)return;
-  // The favicon used to regenerate its SVG on EVERY animation frame, forever.
-  // At 32px nobody can perceive the difference between that and ~15fps, so it
-  // now repaints on a timer whose cadence scales with the shared quality
-  // scalar from js/perf.js (loaded later by main.js): roughly 15fps at full
-  // quality down to ~4fps when the device is struggling. Paused entirely
-  // while the tab is hidden; a single static frame under reduced motion.
   var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function svg(f){
@@ -92,8 +86,88 @@
 <link rel="stylesheet" href="css/nav.css">
 <link rel="stylesheet" href="css/responsive.css">
 
-<!-- Topolines UMD — must load before modules that use window.Topolines -->
+<!-- Topolines UMD — must load before modules that use window.topolines -->
 <script src="js/topolines.global.js"></script>
+
+<style>
+/* ── Dev sidebar ─────────────────────────── */
+#dev-panel {
+  position: fixed;
+  right: 0; top: 0; bottom: 0;
+  width: 320px;
+  background: var(--color-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-left: 1px solid var(--color-border);
+  padding: 1rem;
+  overflow-y: auto;
+  z-index: 10000;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-text);
+}
+#dev-panel h3 {
+  font-family: var(--font-display);
+  margin: 0 0 0.5rem 0;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+}
+.dev-section {
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+}
+.dev-section:first-child {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+.dev-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+}
+.dev-row label {
+  min-width: 90px;
+  flex-shrink: 0;
+  color: var(--color-text-faint);
+  font-size: 0.75rem;
+}
+.dev-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--color-primary, #00f);
+}
+.dev-row output {
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  font-size: 0.75rem;
+}
+.dev-row input[type="checkbox"] {
+  width: 1rem; height: 1rem;
+  accent-color: var(--color-primary, #00f);
+}
+.dev-row input[type="color"] {
+  width: 2rem; height: 1.5rem;
+  border: 1px solid var(--color-border);
+  background: none;
+  cursor: pointer;
+}
+.dev-row input:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.dev-note {
+  font-size: 0.65rem;
+  color: var(--color-text-faint);
+  margin-top: 0.75rem;
+  line-height: 1.4;
+}
+</style>
 </head>
 <body>
 
@@ -120,6 +194,59 @@
 <div id="crt-overlay" aria-hidden="true"></div>
 <div id="noise-overlay" aria-hidden="true"></div>
 
+<!-- ── Dev sidebar ────────────────────────── -->
+<div id="dev-panel">
+  <h3>Topolines</h3>
+  <div class="dev-section">
+    <div class="dev-row"><label>Enabled</label><input type="checkbox" id="dev-enabled" checked></div>
+    <div class="dev-row"><label>Sync w/ site</label><input type="checkbox" id="dev-sync" checked></div>
+  </div>
+  <div class="dev-section">
+    <div class="dev-row"><label>Color</label><input type="color" id="dev-color" value="#C3D82C" disabled></div>
+    <div class="dev-row"><label>Opacity</label><input type="range" id="dev-opacity" min="0" max="1" step="0.01" value="0.25"><output id="dev-opacity-v">0.25</output></div>
+    <div class="dev-row"><label>Line width</label><input type="range" id="dev-linewidth" min="0.2" max="4" step="0.1" value="1.2"><output id="dev-linewidth-v">1.2</output></div>
+    <div class="dev-row"><label>Levels</label><input type="range" id="dev-levels" min="2" max="30" step="1" value="30"><output id="dev-levels-v">30</output></div>
+    <div class="dev-row"><label>Scale</label><input type="range" id="dev-scale" min="0.3" max="3" step="0.01" value="3"><output id="dev-scale-v">3.00</output></div>
+    <div class="dev-row"><label>Speed</label><input type="range" id="dev-speed" min="0" max="0.05" step="0.001" value="0.012"><output id="dev-speed-v">0.012</output></div>
+    <div class="dev-row"><label>Warp</label><input type="range" id="dev-warp" min="0" max="0.6" step="0.01" value="0"><output id="dev-warp-v">0.00</output></div>
+    <div class="dev-row"><label>Interactive</label><input type="checkbox" id="dev-interactive"></div>
+  </div>
+
+  <h3>Acrylic</h3>
+  <div class="dev-section">
+    <div class="dev-row"><label>Blur</label><input type="range" id="dev-blur" min="0" max="40" step="1" value="6"><output id="dev-blur-v">6px</output></div>
+    <div class="dev-row"><label>Bg alpha</label><input type="range" id="dev-glass-alpha" min="0" max="0.6" step="0.01" value="0.20"><output id="dev-glass-alpha-v">0.20</output></div>
+    <div class="dev-row"><label>Border alpha</label><input type="range" id="dev-border-alpha" min="0" max="1" step="0.01" value="0.35"><output id="dev-border-alpha-v">0.35</output></div>
+  </div>
+
+  <h3>Particles</h3>
+  <div class="dev-section">
+    <div class="dev-row"><label>Count</label><input type="range" id="dev-p-count" min="1024" max="65536" step="1024" value="65536"><output id="dev-p-count-v">65536</output></div>
+    <div class="dev-row"><label>Size</label><input type="range" id="dev-p-size" min="0.1" max="5" step="0.05" value="2"><output id="dev-p-size-v">2.00</output></div>
+    <div class="dev-row"><label>FOV</label><input type="range" id="dev-p-fov" min="20" max="120" step="1" value="49"><output id="dev-p-fov-v">49°</output></div>
+    <div class="dev-row"><label>CA strength</label><input type="range" id="dev-p-ca" min="0" max="1" step="0.01" value="1"><output id="dev-p-ca-v">1.00</output></div>
+    <div class="dev-row"><label>Trail decay</label><input type="range" id="dev-p-decay" min="0.8" max="0.99" step="0.005" value="0.99"><output id="dev-p-decay-v">0.990</output></div>
+    <div class="dev-row"><label>Brightness</label><input type="range" id="dev-p-bright" min="0.5" max="3" step="0.05" value="2.6"><output id="dev-p-bright-v">2.60</output></div>
+    <div class="dev-row"><label>Scanline</label><input type="range" id="dev-p-scanline" min="0" max="0.05" step="0.001" value="0.02"><output id="dev-p-scanline-v">0.020</output></div>
+    <div class="dev-row"><label>Vignette</label><input type="range" id="dev-p-vignette" min="0" max="3" step="0.05" value="1.2"><output id="dev-p-vignette-v">1.20</output></div>
+    <div class="dev-row"><label>Rainbow</label><input type="checkbox" id="dev-p-rainbow"></div>
+    <div class="dev-row"><label>Sync topo</label><input type="checkbox" id="dev-p-sync-topo"></div>
+    <div class="dev-row"><label>Topo speed</label><input type="range" id="dev-p-topo-speed" min="0.01" max="1" step="0.01" value="0.15"><output id="dev-p-topo-speed-v">0.15</output></div>
+    <div class="dev-row"><label>Quality</label><input type="range" id="dev-p-quality" min="0" max="1" step="0.01" value="1" disabled><output id="dev-p-quality-v">auto</output></div>
+    <div class="dev-row"><label>Override</label><input type="checkbox" id="dev-p-override"></div>
+  </div>
+
+  <p class="dev-note">
+    <b>Topolines</b>: "Sync w/ site" reads <code>--nav-cycle</code> each frame.
+    Disable to use the manual colour picker.<br>
+    <b>Acrylic</b>: patches <code>backdrop-filter</code> and glass CSS vars on
+    <code>#app</code>, <code>.hero-shell</code>, <code>.doc-nav</code>,
+    <code>.spotlight-card</code>, <code>.footer</code>.<br>
+    <b>Particles</b>: "Override" lets you pin quality manually; uncheck to
+    resume auto-scaling.
+  </p>
+</div>
+
 <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" type="button">
   <span></span><span></span><span></span>
 </button>
@@ -137,7 +264,7 @@
   <button class="nav-dot active" data-section="hero-target" aria-label="Home"><span class="nav-dot-label">Home</span></button>
   <button class="nav-dot" data-section="about" aria-label="About"><span class="nav-dot-label">About</span></button>
   <button class="nav-dot" data-section="projects" aria-label="Projects"><span class="nav-dot-label">Projects</span></button>
-  <button class="nav-dot" data-section="certifications" aria-label="Certifications"><span class="nav-dot-label">Certs</span></button>
+  <button class="nav-dot" data-section="certifications" aria-label="Certs"><span class="nav-dot-label">Certs</span></button>
   <button class="nav-dot" data-section="resume" aria-label="Resume"><span class="nav-dot-label">Resume</span></button>
   <button class="nav-dot" data-section="contact" aria-label="Contact"><span class="nav-dot-label">Contact</span></button>
 </nav>
@@ -379,6 +506,185 @@
 
 <!-- ── Topolines color sync ─────────────── -->
 <script type="module" src="js/dev.js"></script>
+
+<!-- ── Sidebar wiring ───────────────────── -->
+<script type="module">
+  const $ = (id) => document.getElementById(id);
+
+  /* ── Topolines ────────────────────────────── */
+  const topo = {
+    enabled:     $('dev-enabled'),
+    sync:        $('dev-sync'),
+    color:       $('dev-color'),
+    opacity:     $('dev-opacity'),
+    linewidth:   $('dev-linewidth'),
+    levels:      $('dev-levels'),
+    scale:       $('dev-scale'),
+    speed:       $('dev-speed'),
+    warp:        $('dev-warp'),
+    interactive: $('dev-interactive'),
+  };
+  const topoOut = {
+    opacity:   $('dev-opacity-v'),
+    linewidth: $('dev-linewidth-v'),
+    levels:    $('dev-levels-v'),
+    scale:     $('dev-scale-v'),
+    speed:     $('dev-speed-v'),
+    warp:      $('dev-warp-v'),
+  };
+
+  function pushTopo() {
+    if (!window.TopoDev) return;
+    const syncOn = topo.sync.checked;
+    window.TopoDev.setSync(syncOn);
+    topo.color.disabled = syncOn;
+    if (!syncOn) window.TopoDev.setOptions({ color: topo.color.value });
+    window.TopoDev.setOptions({
+      opacity:     +topo.opacity.value,
+      lineWidth:   +topo.linewidth.value,
+      levels:      +topo.levels.value,
+      scale:       +topo.scale.value,
+      speed:       +topo.speed.value,
+      warp:        +topo.warp.value,
+      interactive: topo.interactive.checked,
+    });
+    topoOut.opacity.textContent   = (+topo.opacity.value).toFixed(2);
+    topoOut.linewidth.textContent = (+topo.linewidth.value).toFixed(1);
+    topoOut.levels.textContent    = topo.levels.value;
+    topoOut.scale.textContent     = (+topo.scale.value).toFixed(2);
+    topoOut.speed.textContent     = (+topo.speed.value).toFixed(3);
+    topoOut.warp.textContent      = (+topo.warp.value).toFixed(2);
+  }
+
+  topo.sync.addEventListener('change', pushTopo);
+  Object.values(topo).forEach(inp => {
+    inp.addEventListener('input', pushTopo);
+    inp.addEventListener('change', pushTopo);
+  });
+  topo.enabled.addEventListener('change', () => {
+    if (topo.enabled.checked) location.reload();
+    else window.TopoDev?.destroy();
+  });
+
+  /* ── Acrylic ──────────────────────────────── */
+  const GLASS_TARGETS = ['#app', '.hero-shell', '.doc-nav', '.spotlight-card', '.footer'];
+  const acrylic = {
+    blur:       $('dev-blur'),
+    glassAlpha: $('dev-glass-alpha'),
+    borderAlpha:$('dev-border-alpha'),
+  };
+  const acrylicOut = {
+    blur:       $('dev-blur-v'),
+    glassAlpha: $('dev-glass-alpha-v'),
+    borderAlpha:$('dev-border-alpha-v'),
+  };
+
+  function pushAcrylic() {
+    const px = +acrylic.blur.value;
+    const ga = +acrylic.glassAlpha.value;
+    const ba = +acrylic.borderAlpha.value;
+
+    GLASS_TARGETS.forEach(sel => {
+      document.querySelectorAll(sel).forEach(el => {
+        el.style.backdropFilter = `blur(${px}px)`;
+        el.style.webkitBackdropFilter = `blur(${px}px)`;
+      });
+    });
+
+    document.documentElement.style.setProperty('--color-glass',
+      `oklch(0.09 0.008 260 / ${ga.toFixed(2)})`);
+    document.documentElement.style.setProperty('--color-glass-border',
+      `oklch(0.2 0.02 260 / ${ba.toFixed(2)})`);
+
+    acrylicOut.blur.textContent       = `${px}px`;
+    acrylicOut.glassAlpha.textContent  = ga.toFixed(2);
+    acrylicOut.borderAlpha.textContent = ba.toFixed(2);
+  }
+
+  Object.values(acrylic).forEach(inp => {
+    inp.addEventListener('input', pushAcrylic);
+    inp.addEventListener('change', pushAcrylic);
+  });
+
+  /* ── Particles ────────────────────────────── */
+  const part = {
+    count:    $('dev-p-count'),
+    size:     $('dev-p-size'),
+    fov:      $('dev-p-fov'),
+    ca:       $('dev-p-ca'),
+    decay:    $('dev-p-decay'),
+    bright:   $('dev-p-bright'),
+    scanline: $('dev-p-scanline'),
+    vignette: $('dev-p-vignette'),
+    rainbow:  $('dev-p-rainbow'),
+    syncTopo: $('dev-p-sync-topo'),
+    topoSpeed:$('dev-p-topo-speed'),
+    quality:  $('dev-p-quality'),
+    override: $('dev-p-override'),
+  };
+  const partOut = {
+    count:    $('dev-p-count-v'),
+    size:     $('dev-p-size-v'),
+    fov:      $('dev-p-fov-v'),
+    ca:       $('dev-p-ca-v'),
+    decay:    $('dev-p-decay-v'),
+    bright:   $('dev-p-bright-v'),
+    scanline: $('dev-p-scanline-v'),
+    vignette: $('dev-p-vignette-v'),
+    topoSpeed:$('dev-p-topo-speed-v'),
+    quality:  $('dev-p-quality-v'),
+  };
+
+  function pushParticles() {
+    const P = window.ParticleDev;
+    if (!P) return;
+
+    P.setCount(+part.count.value);
+    P.setParticleSize(+part.size.value);
+    P.setFOV(+part.fov.value);
+    P.setCA(+part.ca.value);
+    P.setTrailDecay(+part.decay.value);
+    P.setBrightness(+part.bright.value);
+    P.setScanline(+part.scanline.value);
+    P.setVignette(+part.vignette.value);
+    P.setRainbow(part.rainbow.checked);
+    P.setSyncTopo(part.syncTopo.checked);
+    P.setTopoSpeed(+part.topoSpeed.value);
+
+    if (part.override.checked) {
+      P.setQualityOverride(+part.quality.value);
+      partOut.quality.textContent = (+part.quality.value).toFixed(2);
+    } else {
+      P.setQualityOverride(null);
+      partOut.quality.textContent = 'auto';
+    }
+
+    partOut.count.textContent    = part.count.value;
+    partOut.size.textContent     = (+part.size.value).toFixed(2);
+    partOut.fov.textContent      = `${part.fov.value}°`;
+    partOut.ca.textContent       = (+part.ca.value).toFixed(2);
+    partOut.decay.textContent    = (+part.decay.value).toFixed(3);
+    partOut.bright.textContent   = (+part.bright.value).toFixed(2);
+    partOut.scanline.textContent = (+part.scanline.value).toFixed(3);
+    partOut.vignette.textContent = (+part.vignette.value).toFixed(2);
+    partOut.topoSpeed.textContent = (+part.topoSpeed.value).toFixed(2);
+  }
+
+  part.override.addEventListener('change', () => {
+    part.quality.disabled = !part.override.checked;
+    pushParticles();
+  });
+
+  Object.values(part).forEach(inp => {
+    inp.addEventListener('input', pushParticles);
+    inp.addEventListener('change', pushParticles);
+  });
+
+  /* ── Init outputs ─────────────────────────── */
+  pushTopo();
+  pushAcrylic();
+  pushParticles();
+</script>
 
 </body>
 </html>
