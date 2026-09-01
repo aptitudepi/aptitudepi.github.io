@@ -28,11 +28,14 @@ const JOBS = [
   { tex: 'cv.tex', pdf: 'cv.pdf' },
 ];
 
-// pdfTeX-only lines that must not reach Tectonic, plus XeTeX hyperref font patch.
+// pdfTeX-only lines that must not reach Tectonic (XeTeX), plus XeTeX
+// hyperref font patch.  The \pdf* filter is intentionally broad: any
+// line beginning with \pdf followed by a letter is a pdfTeX primitive
+// (\pdfgentounicode, \pdfobjcompresslevel, etc.) that XeTeX rejects.
 function stripPdfTexOnly(src) {
   const filtered = src
     .split('\n')
-    .filter((line) => !/^\s*\\pdfgentounicode\s*=/.test(line) && !/^\s*\\input\{\s*glyphtounicode\s*\}/.test(line))
+    .filter((line) => !/^\s*\\pdf[a-zA-Z]/.test(line) && !/^\s*\\input\{\s*glyphtounicode\s*\}/.test(line))
     .join('\n');
   return `\\def\\XeTeXLink@font{}\n` + filtered;
 }
