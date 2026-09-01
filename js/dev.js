@@ -10,7 +10,7 @@
 
 const TAG = '[topo]';
 const DEV = Boolean(document.getElementById('dev-panel')); // only log on dev.html
-function noop() {}
+function noop() { /* silence */ }
 const log = DEV ? console.log.bind(console, TAG) : noop;
 let topo = null;
 let lastColor = '';
