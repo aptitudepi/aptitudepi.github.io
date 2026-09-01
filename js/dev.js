@@ -8,11 +8,10 @@
 // destroy). On the production site the panel is absent and the module
 // just runs the sync silently.
 
-import perf from './perf.js';
-
 const TAG = '[topo]';
-const DEV = !!document.getElementById('dev-panel'); // only log on dev.html
-const log = DEV ? console.log.bind(console, TAG) : () => {};
+const DEV = Boolean(document.getElementById('dev-panel')); // only log on dev.html
+function noop() {}
+const log = DEV ? console.log.bind(console, TAG) : noop;
 let topo = null;
 let lastColor = '';
 let syncEnabled = true;
@@ -37,10 +36,10 @@ const DEFAULTS = {
 };
 
 function getTopoGlobal() {
-  const a = window.topolines;
-  const b = window.Topolines;
-  log('global lookup:', 'topolines=', typeof a, 'Topolines=', typeof b);
-  return a || b || null;
+  const topoLower = window.topolines;
+  const topoUpper = window.Topolines;
+  log('global lookup:', 'topolines=', typeof topoLower, 'Topolines=', typeof topoUpper);
+  return topoLower || topoUpper || null;
 }
 
 function initTopolines() {
@@ -54,8 +53,8 @@ function initTopolines() {
     return;
   }
 
-  const T = getTopoGlobal();
-  if (!T?.TopoField) {
+  const topoGlobal = getTopoGlobal();
+  if (!topoGlobal?.TopoField) {
     console.warn(TAG, 'topolines global missing or incomplete, retrying in 100ms…');
     if (initTopolines._retries < 30) {
       initTopolines._retries++;
@@ -66,9 +65,9 @@ function initTopolines() {
     return;
   }
 
-  log('global found, TopoField=', typeof T.TopoField, ', creating instance…');
+  log('global found, TopoField=', typeof topoGlobal.TopoField, ', creating instance…');
 
-  topo = new T.TopoField(host, DEFAULTS);
+  topo = new topoGlobal.TopoField(host, DEFAULTS);
   log('TopoField.ok =', topo.ok);
 
   if (!topo.ok) {
