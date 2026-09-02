@@ -15,6 +15,7 @@ const log = DEV ? console.log.bind(console, TAG) : noop;
 let topo = null;
 let lastColor = '';
 let syncEnabled = false;
+let syncSaturation = 0; // 0 = fixed glass, 1 = full colorcycle
 let rafId = 0;
 
 const DEFAULTS = {
@@ -30,7 +31,7 @@ const DEFAULTS = {
   scrollPan: [0, 0],
   scrollEase: 0.18,
   maxDpr: 1.5,
-  interactive: true,
+  interactive: false,
   mouseStrength: 0.35,
   mouseRadius: 0.35,
 };
@@ -40,6 +41,21 @@ function getTopoGlobal() {
   const topoUpper = window.Topolines;
   log('global lookup:', 'topolines=', typeof topoLower, 'Topolines=', typeof topoUpper);
   return topoLower || topoUpper || null;
+}
+
+/** Parse a CSS color string to [r, g, b] in 0–1 range */
+function parseColor(c) {
+  const topoGlobal = getTopoGlobal();
+  if (topoGlobal?.parseColor) return topoGlobal.parseColor(c);
+  // Fallback: use 2D canvas
+  const ctx = document.createElement('canvas').getContext('2d');
+  ctx.fillStyle = '#000'; ctx.fillStyle = c;
+  if (ctx.fillStyle !== '#000') {
+    ctx.fillStyle = '#fff'; ctx.fillStyle = c;
+  }
+  ctx.clearRect(0, 0, 1, 1); ctx.fillRect(0, 0, 1, 1);
+  const d = ctx.getImageData(0, 0, 1, 1).data;
+  return [d[0] / 255, d[1] / 255, d[2] / 255];
 }
 
 function initTopolines() {
@@ -92,8 +108,21 @@ function tickColorSync() {
   if (nav) {
     const color = getComputedStyle(nav).getPropertyValue('--nav-cycle').trim();
     if (color && color !== lastColor) {
-      log('color sync →', color);
-      topo.setOptions({ color });
+      // Lerp between glass base and nav-cycle based on syncSaturation
+      if (syncSaturation < 1) {
+        const glassRGB = parseColor('#C9B8E8');
+        const navRGB = parseColor(color);
+        const t = syncSaturation;
+        const r = Math.round((glassRGB[0] + (navRGB[0] - glassRGB[0]) * t) * 255);
+        const g = Math.round((glassRGB[1] + (navRGB[1] - glassRGB[1]) * t) * 255);
+        const b = Math.round((glassRGB[2] + (navRGB[2] - glassRGB[2]) * t) * 255);
+        const mixed = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        log('color sync →', mixed, `(sat=${t.toFixed(2)})`);
+        topo.setOptions({ color: mixed });
+      } else {
+        log('color sync →', color);
+        topo.setOptions({ color });
+      }
       lastColor = color;
     }
   }
@@ -140,6 +169,16 @@ window.TopoDev = {
 
   isSyncing() {
     return syncEnabled;
+  },
+
+  /** 0 = fixed glass, 1 = full colorcycle. */
+  setSyncSaturation(v) {
+    syncSaturation = Math.max(0, Math.min(1, v));
+    lastColor = ''; // force re-push with new saturation
+  },
+
+  getSyncSaturation() {
+    return syncSaturation;
   },
 
   destroy() {

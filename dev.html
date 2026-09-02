@@ -200,6 +200,7 @@
   <div class="dev-section">
     <div class="dev-row"><label>Enabled</label><input type="checkbox" id="dev-enabled" checked></div>
     <div class="dev-row"><label>Sync w/ site</label><input type="checkbox" id="dev-sync"></div>
+    <div class="dev-row"><label>Sync saturation</label><input type="range" id="dev-sync-sat" min="0" max="1" step="0.01" value="0"><output id="dev-sync-sat-v">0.00</output></div>
   </div>
   <div class="dev-section">
     <div class="dev-row"><label>Color</label><input type="color" id="dev-color" value="#C9B8E8"></div>
@@ -530,6 +531,7 @@
   const topo = {
     enabled:     $('dev-enabled'),
     sync:        $('dev-sync'),
+    syncSat:     $('dev-sync-sat'),
     color:       $('dev-color'),
     opacity:     $('dev-opacity'),
     linewidth:   $('dev-linewidth'),
@@ -548,6 +550,7 @@
     speed:     $('dev-speed-v'),
     warp:      $('dev-warp-v'),
     particleInfluence: $('dev-particle-influence-v'),
+    syncSat:   $('dev-sync-sat-v'),
   };
 
   function pushTopo() {
@@ -566,6 +569,7 @@
       interactive: topo.interactive.checked,
     });
     window.TopoDev.setParticleInfluence(+topo.particleInfluence.value);
+    window.TopoDev.setSyncSaturation(+topo.syncSat.value);
     topoOut.opacity.textContent   = (+topo.opacity.value).toFixed(2);
     topoOut.linewidth.textContent = (+topo.linewidth.value).toFixed(1);
     topoOut.levels.textContent    = topo.levels.value;
@@ -573,6 +577,7 @@
     topoOut.speed.textContent     = (+topo.speed.value).toFixed(3);
     topoOut.warp.textContent      = (+topo.warp.value).toFixed(2);
     topoOut.particleInfluence.textContent = (+topo.particleInfluence.value).toFixed(2);
+    topoOut.syncSat.textContent = (+topo.syncSat.value).toFixed(2);
   }
 
   topo.sync.addEventListener('change', pushTopo);
