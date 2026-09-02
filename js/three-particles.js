@@ -627,4 +627,3 @@ function setKonami(active) {
 }
 
 export { initParticles, setKonami };
- 
