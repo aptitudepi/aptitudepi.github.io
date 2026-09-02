@@ -137,6 +137,7 @@ function initParticles() {
   //   • frame budget   — cap FPS between 30 (q=0) and native-but-≤90 (q=1)
   //   • CA strength   — dial the chromatic-aberration post effect down, not off
   // Called once up front and again every time quality drifts meaningfully.
+  let triGeo = null;
   function applyQuality(q) {
     const wantPR = 1 + q; // 1 … 2
     const nextPR = Math.min(PR_raw, wantPR);
@@ -179,7 +180,7 @@ function initParticles() {
 
   const posData = new Float32Array(256 * 256 * 4);
   for (let i = 0; i < 256 * 256; i++) {
-    let x, y;
+    let x = 0, y = 0;
     do { x = Math.random() * 2 - 1; y = Math.random() * 2 - 1; } while (x * x + y * y > 1);
     posData[i * 4] = x;
     posData[i * 4 + 1] = y;
@@ -197,7 +198,7 @@ function initParticles() {
       uTime: { value: 0 }, uDt: { value: 0.016 }, uHover: { value: 0 },
       uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
     },
-    vertexShader: `void main(){gl_Position=vec4(position,1.);}`,
+    vertexShader: 'void main(){gl_Position=vec4(position,1.);}',
     fragmentShader: `precision highp float;
 uniform sampler2D uPos;
 uniform float uSZ,uTime,uDt,uHover,uMouseR;
@@ -245,7 +246,7 @@ void main(){
     -0.866, -0.5, 0.0,
     0.866, -0.5, 0.0
   ]);
-  const triGeo = new THREE.InstancedBufferGeometry();
+  triGeo = new THREE.InstancedBufferGeometry();
   triGeo.setAttribute('position', new THREE.BufferAttribute(triVerts, 3));
 
   const N = 256 * 256;
@@ -334,7 +335,7 @@ void main(){
       uPrev: { value: trailA.texture }, uParts: { value: outRT.texture },
       uTime: { value: 0 }, uDecay: { value: 0.91 }, uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
     },
-    vertexShader: `void main(){gl_Position=vec4(position,1.);}`,
+    vertexShader: 'void main(){gl_Position=vec4(position,1.);}',
     fragmentShader: buildTrailFrag(iW, iH)
   });
   trailScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), trailMat));
@@ -348,7 +349,7 @@ void main(){
       uScanline: { value: 0.031 },
       uVignette: { value: 1.2 },
     },
-    vertexShader: `void main(){gl_Position=vec4(position,1.);}`,
+    vertexShader: 'void main(){gl_Position=vec4(position,1.);}',
     fragmentShader: `precision highp float;
 uniform sampler2D uTex;
 uniform vec2 uRez;
