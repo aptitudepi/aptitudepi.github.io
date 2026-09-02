@@ -115,6 +115,8 @@ uniform vec2  uScrollOff;
 uniform vec2  uMouse;        // cursor in the pre-offset stBase space
 uniform float uMouseBump;    // eased bump height (0 disables the feature)
 uniform float uMouseRadius;  // bump falloff radius, in stBase units
+uniform sampler2D uParticleTex;   // particle trail canvas (0 = unused)
+uniform float uParticleInfluence; // 0 = pure noise, 1 = pure particles
 
 // Simplex noise \u2014 Ashima Arts / Stefan Gustavson, MIT licensed.
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -203,6 +205,17 @@ void main() {
   }
 
   float v = fbm(vec3(st, uTime));
+
+  // Particle-driven contour field — sample the particle trail canvas and
+  // extract luminance as a density scalar.  Blend with the noise field so
+  // contour lines trace the particle flow when influence > 0.
+  float pDensity = 0.0;
+  if (uParticleInfluence > 0.001) {
+    vec4 pTex = texture2D(uParticleTex, gl_FragCoord.xy / uRes);
+    pDensity = dot(pTex.rgb, vec3(0.299, 0.587, 0.114)) * pTex.a;
+    // Smooth the field slightly so contour lines don't alias on individual particles
+    v = mix(v, pDensity, uParticleInfluence);
+  }
 
   // Mouse bump \u2014 raise the field with a soft Gaussian around the cursor so the
   // contour rings bloom outward. d is measured in the pre-offset stBase space,
@@ -409,6 +422,15 @@ void main() {
         gl.uniform2f(this.uMouse, this.mouseX, this.mouseY);
         gl.uniform1f(this.uMouseBump, this.bump);
         gl.uniform1f(this.uMouseRadius, Math.max(p.mouseRadius, 1e-3));
+        gl.uniform1f(this.uParticleInfluence, this.particleInfluence || 0);
+        if (this.particleTex) {
+          this.updateParticleTex();
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, this.particleTex);
+          gl.uniform1i(this.uParticleTex, 1);
+        } else {
+          gl.uniform1i(this.uParticleTex, 0);
+        }
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -542,6 +564,36 @@ void main() {
         this.render();
       }
     }
+    /** Bind a 2D canvas as the particle density texture. Creates the GL texture
+     *  lazily on first call. */
+    setParticleTex(canvas) {
+      if (!this.ok) return;
+      const gl = this.gl;
+      if (!this.particleTex) {
+        this.particleTex = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, this.particleTex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      }
+      this.particleCanvas = canvas;
+      this.updateParticleTex();
+    }
+    /** Upload the current canvas pixels to the GL texture. Called each frame
+     *  from render() when a particle canvas is bound. */
+    updateParticleTex() {
+      if (!this.ok || !this.particleTex || !this.particleCanvas) return;
+      const gl = this.gl;
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.particleCanvas);
+    }
+    /** 0 = pure noise, 1 = pure particles. */
+    setParticleInfluence(v) {
+      this.particleInfluence = Math.max(0, Math.min(1, v));
+    }
     play() {
       if (this.ok) this.start();
     }
@@ -622,6 +674,8 @@ void main() {
       this.uMouse = u("uMouse");
       this.uMouseBump = u("uMouseBump");
       this.uMouseRadius = u("uMouseRadius");
+      this.uParticleTex = u("uParticleTex");
+      this.uParticleInfluence = u("uParticleInfluence");
       gl.useProgram(program);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);

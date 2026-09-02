@@ -14,7 +14,7 @@ function noop() { /* silence */ }
 const log = DEV ? console.log.bind(console, TAG) : noop;
 let topo = null;
 let lastColor = '';
-let syncEnabled = true;
+let syncEnabled = false;
 let rafId = 0;
 
 const DEFAULTS = {
@@ -23,10 +23,10 @@ const DEFAULTS = {
   scale: 3,
   levels: 30,
   lineWidth: 1.2,
-  opacity: 0.25,
-  color: '#C3D82C',
+  opacity: 0.09,
+  color: '#C9B8E8',
   drift: [0.004, 0.002],
-  warp: 0,
+  warp: 0.6,
   scrollPan: [0, 0],
   scrollEase: 0.18,
   maxDpr: 1.5,
@@ -75,10 +75,8 @@ function initTopolines() {
     return;
   }
 
-  syncEnabled = true;
+  syncEnabled = false;
   lastColor = '';
-  log('starting color sync loop');
-  tickColorSync();
 }
 initTopolines._retries = 0;
 
@@ -117,6 +115,16 @@ window.TopoDev = {
 
   /** Raw topo instance (for external drivers like the particle sync). */
   getTopo() { return topo; },
+
+  /** Bind a 2D canvas as the particle density texture. */
+  setParticleTex(canvas) {
+    if (topo?.setParticleTex) topo.setParticleTex(canvas);
+  },
+
+  /** 0 = pure noise, 1 = pure particles. */
+  setParticleInfluence(v) {
+    if (topo?.setParticleInfluence) topo.setParticleInfluence(v);
+  },
 
   /** Read the topo's accumulated animation clock (seconds × speed). */
   getClock() {

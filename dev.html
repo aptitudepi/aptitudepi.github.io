@@ -199,17 +199,18 @@
   <h3>Topolines</h3>
   <div class="dev-section">
     <div class="dev-row"><label>Enabled</label><input type="checkbox" id="dev-enabled" checked></div>
-    <div class="dev-row"><label>Sync w/ site</label><input type="checkbox" id="dev-sync" checked></div>
+    <div class="dev-row"><label>Sync w/ site</label><input type="checkbox" id="dev-sync"></div>
   </div>
   <div class="dev-section">
-    <div class="dev-row"><label>Color</label><input type="color" id="dev-color" value="#C3D82C" disabled></div>
-    <div class="dev-row"><label>Opacity</label><input type="range" id="dev-opacity" min="0" max="1" step="0.01" value="0.25"><output id="dev-opacity-v">0.25</output></div>
+    <div class="dev-row"><label>Color</label><input type="color" id="dev-color" value="#C9B8E8"></div>
+    <div class="dev-row"><label>Opacity</label><input type="range" id="dev-opacity" min="0" max="1" step="0.01" value="0.09"><output id="dev-opacity-v">0.09</output></div>
     <div class="dev-row"><label>Line width</label><input type="range" id="dev-linewidth" min="0.2" max="4" step="0.1" value="1.2"><output id="dev-linewidth-v">1.2</output></div>
     <div class="dev-row"><label>Levels</label><input type="range" id="dev-levels" min="2" max="30" step="1" value="30"><output id="dev-levels-v">30</output></div>
     <div class="dev-row"><label>Scale</label><input type="range" id="dev-scale" min="0.3" max="3" step="0.01" value="3"><output id="dev-scale-v">3.00</output></div>
     <div class="dev-row"><label>Speed</label><input type="range" id="dev-speed" min="0" max="0.05" step="0.001" value="0.012"><output id="dev-speed-v">0.012</output></div>
-    <div class="dev-row"><label>Warp</label><input type="range" id="dev-warp" min="0" max="0.6" step="0.01" value="0"><output id="dev-warp-v">0.00</output></div>
+    <div class="dev-row"><label>Warp</label><input type="range" id="dev-warp" min="0" max="0.6" step="0.01" value="0.6"><output id="dev-warp-v">0.60</output></div>
     <div class="dev-row"><label>Interactive</label><input type="checkbox" id="dev-interactive"></div>
+    <div class="dev-row"><label>Particle influence</label><input type="range" id="dev-particle-influence" min="0" max="1" step="0.01" value="0.59"><output id="dev-particle-influence-v">0.59</output></div>
   </div>
 
   <h3>Acrylic</h3>
@@ -221,13 +222,13 @@
 
   <h3>Particles</h3>
   <div class="dev-section">
-    <div class="dev-row"><label>Count</label><input type="range" id="dev-p-count" min="1024" max="65536" step="1024" value="65536"><output id="dev-p-count-v">65536</output></div>
-    <div class="dev-row"><label>Size</label><input type="range" id="dev-p-size" min="0.1" max="5" step="0.05" value="2"><output id="dev-p-size-v">2.00</output></div>
-    <div class="dev-row"><label>FOV</label><input type="range" id="dev-p-fov" min="20" max="120" step="1" value="49"><output id="dev-p-fov-v">49°</output></div>
+    <div class="dev-row"><label>Count</label><input type="range" id="dev-p-count" min="1024" max="65536" step="1024" value="32768"><output id="dev-p-count-v">32768</output></div>
+    <div class="dev-row"><label>Size</label><input type="range" id="dev-p-size" min="0.1" max="5" step="0.05" value="1.4"><output id="dev-p-size-v">1.40</output></div>
+    <div class="dev-row"><label>FOV</label><input type="range" id="dev-p-fov" min="20" max="120" step="1" value="35"><output id="dev-p-fov-v">35°</output></div>
     <div class="dev-row"><label>CA strength</label><input type="range" id="dev-p-ca" min="0" max="1" step="0.01" value="1"><output id="dev-p-ca-v">1.00</output></div>
-    <div class="dev-row"><label>Trail decay</label><input type="range" id="dev-p-decay" min="0.8" max="0.99" step="0.005" value="0.99"><output id="dev-p-decay-v">0.990</output></div>
+    <div class="dev-row"><label>Trail decay</label><input type="range" id="dev-p-decay" min="0.8" max="0.99" step="0.005" value="0.91"><output id="dev-p-decay-v">0.910</output></div>
     <div class="dev-row"><label>Brightness</label><input type="range" id="dev-p-bright" min="0.5" max="3" step="0.05" value="2.6"><output id="dev-p-bright-v">2.60</output></div>
-    <div class="dev-row"><label>Scanline</label><input type="range" id="dev-p-scanline" min="0" max="0.05" step="0.001" value="0.02"><output id="dev-p-scanline-v">0.020</output></div>
+    <div class="dev-row"><label>Scanline</label><input type="range" id="dev-p-scanline" min="0" max="0.05" step="0.001" value="0.031"><output id="dev-p-scanline-v">0.031</output></div>
     <div class="dev-row"><label>Vignette</label><input type="range" id="dev-p-vignette" min="0" max="3" step="0.05" value="1.2"><output id="dev-p-vignette-v">1.20</output></div>
     <div class="dev-row"><label>Rainbow</label><input type="checkbox" id="dev-p-rainbow"></div>
     <div class="dev-row"><label>Sync topo</label><input type="checkbox" id="dev-p-sync-topo"></div>
@@ -236,14 +237,28 @@
     <div class="dev-row"><label>Override</label><input type="checkbox" id="dev-p-override"></div>
   </div>
 
+  <h3>Velocity Network</h3>
+  <div class="dev-section">
+    <div class="dev-row"><label>Enabled</label><input type="checkbox" id="dev-vn-enabled"></div>
+    <div class="dev-row"><label>Opacity</label><input type="range" id="dev-vn-opacity" min="0" max="1" step="0.01" value="0.23"><output id="dev-vn-opacity-v">0.23</output></div>
+  </div>
+
+  <h3>Export</h3>
+  <div class="dev-section">
+    <div class="dev-row"><button id="dev-export" style="flex:1;cursor:pointer;">📋 Copy settings JSON</button></div>
+    <div class="dev-row" id="dev-export-status" style="display:none;color:var(--color-primary,#00f);font-size:0.7rem;justify-content:center;"></div>
+  </div>
+
   <p class="dev-note">
     <b>Topolines</b>: "Sync w/ site" reads <code>--nav-cycle</code> each frame.
-    Disable to use the manual colour picker.<br>
+    Disable to use the manual colour picker. Particle influence blends the topo
+    contour field between noise (0) and particle density (1).<br>
     <b>Acrylic</b>: patches <code>backdrop-filter</code> and glass CSS vars on
     <code>#app</code>, <code>.hero-shell</code>, <code>.doc-nav</code>,
     <code>.spotlight-card</code>, <code>.footer</code>.<br>
     <b>Particles</b>: "Override" lets you pin quality manually; uncheck to
-    resume auto-scaling.
+    resume auto-scaling.<br>
+    <b>Velocity Network</b>: connects particles with similar velocity directions.
   </p>
 </div>
 
@@ -523,6 +538,7 @@
     speed:       $('dev-speed'),
     warp:        $('dev-warp'),
     interactive: $('dev-interactive'),
+    particleInfluence: $('dev-particle-influence'),
   };
   const topoOut = {
     opacity:   $('dev-opacity-v'),
@@ -531,6 +547,7 @@
     scale:     $('dev-scale-v'),
     speed:     $('dev-speed-v'),
     warp:      $('dev-warp-v'),
+    particleInfluence: $('dev-particle-influence-v'),
   };
 
   function pushTopo() {
@@ -548,12 +565,14 @@
       warp:        +topo.warp.value,
       interactive: topo.interactive.checked,
     });
+    window.TopoDev.setParticleInfluence(+topo.particleInfluence.value);
     topoOut.opacity.textContent   = (+topo.opacity.value).toFixed(2);
     topoOut.linewidth.textContent = (+topo.linewidth.value).toFixed(1);
     topoOut.levels.textContent    = topo.levels.value;
     topoOut.scale.textContent     = (+topo.scale.value).toFixed(2);
     topoOut.speed.textContent     = (+topo.speed.value).toFixed(3);
     topoOut.warp.textContent      = (+topo.warp.value).toFixed(2);
+    topoOut.particleInfluence.textContent = (+topo.particleInfluence.value).toFixed(2);
   }
 
   topo.sync.addEventListener('change', pushTopo);
@@ -684,6 +703,120 @@
   pushTopo();
   pushAcrylic();
   pushParticles();
+
+  /* ── Wire particle canvas → topo ─────────── */
+  function wireParticleTopo() {
+    if (!window.TopoDev || !window.ParticleDev) {
+      requestAnimationFrame(wireParticleTopo);
+      return;
+    }
+    const canvas = window.ParticleDev.getParticleCanvas();
+    if (canvas) window.TopoDev.setParticleTex(canvas);
+  }
+  wireParticleTopo();
+
+  /* ── Velocity Network ─────────────────────── */
+  import('../js/velocity-network.js').then(({ init: initVN }) => {
+    function waitForParticles() {
+      if (!window.ParticleDev) { requestAnimationFrame(waitForParticles); return; }
+      initVN(window.ParticleDev);
+
+      const vn = {
+        enabled:  $('dev-vn-enabled'),
+        opacity:  $('dev-vn-opacity'),
+      };
+      const vnOut = {
+        opacity:  $('dev-vn-opacity-v'),
+      };
+
+      function pushVN() {
+        const VN = window.VelocityNetwork;
+        if (!VN) return;
+        if (vn.enabled.checked) VN.enable(); else VN.disable();
+        VN.setOpacity(+vn.opacity.value);
+        vnOut.opacity.textContent = (+vn.opacity.value).toFixed(2);
+      }
+
+      vn.enabled.addEventListener('change', pushVN);
+      Object.values(vn).forEach(inp => {
+        inp.addEventListener('input', pushVN);
+        inp.addEventListener('change', pushVN);
+      });
+
+      function vnLoop() {
+        if (window.VelocityNetwork?.isEnabled()) window.VelocityNetwork.update();
+        requestAnimationFrame(vnLoop);
+      }
+      setTimeout(() => requestAnimationFrame(vnLoop), 500);
+
+      pushVN();
+    }
+    waitForParticles();
+  });
+
+  /* ── Export ─────────────────────────────────── */
+  $('dev-export').addEventListener('click', () => {
+    const val = (id) => {
+      const el = $(id);
+      if (!el) return null;
+      if (el.type === 'checkbox') return el.checked;
+      if (el.type === 'range' || el.type === 'number') return +el.value;
+      return el.value;
+    };
+    const settings = {
+      topo: {
+        color:            val('dev-color'),
+        opacity:          val('dev-opacity'),
+        lineWidth:        val('dev-linewidth'),
+        levels:           val('dev-levels'),
+        scale:            val('dev-scale'),
+        speed:            val('dev-speed'),
+        warp:             val('dev-warp'),
+        interactive:      val('dev-interactive'),
+        particleInfluence:val('dev-particle-influence'),
+      },
+      particles: {
+        count:    val('dev-p-count'),
+        size:     val('dev-p-size'),
+        fov:      val('dev-p-fov'),
+        ca:       val('dev-p-ca'),
+        decay:    val('dev-p-decay'),
+        bright:   val('dev-p-bright'),
+        scanline: val('dev-p-scanline'),
+        vignette: val('dev-p-vignette'),
+        rainbow:  val('dev-p-rainbow'),
+        syncTopo: val('dev-p-sync-topo'),
+        topoSpeed:val('dev-p-topo-speed'),
+      },
+      vn: {
+        enabled: val('dev-vn-enabled'),
+        opacity: val('dev-vn-opacity'),
+      },
+      acrylic: {
+        blur:       val('dev-blur'),
+        glassAlpha: val('dev-glass-alpha'),
+        borderAlpha:val('dev-border-alpha'),
+      },
+    };
+    const json = JSON.stringify(settings, null, 2);
+    navigator.clipboard.writeText(json).then(() => {
+      const s = $('dev-export-status');
+      s.textContent = '\u2713 Copied to clipboard \u2014 paste in chat';
+      s.style.display = 'flex';
+      setTimeout(() => s.style.display = 'none', 2500);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = json;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      const s = $('dev-export-status');
+      s.textContent = '\u2713 Copied to clipboard \u2014 paste in chat';
+      s.style.display = 'flex';
+      setTimeout(() => s.style.display = 'none', 2500);
+    });
+  });
 </script>
 
 </body>

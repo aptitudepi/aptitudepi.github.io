@@ -159,7 +159,7 @@ function initParticles() {
   }
 
   const scene = new THREE.Scene();
-  const camMain = new THREE.PerspectiveCamera(49, W() / H(), 0.01, 10);
+  const camMain = new THREE.PerspectiveCamera(35, W() / H(), 0.01, 10);
   camMain.position.z = 2.8;
   const flatCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
@@ -332,7 +332,7 @@ void main(){
   const trailMat = new THREE.ShaderMaterial({
     uniforms: {
       uPrev: { value: trailA.texture }, uParts: { value: outRT.texture },
-      uTime: { value: 0 }, uDecay: { value: 0.99 }, uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
+      uTime: { value: 0 }, uDecay: { value: 0.91 }, uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
     },
     vertexShader: `void main(){gl_Position=vec4(position,1.);}`,
     fragmentShader: buildTrailFrag(iW, iH)
@@ -345,7 +345,7 @@ void main(){
       uTex: { value: trailB.texture }, uRez: { value: new THREE.Vector2(iW, iH) }, uTime: { value: 0 },
       uCA: { value: 1 },
       uBrightness: { value: 2.6 },
-      uScanline: { value: 0.02 },
+      uScanline: { value: 0.031 },
       uVignette: { value: 1.2 },
     },
     vertexShader: `void main(){gl_Position=vec4(position,1.);}`,
@@ -370,6 +370,22 @@ void main(){
   });
   postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), postMat));
 
+  /* ── Post-out RT + blit pass ────────────────────────── */
+  let postOut = mkFull();
+  const blitMat = new THREE.ShaderMaterial({
+    uniforms: { uTex: { value: null }, uRez: { value: new THREE.Vector2(1, 1) } },
+    vertexShader: 'void main(){gl_Position=vec4(position,1.);}',
+    fragmentShader: 'precision highp float;uniform sampler2D uTex;uniform vec2 uRez;void main(){gl_FragColor=texture2D(uTex,gl_FragCoord.xy/uRez);}',
+  });
+  const blitScene = new THREE.Scene();
+  blitScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blitMat));
+
+  /* ── Hidden 2D canvas for topo texture ──────────────── */
+  const _topoCanvas = document.createElement('canvas');
+  _topoCanvas.width = 256; _topoCanvas.height = 256;
+  const _topoCtx = _topoCanvas.getContext('2d', { willReadFrequently: true });
+  let _pxBuf = null;
+
   const mouse = { x: 0, y: 0, active: false };
   let hP = 0;
   const mv = (x, y) => { mouse.x = (x / W()) * 2 - 1; mouse.y = -(y / H()) * 2 + 1; mouse.active = true; };
@@ -389,15 +405,40 @@ void main(){
     pMat.uniforms.uPS.value = W() / (PR * 2000) * 0.65;
     iW = W() * PR | 0;
     iH = H() * PR | 0;
-    [trailA, trailB, outRT].forEach(r => r.dispose());
+    [trailA, trailB, outRT, postOut].forEach(r => r.dispose());
     trailA = mkFull();
     trailB = mkFull();
     outRT = mkFull();
+    postOut = mkFull();
     postMat.uniforms.uRez.value.set(iW, iH);
+    blitMat.uniforms.uRez.value.set(W(), H());
     trailMat.fragmentShader = buildTrailFrag(iW, iH);
     trailMat.needsUpdate = true;
   }
   window.addEventListener('resize', onResize);
+
+  /** Read postOut pixels into the hidden 2D canvas for topo texture sampling */
+  function updateParticleCanvas() {
+    const w = W(), h = H();
+    const pw = Math.min(256, w), ph = Math.min(256, h);
+    if (_topoCanvas.width !== pw || _topoCanvas.height !== ph) {
+      _topoCanvas.width = pw; _topoCanvas.height = ph;
+    }
+    const len = pw * ph * 4;
+    if (!_pxBuf || _pxBuf.length < len) _pxBuf = new Uint8Array(len);
+    const gl = R.getContext();
+    R.setRenderTarget(postOut);
+    gl.readPixels(0, 0, pw, ph, gl.RGBA, gl.UNSIGNED_BYTE, _pxBuf);
+    R.setRenderTarget(null);
+    const img = _topoCtx.createImageData(pw, ph);
+    const row = pw * 4;
+    for (let y = 0; y < ph; y++) {
+      const src = (ph - 1 - y) * row;
+      const dst = y * row;
+      img.data.set(_pxBuf.subarray(src, src + row), dst);
+    }
+    _topoCtx.putImageData(img, 0, 0);
+  }
 
   const clock = new THREE.Clock();
   let prevT = 0, ever = false;
@@ -454,7 +495,7 @@ void main(){
     trailMat.uniforms.uPrev.value = trailA.texture;
     trailMat.uniforms.uParts.value = outRT.texture;
     trailMat.uniforms.uTime.value = t;
-    trailMat.uniforms.uDecay.value = 0.99 - hP * 0.04;
+    trailMat.uniforms.uDecay.value = 0.91 - hP * 0.04;
     R.setRenderTarget(trailB);
     R.clear();
     R.render(trailScene, flatCam);
@@ -462,9 +503,18 @@ void main(){
     postMat.uniforms.uTex.value = trailB.texture;
     postMat.uniforms.uTime.value = t;
     postMat.uniforms.uCA.value = caStrength;
-    R.setRenderTarget(null);
+    R.setRenderTarget(postOut);
     R.clear();
     R.render(postScene, flatCam);
+
+    /* Blit postOut → screen */
+    blitMat.uniforms.uTex.value = postOut.texture;
+    R.setRenderTarget(null);
+    R.clear();
+    R.render(blitScene, flatCam);
+
+    /* Update the hidden 2D canvas so the topo can sample particle density */
+    if (window.ParticleDev) updateParticleCanvas();
 
     let tmp = rA; rA = rB; rB = tmp;
     tmp = trailA; trailA = trailB; trailB = tmp;
@@ -494,6 +544,14 @@ void main(){
 
     /* ── Dev API — exposed for dev.html sidebar ──── */
     window.ParticleDev = {
+      /* Expose internals for velocity-network and topo wiring */
+      getRenderer() { return R; },
+      getScene() { return scene; },
+      getRT() { return rB; },
+      getPosTex() { return posTex; },
+      getParticleCanvas() { return _topoCanvas; },
+      updateParticleCanvas,
+
       setCount(n) {
         activeCount = Math.max(1024, Math.min(N_MAX, Math.round(n)));
         if (triGeo) triGeo.instanceCount = activeCount;
@@ -569,3 +627,4 @@ function setKonami(active) {
 }
 
 export { initParticles, setKonami };
+ 
