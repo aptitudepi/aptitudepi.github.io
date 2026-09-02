@@ -19,7 +19,7 @@ let rafId = 0;
 
 const DEFAULTS = {
   seed: 'topo',
-  speed: 0.012,
+  speed: 0.05,
   scale: 3,
   levels: 30,
   lineWidth: 1.2,
