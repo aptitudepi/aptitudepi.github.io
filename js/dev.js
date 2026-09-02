@@ -49,10 +49,11 @@ function parseColor(c) {
   if (topoGlobal?.parseColor) return topoGlobal.parseColor(c);
   // Fallback: use 2D canvas
   const ctx = document.createElement('canvas').getContext('2d');
-  ctx.fillStyle = '#000'; ctx.fillStyle = c;
+  ctx.fillStyle = '#000';
   if (ctx.fillStyle !== '#000') {
-    ctx.fillStyle = '#fff'; ctx.fillStyle = c;
+    ctx.fillStyle = '#fff';
   }
+  ctx.fillStyle = c;
   ctx.clearRect(0, 0, 1, 1); ctx.fillRect(0, 0, 1, 1);
   const d = ctx.getImageData(0, 0, 1, 1).data;
   return [d[0] / 255, d[1] / 255, d[2] / 255];
@@ -113,10 +114,10 @@ function tickColorSync() {
         const glassRGB = parseColor('#C9B8E8');
         const navRGB = parseColor(color);
         const t = syncSaturation;
-        const r = Math.round((glassRGB[0] + (navRGB[0] - glassRGB[0]) * t) * 255);
-        const g = Math.round((glassRGB[1] + (navRGB[1] - glassRGB[1]) * t) * 255);
-        const b = Math.round((glassRGB[2] + (navRGB[2] - glassRGB[2]) * t) * 255);
-        const mixed = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        const red = Math.round((glassRGB[0] + (navRGB[0] - glassRGB[0]) * t) * 255);
+        const green = Math.round((glassRGB[1] + (navRGB[1] - glassRGB[1]) * t) * 255);
+        const blue = Math.round((glassRGB[2] + (navRGB[2] - glassRGB[2]) * t) * 255);
+        const mixed = `#${red.toString(16).padStart(2, '0')}${green.toString(16).padStart(2, '0')}${blue.toString(16).padStart(2, '0')}`;
         log('color sync →', mixed, `(sat=${t.toFixed(2)})`);
         topo.setOptions({ color: mixed });
       } else {
