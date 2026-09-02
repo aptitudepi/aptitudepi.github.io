@@ -97,7 +97,7 @@ function init(P) {
   geo.setAttribute('position', new Float32BufferAttribute([], 3));
   geo.setAttribute('color', new Float32BufferAttribute([], 3));
   const mat = new LineBasicMaterial({
-    vertexColors: true, transparent: true, opacity: 0.23,
+    vertexColors: true, transparent: true, opacity: 1,
     blending: AdditiveBlending, depthTest: false, depthWrite: false,
   });
   lineMesh = new LineSegments(geo, mat);

@@ -160,7 +160,7 @@ function initParticles() {
   }
 
   const scene = new THREE.Scene();
-  const camMain = new THREE.PerspectiveCamera(35, W() / H(), 0.01, 10);
+  const camMain = new THREE.PerspectiveCamera(120, W() / H(), 0.01, 10);
   camMain.position.z = 2.8;
   const flatCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
@@ -333,7 +333,7 @@ void main(){
   const trailMat = new THREE.ShaderMaterial({
     uniforms: {
       uPrev: { value: trailA.texture }, uParts: { value: outRT.texture },
-      uTime: { value: 0 }, uDecay: { value: 0.91 }, uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
+      uTime: { value: 0 }, uDecay: { value: 0.8 }, uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
     },
     vertexShader: 'void main(){gl_Position=vec4(position,1.);}',
     fragmentShader: buildTrailFrag(iW, iH)
@@ -346,7 +346,7 @@ void main(){
       uTex: { value: trailB.texture }, uRez: { value: new THREE.Vector2(iW, iH) }, uTime: { value: 0 },
       uCA: { value: 1 },
       uBrightness: { value: 2.6 },
-      uScanline: { value: 0.031 },
+      uScanline: { value: 0 },
       uVignette: { value: 1.2 },
     },
     vertexShader: 'void main(){gl_Position=vec4(position,1.);}',
@@ -496,7 +496,7 @@ void main(){
     trailMat.uniforms.uPrev.value = trailA.texture;
     trailMat.uniforms.uParts.value = outRT.texture;
     trailMat.uniforms.uTime.value = t;
-    trailMat.uniforms.uDecay.value = 0.91 - hP * 0.04;
+    trailMat.uniforms.uDecay.value = 0.8 - hP * 0.04;
     R.setRenderTarget(trailB);
     R.clear();
     R.render(trailScene, flatCam);
