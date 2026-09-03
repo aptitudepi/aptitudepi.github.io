@@ -25,20 +25,23 @@ function getPalette() {
     : { base: [150, 158, 168], hot: ACCENT, boost: 2.6 };
 }
 
-// Matches an ANSI "38;2;R;G;Bm<glyph>" fragment. Uses the \u001b unicode
-// escape (not a raw control byte) and the `u` flag to stay linter-friendly.
-const FRAG_RE = /^\u001b\[38;2;(\d+);(\d+);(\d+)m([\s\S])$/u;
+// Parse one ANSI fragment into { glyph, r, g, b }. Each fragment is a run of
+// <ESC[38;2;R;G;Bm> + a single glyph <ESC[0m> (the line is split on ESC[0m
+// in parseAnsiArt). We avoid putting the ESC control char in a regex literal
+// (JS-0004) by stripping the prefix with a string compare instead.
+const ESC_CHAR = String.fromCharCode(27);
+const FRAG_PREFIX = `${ESC_CHAR}[38;2;`;
+const COLOR_RE = /^(\d+);(\d+);(\d+)m([\s\S])$/u;
 
-// Parse one ANSI fragment into { glyph, r, g, b }. Splitting the line on
-// \u001b[0m gives runs of <prefix + single char>.
 function parseFragment(frag) {
-  const match = frag.match(FRAG_RE);
-  if (!match) return null;
+  if (!frag.startsWith(FRAG_PREFIX)) return null;
+  const colorMatch = frag.slice(FRAG_PREFIX.length).match(COLOR_RE);
+  if (!colorMatch) return null;
   return {
-    glyph: match[4],
-    r: Number(match[1]),
-    g: Number(match[2]),
-    b: Number(match[3]),
+    glyph: colorMatch[4],
+    r: Number(colorMatch[1]),
+    g: Number(colorMatch[2]),
+    b: Number(colorMatch[3]),
   };
 }
 
