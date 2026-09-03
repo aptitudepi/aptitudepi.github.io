@@ -489,8 +489,8 @@ function neofetch(term) {
   const gap = 4;
   const maxArtW = Math.max(...ASCII_ART.map(visibleLen));
 
-  // Classic neofetch colour palette (two rows of eight blocks) on their own
-  // two lines below the info block.
+  // Classic neofetch colour palette (two rows of eight blocks) shares the
+  // final two info rows, left-aligned at one column so both rows line up.
   const phase = getBlueRedPhase();
   const bPhase = phase.map(c => Math.min(255, Math.round(c * 1.3)));
   const blockColors = [
@@ -506,8 +506,11 @@ function neofetch(term) {
     .join('');
   const blocks1 = blockRow(blockColors.slice(0, 8));
   const blocks2 = blockRow(blockColors.slice(8, 16));
-  // Indent under the portrait edge when art is shown, else to the info column.
-  const blockIndent = SHOW_TERMINAL_ART ? maxArtW + gap : gap;
+  // Left-align both block rows at one column: pad the shorter row so the
+  // block sequences start together, a few spaces past the longer text.
+  const tryText = `${ANSI_BOLD}${SITE_WHITE}Try:${ANSI_RESET} matrix · vm · ai · weather · hn · md · wall`;
+  const helpText = `${SITE_MUTED}type${ANSI_RESET} \`${SITE_WHITE}help${ANSI_RESET}\` ${SITE_MUTED}for the full command list${ANSI_RESET}`;
+  const blockCol = Math.max(visibleLen(tryText), visibleLen(helpText)) + 6;
 
   const infoLines = [
     { label: '', value: `${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET}` },
@@ -521,8 +524,8 @@ function neofetch(term) {
     { label: 'Shell', value: `fish 3.7` },
     { label: 'Uptime', value: uptimeStr() },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
-    { label: '', value: `${ANSI_BOLD}${SITE_WHITE}Try:${ANSI_RESET} matrix · vm · ai · weather · hn · md · wall` },
-    { label: '', value: `${SITE_MUTED}type${ANSI_RESET} \`${SITE_WHITE}help${ANSI_RESET}\` ${SITE_MUTED}for the full command list${ANSI_RESET}` },
+    { label: '', value: `${tryText}${' '.repeat(blockCol - visibleLen(tryText))}${blocks1}` },
+    { label: '', value: `${helpText}${' '.repeat(blockCol - visibleLen(helpText))}${blocks2}` },
   ];
 
   if (SHOW_TERMINAL_ART) {
@@ -547,10 +550,6 @@ function neofetch(term) {
     }
   }
 
-  // Two rows of colour blocks on their own lines.
-  term.writeln('');
-  term.writeln(`${' '.repeat(blockIndent)}${blocks1}`);
-  term.writeln(`${' '.repeat(blockIndent)}${blocks2}`);
 }
 
 const resfetch = neofetch;
