@@ -38,7 +38,7 @@ function collectTabCandidates(partial, isPath) {
     if (!candidates.length) {
       for (const key of vfs.keys()) {
         const base = key.replace(/^\/home\/db\//, '');
-        const display = base.endsWith('.txt') || base.endsWith('.md') || base.endsWith('.pdf') ? base : base + '/';
+        const display = base.endsWith('.txt') || base.endsWith('.md') || base.endsWith('.pdf') ? base : `${base}/`;
         if (display.startsWith(partial)) candidates.push(display);
       }
     }
