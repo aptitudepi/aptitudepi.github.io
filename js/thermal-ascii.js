@@ -195,7 +195,7 @@ export function initThermalAscii(canvas, options = {}) {
 
     if (portraitMode) {
       // Size the canvas to the container width while keeping the portrait
-      // aspect so every column/row of the 60×30 art renders (no wrap, no cut).
+      // aspect so every column/row of the art renders (no wrap, no cut).
       cellW = width / artGrid.cols;
       cellH = cellW / cellWidthRatio * cellHeightRatio; // keep glyph aspect
       // If column is too tall for the space, cap by height instead.
