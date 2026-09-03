@@ -275,7 +275,8 @@
     <b>Particles</b>: "Override" lets you pin quality manually; uncheck to
     resume auto-scaling.<br>
     <b>Velocity Network</b>: connects particles with similar velocity directions.<br>
-    <b>Thermal ASCII</b>: sparse glyph field that shimmers under cursor (sticky left column).
+    <b>Thermal ASCII</b>: colored neofetch portrait (30×60) that glows toward the
+    site accent under the cursor (sticky left column). Heat radius / decay tune the shimmer.
   </p>
 </div>
 
@@ -776,11 +777,14 @@
   });
 
   /* ── Thermal ASCII ───────────────────────────── */
-  import('../js/thermal-ascii.js').then(({ initThermalAscii }) => {
+  Promise.all([
+    import('../js/thermal-ascii.js'),
+    import('../js/shell.js'),
+  ]).then(([{ initThermalAscii }, { ASCII_ART }]) => {
     function waitForCanvas() {
       const canvas = document.getElementById('thermal-ascii');
       if (!canvas) { requestAnimationFrame(waitForCanvas); return; }
-      let thermal = initThermalAscii(canvas);
+      let thermal = initThermalAscii(canvas, { art: ASCII_ART });
 
       const th = {
         enabled:   $('dev-thermal-enabled'),
@@ -805,6 +809,7 @@
           braille: "⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋",
         };
         thermal = initThermalAscii(document.getElementById('thermal-ascii'), {
+          art: ASCII_ART,
           heatRadius: +th.radius.value,
           heatDecay: +th.decay.value,
           ramp: rampMap[th.ramp.value] || rampMap.default,

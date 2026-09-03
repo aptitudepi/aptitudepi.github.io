@@ -1,35 +1,55 @@
-// thermal-ascii.js — sparse ASCII field that shimmers under cursor
-// Vanilla port of andriidrok's AsciiDraw.tsx
+// thermal-ascii.js — colored ASCII portrait that glows under the cursor.
+// A vanilla, dependency-free canvas effect. It renders a cell grid (by default
+// the site's neofetch portrait) and, as you move the cursor across it, stamps
+// "heat" that decays each frame and lerps the stuck glyphs toward the site
+// accent — a warm, living terminal-print feel.
+//
+// Two modes:
+//   • portrait (default): options.art = array of ANSI 38;2;R;G;B strings
+//     (e.g. shell.js's ASCII_ART). Glyphs + true colors are decoded so the
+//     portrait renders at its native 30×60 geometry, recolored by the palette.
+//   • spaRse noise fallback: same heat behaviour over a sparse glyph field,
+//     used when no art is supplied (kept for the old look).
 
 const RAMP = " `.:-=+*cs#%@";
-const HEIGHT = 240;
+const HEIGHT = 240; // CSS px height for the sparse-noise fallback mode
+
+// Site accent — matched to --color-primary (oklch .45 .31 264 ≈ indigo/blue).
+const ACCENT = [130, 156, 255];
+const ACCENT_HOT = [235, 242, 255];
 
 function getPalette() {
   const dark = document.documentElement.dataset.theme === "dark";
   return dark
-    ? { base: [88, 96, 105], hot: [240, 246, 252], boost: 1.4 }
-    : { base: [175, 184, 193], hot: [0, 0, 0], boost: 2.4 };
+    ? { base: [86, 94, 103], hot: ACCENT_HOT, boost: 1.5 }
+    : { base: [150, 158, 168], hot: ACCENT, boost: 2.6 };
 }
 
-function createStaticLayer(canvas, field, cols, rows, cellW, cellH, dpr, fontPx, fontFamily, pal) {
-  const staticLayer = document.createElement("canvas");
-  staticLayer.width = canvas.width;
-  staticLayer.height = canvas.height;
-  const staticCtx = staticLayer.getContext("2d");
-  if (!staticCtx) return null;
-  staticCtx.scale(dpr, dpr);
-  staticCtx.font = `${fontPx}px ${fontFamily}`;
-  staticCtx.textBaseline = "top";
-  staticCtx.fillStyle = `rgb(${pal.base.join(",")})`;
-  for (let i = 0; i < field.length; i++) {
-    if (field[i] === 0) continue;
-    staticCtx.fillText(
-      RAMP[field[i]],
-      (i % cols) * cellW,
-      ((i / cols) | 0) * cellH,
-    );
+// Parse one ANSI "38;2;R;G;Bm<glyph>" fragment into { glyph, r, g, b }.
+function parseFragment(frag) {
+  const m = frag.match(/^\x1b\[38;2;(\d+);(\d+);(\d+)m([\s\S])$/);
+  if (!m) return null;
+  return {
+    glyph: m[4] === '\u0000' ? ' ' : m[4],
+    r: +m[1], g: +m[2], b: +m[3],
+  };
+}
+
+// Decode an array of ANSI art lines into { cols, rows, cells: {glyph,r,g,b}[] }.
+export function parseAnsiArt(artLines) {
+  const rows = [];
+  for (const line of artLines) {
+    const row = [];
+    // Split into <ESC[38;2;R;G;Bm> + single char + <ESC[0m> runs
+    const toks = line.split('\u001b[0m');
+    for (const tok of toks) {
+      const frag = parseFragment(tok);
+      if (frag) row.push(frag);
+    }
+    rows.push(row);
   }
-  return staticLayer;
+  const cols = rows.reduce((max, r) => Math.max(max, r.length), 0);
+  return { cols, rows: rows.length, cells: rows };
 }
 
 export function initThermalAscii(canvas, options = {}) {
@@ -42,6 +62,7 @@ export function initThermalAscii(canvas, options = {}) {
     heatThreshold = 0.02,
     ramp = RAMP,
     maxDpr = 2,
+    art = null, // array of ANSI lines (shell.js ASCII_ART) — portrait mode
   } = options;
 
   const ctx = canvas.getContext("2d");
@@ -50,50 +71,137 @@ export function initThermalAscii(canvas, options = {}) {
     return { destroy() { /* no-op */ } };
   }
 
-  let width = 0, dpr = 1, cellW = 0, cellH = 0;
+  let width = 0, dispW = 0, dispH = 0, dpr = 1, cellW = 0, cellH = 0;
+  let renderFontPx = fontPx; // actual font size used for glyphs
   let COLS = 0, ROWS = 0;
   let field = new Int8Array(0);
+  let baseColors = null;   // Float32Array R*G*B per cell (portrait mode)
+  let glyphs = null;       // Array of cell chars (portrait mode)
   let heat = new Float32Array(0);
   let pal = getPalette();
   let staticLayer = null;
   let raf = 0;
   let loopRunning = false;
   let disposed = false;
+  let fontFamily = "'JetBrains Mono', ui-monospace, monospace";
+
+  // Portrait mode: decode the art once into a cell grid.
+  let artGrid = null;
+  if (art && Array.isArray(art)) {
+    const decoded = parseAnsiArt(art);
+    if (decoded && decoded.rows > 0 && decoded.cols > 0) artGrid = decoded;
+  }
+  const portraitMode = !!artGrid;
+
+  function getFont() {
+    fontFamily = getComputedStyle(canvas).fontFamily || "'JetBrains Mono', ui-monospace, monospace";
+  }
 
   function layout() {
     if (!canvas) return;
+    getFont();
     width = canvas.parentElement?.clientWidth || canvas.clientWidth;
-    cellW = fontPx * cellWidthRatio;
-    cellH = fontPx * cellHeightRatio;
-    COLS = Math.floor(width / cellW);
-    ROWS = Math.floor(HEIGHT / cellH);
-    if (field.length !== ROWS * COLS) {
-      field = new Int8Array(ROWS * COLS);
-      heat = new Float32Array(ROWS * COLS);
-      for (let i = 0; i < field.length; i++) {
-        const randVal = Math.random();
-        field[i] = randVal < 0.55 ? 0 : 1 + Math.floor(Math.pow(Math.random(), 2) * 3);
+
+    if (portraitMode) {
+      // Size the canvas to the container width while keeping the portrait
+      // aspect so every column/row of the 60×30 art renders (no wrap, no cut).
+      cellW = width / artGrid.cols;
+      cellH = cellW / cellWidthRatio * cellHeightRatio; // keep glyph aspect
+      // If column is too tall for the space, cap by height instead.
+      const maxH = canvas.parentElement?.clientHeight || (window.innerHeight * 0.7);
+      if (cellH * artGrid.rows > maxH) {
+        cellH = maxH / artGrid.rows;
+        cellW = cellH / cellHeightRatio * cellWidthRatio;
       }
+      renderFontPx = cellW / cellWidthRatio; // glyph advance ≈ cellW
+      COLS = artGrid.cols;
+      ROWS = artGrid.rows;
+      const bufW = Math.round(COLS * cellW);
+      const bufH = Math.round(ROWS * cellH);
+
+      if (field.length !== ROWS * COLS) {
+        field = new Int8Array(ROWS * COLS);
+        heat = new Float32Array(ROWS * COLS);
+        baseColors = new Float32Array(ROWS * COLS * 3);
+        glyphs = new Array(ROWS * COLS);
+        for (let r = 0; r < ROWS; r++) {
+          const rowCells = artGrid.cells[r] || [];
+          for (let c = 0; c < COLS; c++) {
+            const cellInfo = rowCells[c] || { glyph: ' ', r: 0, g: 0, b: 0 };
+            const i = r * COLS + c;
+            glyphs[i] = cellInfo.glyph;
+            baseColors[i * 3] = cellInfo.r;
+            baseColors[i * 3 + 1] = cellInfo.g;
+            baseColors[i * 3 + 2] = cellInfo.b;
+            field[i] = cellInfo.glyph === ' ' ? 0 : 1;
+          }
+        }
+      }
+
+      dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+      canvas.width = Math.round(bufW * dpr);
+      canvas.height = Math.round(bufH * dpr);
+      canvas.style.width = `${bufW}px`;
+      canvas.style.height = `${bufH}px`;
+      dispW = bufW;
+      dispH = bufH;
+    } else {
+      cellW = fontPx * cellWidthRatio;
+      cellH = fontPx * cellHeightRatio;
+      COLS = Math.floor(width / cellW);
+      ROWS = Math.floor(HEIGHT / cellH);
+      if (field.length !== ROWS * COLS) {
+        field = new Int8Array(ROWS * COLS);
+        heat = new Float32Array(ROWS * COLS);
+        for (let i = 0; i < field.length; i++) {
+          const randVal = Math.random();
+          field[i] = randVal < 0.55 ? 0 : 1 + Math.floor(Math.pow(Math.random(), 2) * 3);
+        }
+      }
+      dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(HEIGHT * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${HEIGHT}px`;
+      dispW = width;
+      dispH = HEIGHT;
     }
-    dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
-    canvas.width = Math.round(width * dpr);
-    canvas.height = Math.round(HEIGHT * dpr);
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${HEIGHT}px`;
 
     pal = getPalette();
-    const fontFamily = getComputedStyle(canvas).fontFamily || "'JetBrains Mono', monospace";
-    staticLayer = createStaticLayer(canvas, field, COLS, ROWS, cellW, cellH, dpr, fontPx, fontFamily, pal);
+    staticLayer = createStaticLayer(canvas);
+  }
+
+  function createStaticLayer(canvas) {
+    const layer = document.createElement("canvas");
+    layer.width = canvas.width;
+    layer.height = canvas.height;
+    const s = layer.getContext("2d");
+    if (!s) return null;
+    s.scale(dpr, dpr);
+    s.font = `${renderFontPx}px ${fontFamily}`;
+    s.textBaseline = "top";
+    for (let i = 0; i < field.length; i++) {
+      if (field[i] === 0) continue;
+      const colIdx = i % COLS;
+      const rowIdx = (i / COLS) | 0;
+      if (portraitMode) {
+        s.fillStyle = `rgb(${baseColors[i * 3] | 0},${baseColors[i * 3 + 1] | 0},${baseColors[i * 3 + 2] | 0})`;
+        s.fillText(glyphs[i], colIdx * cellW, rowIdx * cellH);
+      } else {
+        s.fillStyle = `rgb(${pal.base.join(",")})`;
+        s.fillText(ramp[field[i]], colIdx * cellW, rowIdx * cellH);
+      }
+    }
+    return layer;
   }
 
   function frame() {
     raf = 0;
     if (disposed || !ctx || !staticLayer) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, width, HEIGHT);
-    ctx.drawImage(staticLayer, 0, 0, width, HEIGHT);
-    const fontFamily = getComputedStyle(canvas).fontFamily || "'JetBrains Mono', monospace";
-    ctx.font = `${fontPx}px ${fontFamily}`;
+    ctx.clearRect(0, 0, dispW, dispH);
+    ctx.drawImage(staticLayer, 0, 0, dispW, dispH);
+    ctx.font = `${renderFontPx}px ${fontFamily}`;
     ctx.textBaseline = "top";
     const currentPal = pal; // capture palette for this frame
     let maxHeat = 0;
@@ -105,14 +213,29 @@ export function initThermalAscii(canvas, options = {}) {
       if (currentHeat > maxHeat) maxHeat = currentHeat;
       const base = field[i];
       if (base === 0 && currentHeat < 0.2) continue;
-      const idx = Math.min(ramp.length - 1, base + Math.round(currentHeat * 6));
-      const mix = Math.min(1, currentHeat * currentPal.boost);
-      const col = currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (currentPal.hot[colorIdx] - baseColor) * mix));
       const colIdx = i % COLS;
       const rowIdx = (i / COLS) | 0;
-      ctx.clearRect(colIdx * cellW, rowIdx * cellH, cellW, cellH);
-      ctx.fillStyle = `rgb(${col.join(",")})`;
-      ctx.fillText(ramp[idx], colIdx * cellW, rowIdx * cellH);
+      const mix = Math.min(1, currentHeat * currentPal.boost);
+      let col;
+      if (portraitMode) {
+        const baseR = baseColors[i * 3];
+        const baseG = baseColors[i * 3 + 1];
+        const baseB = baseColors[i * 3 + 2];
+        col = [
+          Math.round(baseR + (currentPal.hot[0] - baseR) * mix),
+          Math.round(baseG + (currentPal.hot[1] - baseG) * mix),
+          Math.round(baseB + (currentPal.hot[2] - baseB) * mix),
+        ];
+        ctx.clearRect(colIdx * cellW, rowIdx * cellH, cellW, cellH);
+        ctx.fillStyle = `rgb(${col.join(",")})`;
+        ctx.fillText(glyphs[i], colIdx * cellW, rowIdx * cellH);
+      } else {
+        const idx = Math.min(ramp.length - 1, base + Math.round(currentHeat * 6));
+        col = currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (currentPal.hot[colorIdx] - baseColor) * mix));
+        ctx.clearRect(colIdx * cellW, rowIdx * cellH, cellW, cellH);
+        ctx.fillStyle = `rgb(${col.join(",")})`;
+        ctx.fillText(ramp[idx], colIdx * cellW, rowIdx * cellH);
+      }
     }
     if (maxHeat >= heatThreshold) {
       raf = requestAnimationFrame(frame);

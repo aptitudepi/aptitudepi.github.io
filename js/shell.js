@@ -454,6 +454,11 @@ function getBlueRedPhase() {
   return [Math.round(mix * 255), 0, Math.round((1 - mix) * 255)];
 }
 
+// The ASCII portrait duplicated the thermal column, so it is hidden by
+// default (the info block, color blocks and every command still work).
+// Set to `true` to restore the classic terminal portrait in neofetch/boot.
+let SHOW_TERMINAL_ART = false;
+
 function neofetch(term) {
   const artHeight = ASCII_ART.length;
   const gap = 4;
@@ -475,16 +480,24 @@ function neofetch(term) {
     { label: '', value: `${SITE_MUTED}type${ANSI_RESET} \`${SITE_WHITE}help${ANSI_RESET}\` ${SITE_MUTED}for the full command list${ANSI_RESET}` },
   ];
 
-  for (let i = 0; i < Math.max(artHeight + 2, infoLines.length + 2); i++) {
-    const line = ASCII_ART[i] || '';
-    const coloredArt = i < artHeight ? line : ' '.repeat(maxArtW);
-    const infoIdx = i - 2;
-    let infoPart = '';
-    if (infoIdx >= 0 && infoIdx < infoLines.length) {
-      const info = infoLines[infoIdx];
-      infoPart = `${' '.repeat(gap)}${info.label ? `${SITE_LABEL}${info.label}${ANSI_RESET}: ` : ''}${info.value}`;
+  if (SHOW_TERMINAL_ART) {
+    for (let i = 0; i < Math.max(artHeight + 2, infoLines.length + 2); i++) {
+      const line = ASCII_ART[i] || '';
+      const coloredArt = i < artHeight ? line : ' '.repeat(maxArtW);
+      const infoIdx = i - 2;
+      let infoPart = '';
+      if (infoIdx >= 0 && infoIdx < infoLines.length) {
+        const info = infoLines[infoIdx];
+        infoPart = `${' '.repeat(gap)}${info.label ? `${SITE_LABEL}${info.label}${ANSI_RESET}: ` : ''}${info.value}`;
+      }
+      term.writeln(coloredArt + infoPart);
     }
-    term.writeln(coloredArt + infoPart);
+  } else {
+    // Portrait hidden — render a compact banner + the info block instead.
+    term.writeln(`${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET} ${SITE_MUTED}· neofetch (portrait shown in thermal column)${ANSI_RESET}`);
+    for (const info of infoLines.slice(1)) {
+      term.writeln(`${info.label ? `${SITE_LABEL}${info.label}${ANSI_RESET}: ` : ''}${info.value}`);
+    }
   }
 
   term.writeln('');
@@ -1153,4 +1166,4 @@ function executeCommand(input, term) {
 
 window.executeTerminalCommand = executeCommand;
 
-export { ASCII_ART, vfs, RESUME, CMD_HISTORY, BOOT_MSGS, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS };
+export { ASCII_ART, vfs, RESUME, CMD_HISTORY, BOOT_MSGS, SHOW_TERMINAL_ART, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS };

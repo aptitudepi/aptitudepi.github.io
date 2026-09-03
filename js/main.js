@@ -6,7 +6,7 @@ import { initGitHubStats } from './github-stats.js';
 import { initThermalAscii } from './thermal-ascii.js';
 import { initNav } from './nav.js';
 import { createTerminal, startBoot, getTerm } from './terminal.js';
-import { executeCommand } from './shell.js';
+import { executeCommand, ASCII_ART } from './shell.js';
 import { bootVM } from './v86-launcher.js';
 import { startMatrixRain, stopMatrixRain, isMatrixActive } from './matrix-rain.js';
 import { mountNavOrb } from './orb.js';
@@ -100,7 +100,7 @@ function init() {
 
   const thermalCanvas = document.getElementById('thermal-ascii');
   if (thermalCanvas) {
-    initThermalAscii(thermalCanvas);
+    initThermalAscii(thermalCanvas, { art: ASCII_ART });
   }
 
   // Subscribe to universal reactive store
