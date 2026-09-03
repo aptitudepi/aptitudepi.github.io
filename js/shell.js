@@ -502,9 +502,9 @@ function neofetch(term) {
     bPhase,
     [255,80,255],[80,255,255],[255,255,255],
   ];
-  const blockRow = (colors) => colors.reduce(
-    (s, [r,g,b]) => s + `${' '.repeat(2)}${colorBlock(r,g,b)}${' '.repeat(2)}`, ''
-  );
+  const blockRow = (colors) => colors
+    .map(([r,g,b]) => `${' '.repeat(2)}${colorBlock(r,g,b)}${' '.repeat(2)}`)
+    .join('');
   const blocks1 = blockRow(blockColors.slice(0, 8));
   const blocks2 = blockRow(blockColors.slice(8, 16));
 
