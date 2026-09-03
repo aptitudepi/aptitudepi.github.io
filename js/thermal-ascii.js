@@ -15,15 +15,15 @@ function createStaticLayer(canvas, field, cols, rows, cellW, cellH, dpr, fontPx,
   const staticLayer = document.createElement("canvas");
   staticLayer.width = canvas.width;
   staticLayer.height = canvas.height;
-  const s = staticLayer.getContext("2d");
-  if (!s) return null;
-  s.scale(dpr, dpr);
-  s.font = `${fontPx}px ${fontFamily}`;
-  s.textBaseline = "top";
-  s.fillStyle = `rgb(${pal.base.join(",")})`;
+  const staticCtx = staticLayer.getContext("2d");
+  if (!staticCtx) return null;
+  staticCtx.scale(dpr, dpr);
+  staticCtx.font = `${fontPx}px ${fontFamily}`;
+  staticCtx.textBaseline = "top";
+  staticCtx.fillStyle = `rgb(${pal.base.join(",")})`;
   for (let i = 0; i < field.length; i++) {
     if (field[i] === 0) continue;
-    s.fillText(
+    staticCtx.fillText(
       RAMP[field[i]],
       (i % cols) * cellW,
       ((i / cols) | 0) * cellH,
@@ -47,10 +47,10 @@ export function initThermalAscii(canvas, options = {}) {
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     console.warn("thermal-ascii: no 2D context");
-    return { destroy: () => {} };
+    return { destroy() {} };
   }
 
-  let W = 0, dpr = 1, cellW = 0, cellH = 0;
+  let width = 0, dpr = 1, cellW = 0, cellH = 0;
   let COLS = 0, ROWS = 0;
   let field = new Int8Array(0);
   let heat = new Float32Array(0);
@@ -62,23 +62,23 @@ export function initThermalAscii(canvas, options = {}) {
 
   function layout() {
     if (!canvas) return;
-    W = canvas.parentElement?.clientWidth || canvas.clientWidth;
+    width = canvas.parentElement?.clientWidth || canvas.clientWidth;
     cellW = fontPx * cellWidthRatio;
     cellH = fontPx * cellHeightRatio;
-    COLS = Math.floor(W / cellW);
+    COLS = Math.floor(width / cellW);
     ROWS = Math.floor(HEIGHT / cellH);
     if (field.length !== ROWS * COLS) {
       field = new Int8Array(ROWS * COLS);
       heat = new Float32Array(ROWS * COLS);
       for (let i = 0; i < field.length; i++) {
-        const r = Math.random();
-        field[i] = r < 0.55 ? 0 : 1 + Math.floor(Math.pow(Math.random(), 2) * 3);
+        const randVal = Math.random();
+        field[i] = randVal < 0.55 ? 0 : 1 + Math.floor(Math.pow(Math.random(), 2) * 3);
       }
     }
     dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
-    canvas.width = Math.round(W * dpr);
+    canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(HEIGHT * dpr);
-    canvas.style.width = `${W}px`;
+    canvas.style.width = `${width}px`;
     canvas.style.height = `${HEIGHT}px`;
 
     pal = getPalette();
@@ -90,28 +90,29 @@ export function initThermalAscii(canvas, options = {}) {
     raf = 0;
     if (disposed || !ctx || !staticLayer) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, HEIGHT);
-    ctx.drawImage(staticLayer, 0, 0, W, HEIGHT);
+    ctx.clearRect(0, 0, width, HEIGHT);
+    ctx.drawImage(staticLayer, 0, 0, width, HEIGHT);
     const fontFamily = getComputedStyle(canvas).fontFamily || "'JetBrains Mono', monospace";
     ctx.font = `${fontPx}px ${fontFamily}`;
     ctx.textBaseline = "top";
+    const currentPal = pal; // capture palette for this frame
     let maxHeat = 0;
     for (let i = 0; i < heat.length; i++) {
-      let h = heat[i];
-      if (h < heatThreshold) continue;
-      h *= heatDecay;
-      heat[i] = h;
-      if (h > maxHeat) maxHeat = h;
+      let currentHeat = heat[i];
+      if (currentHeat < heatThreshold) continue;
+      currentHeat *= heatDecay;
+      heat[i] = currentHeat;
+      if (currentHeat > maxHeat) maxHeat = currentHeat;
       const base = field[i];
-      if (base === 0 && h < 0.2) continue;
-      const idx = Math.min(ramp.length - 1, base + Math.round(h * 6));
-      const mix = Math.min(1, h * pal.boost);
-      const col = pal.base.map((b, k) => Math.round(b + (pal.hot[k] - b) * mix));
-      const c = i % COLS;
-      const r = (i / COLS) | 0;
-      ctx.clearRect(c * cellW, r * cellH, cellW, cellH);
+      if (base === 0 && currentHeat < 0.2) continue;
+      const idx = Math.min(ramp.length - 1, base + Math.round(currentHeat * 6));
+      const mix = Math.min(1, currentHeat * currentPal.boost);
+      const col = currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (currentPal.hot[colorIdx] - baseColor) * mix));
+      const colIdx = i % COLS;
+      const rowIdx = (i / COLS) | 0;
+      ctx.clearRect(colIdx * cellW, rowIdx * cellH, cellW, cellH);
       ctx.fillStyle = `rgb(${col.join(",")})`;
-      ctx.fillText(ramp[idx], c * cellW, r * cellH);
+      ctx.fillText(ramp[idx], colIdx * cellW, rowIdx * cellH);
     }
     if (maxHeat >= heatThreshold) {
       raf = requestAnimationFrame(frame);
@@ -129,18 +130,18 @@ export function initThermalAscii(canvas, options = {}) {
 
   function stamp(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
-    const col = (clientX - rect.left) / cellW;
-    const row = (clientY - rect.top) / cellH;
-    const R = heatRadius;
-    for (let dr = -R; dr <= R; dr++) {
-      for (let dc = -R; dc <= R; dc++) {
-        const r = Math.round(row + dr);
-        const c = Math.round(col + dc);
+    const colPos = (clientX - rect.left) / cellW;
+    const rowPos = (clientY - rect.top) / cellH;
+    const radius = heatRadius;
+    for (let dr = -radius; dr <= radius; dr++) {
+      for (let dc = -radius; dc <= radius; dc++) {
+        const r = Math.round(rowPos + dr);
+        const c = Math.round(colPos + dc);
         if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
-        const d2 = dr * dr + dc * dc;
-        if (d2 > R * R) continue;
+        const distSq = dr * dr + dc * dc;
+        if (distSq > radius * radius) continue;
         const i = r * COLS + c;
-        heat[i] = Math.min(1, heat[i] + Math.exp(-d2 / 3));
+        heat[i] = Math.min(1, heat[i] + Math.exp(-distSq / 3));
       }
     }
     ensureLoop();
