@@ -1,28 +1,70 @@
-// thermal-ascii.js — colored ASCII portrait that glows under the cursor.
-// A vanilla, dependency-free canvas effect. It renders a cell grid (by default
+// thermal-ascii.js — colored ASCII portrait that SHIMMERS under the cursor.
+// A vanilla, framework-free canvas effect. It renders a cell grid (by default
 // the site's neofetch portrait) and, as you move the cursor across it, stamps
-// "heat" that decays each frame and lerps the stuck glyphs toward the site
-// accent — a warm, living terminal-print feel.
+// "heat" that decays each frame. A hot cell SCRAMBLES — its glyph gains weight
+// through the ramp (. → + → @) — and its colour lerps toward the site's live
+// --nav-cycle tone (blue↔red), so the flare moves in phase with the nav bar.
 //
 // Two modes:
 //   • portrait (default): options.art = array of ANSI 38;2;R;G;B strings
 //     (e.g. shell.js's ASCII_ART). Glyphs + true colors are decoded so the
-//     portrait renders at its native 30×60 geometry, recolored by the palette.
+//     portrait renders at its native 30×60 geometry; heat scrambles the cells.
 //   • spaRse noise fallback: same heat behaviour over a sparse glyph field,
 //     used when no art is supplied (kept for the old look).
 
 const RAMP = " `.:-=+*cs#%@";
 const HEIGHT = 240; // CSS px height for the sparse-noise fallback mode
 
-// Site accent — matched to --color-primary (oklch .45 .31 264 ≈ indigo/blue).
-const ACCENT = [130, 156, 255];
-const ACCENT_HOT = [235, 242, 255];
+// Fallback flare colour when the site's --nav-cycle can't be read yet (e.g.
+// before the nav bar mounts). Kept as a dim neutral so the field still flares.
+const CYCLE_FALLBACK = [205, 214, 244];
 
 function getPalette() {
   const dark = document.documentElement.dataset.theme === "dark";
+  // base: quiet glyph ink. hot: filled live from --nav-cycle each frame; the
+  // boost is the light-page inversion (the cursor BURNS the paper darker).
   return dark
-    ? { base: [86, 94, 103], hot: ACCENT_HOT, boost: 1.5 }
-    : { base: [150, 158, 168], hot: ACCENT, boost: 2.6 };
+    ? { base: [88, 96, 105], boost: 1.4 }
+    : { base: [175, 184, 193], boost: 2.4 };
+}
+
+// Parse an arbitrary CSS colour string into an [r,g,b] triple (0-255) using a
+// tiny cached 1x1 canvas, mirroring topolines.parseColor. Returns null when the
+// string is empty/invalid so the caller can fall back to a static baseline.
+let cssParseCtx = null;
+const colorCache = new Map();
+function parseColorToRgb(colorStr) {
+  const cached = colorCache.get(colorStr);
+  if (cached) return cached;
+  if (!cssParseCtx) {
+    if (typeof document === "undefined") return null;
+    const cv = document.createElement("canvas");
+    cv.width = 1;
+    cv.height = 1;
+    cssParseCtx = cv.getContext("2d", { willReadFrequently: true });
+  }
+  if (!cssParseCtx) return null;
+  cssParseCtx.clearRect(0, 0, 1, 1);
+  cssParseCtx.fillStyle = "#000";
+  cssParseCtx.fillStyle = colorStr;
+  cssParseCtx.fillRect(0, 0, 1, 1);
+  const data = cssParseCtx.getImageData(0, 0, 1, 1).data;
+  const rgb = [data[0], data[1], data[2]];
+  colorCache.set(colorStr, rgb);
+  return rgb;
+}
+
+// Read the site's live --nav-cycle colour (blue<->red on .doc-nav). Returns an
+// [r,g,b] triple, or the fallback when the cycle can't be resolved.
+function readCycleColor(navEl) {
+  if (navEl) {
+    const raw = getComputedStyle(navEl).getPropertyValue("--nav-cycle").trim();
+    if (raw) {
+      const rgb = parseColorToRgb(raw);
+      if (rgb) return rgb;
+    }
+  }
+  return CYCLE_FALLBACK;
 }
 
 // Parse one ANSI fragment into { glyph, r, g, b }. Each fragment is a run of
@@ -89,6 +131,8 @@ export function initThermalAscii(canvas, options = {}) {
   let glyphs = null;       // Array of cell chars (portrait mode)
   let heat = new Float32Array(0);
   let pal = getPalette();
+  let hotColor = readCycleColor(canvas.closest('.doc-nav')); // live --nav-cycle
+  let navEl = canvas.closest('.doc-nav');
   let staticLayer = null;
   let raf = 0;
   let loopRunning = false;
@@ -178,6 +222,7 @@ export function initThermalAscii(canvas, options = {}) {
     }
 
     pal = getPalette();
+    navEl = canvas.closest('.doc-nav');
     staticLayer = createStaticLayer();
   }
 
@@ -208,6 +253,13 @@ export function initThermalAscii(canvas, options = {}) {
   function frame() {
     raf = 0;
     if (disposed || !ctx || !staticLayer) return;
+    // Track the site's live --nav-cycle so the flare colour moves with the bar.
+    hotColor = readCycleColor(navEl) || hotColor;
+    const darkTheme = document.documentElement.dataset.theme === "dark";
+    // On a dark page the cursor flares toward the cycle colour; on a light page
+    // it BURNS the paper — grey down to pure black (steep mix, contrast reads
+    // weaker on white).
+    const hotTarget = darkTheme ? hotColor : [0, 0, 0];
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, dispW, dispH);
     ctx.drawImage(staticLayer, 0, 0, dispW, dispH);
@@ -226,25 +278,26 @@ export function initThermalAscii(canvas, options = {}) {
       const colIdx = i % COLS;
       const rowIdx = (i / COLS) | 0;
       const mix = Math.min(1, currentHeat * currentPal.boost);
+      // Character scramble: a heated glyph gains WEIGHT through the ramp
+      // (`.`` becomes `+` becomes `@`) as heat rises — on the portrait too.
+      const scrambleIdx = Math.min(ramp.length - 1, base + Math.round(currentHeat * 6));
+      const scrambleGlyph = ramp[scrambleIdx];
+      let col;
       if (portraitMode) {
         const baseR = baseColors[i * 3];
         const baseG = baseColors[i * 3 + 1];
         const baseB = baseColors[i * 3 + 2];
-        const col = [
-          Math.round(baseR + (currentPal.hot[0] - baseR) * mix),
-          Math.round(baseG + (currentPal.hot[1] - baseG) * mix),
-          Math.round(baseB + (currentPal.hot[2] - baseB) * mix),
+        col = [
+          Math.round(baseR + (hotTarget[0] - baseR) * mix),
+          Math.round(baseG + (hotTarget[1] - baseG) * mix),
+          Math.round(baseB + (hotTarget[2] - baseB) * mix),
         ];
-        ctx.clearRect(colIdx * cellW, rowIdx * cellH, cellW, cellH);
-        ctx.fillStyle = `rgb(${col.join(",")})`;
-        ctx.fillText(glyphs[i], colIdx * cellW, rowIdx * cellH);
       } else {
-        const idx = Math.min(ramp.length - 1, base + Math.round(currentHeat * 6));
-        const col = currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (currentPal.hot[colorIdx] - baseColor) * mix));
-        ctx.clearRect(colIdx * cellW, rowIdx * cellH, cellW, cellH);
-        ctx.fillStyle = `rgb(${col.join(",")})`;
-        ctx.fillText(ramp[idx], colIdx * cellW, rowIdx * cellH);
+        col = currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (hotTarget[colorIdx] - baseColor) * mix));
       }
+      ctx.clearRect(colIdx * cellW, rowIdx * cellH, cellW, cellH);
+      ctx.fillStyle = `rgb(${col.join(",")})`;
+      ctx.fillText(scrambleGlyph, colIdx * cellW, rowIdx * cellH);
     }
     if (maxHeat >= heatThreshold) {
       raf = requestAnimationFrame(frame);
