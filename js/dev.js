@@ -31,7 +31,7 @@ const DEFAULTS = {
   scrollPan: [0, 0],
   scrollEase: 0.18,
   maxDpr: 1.5,
-  interactive: false,
+  interactive: true,
   mouseStrength: 0.35,
   mouseRadius: 0.35,
 };

@@ -210,7 +210,7 @@
     <div class="dev-row"><label>Scale</label><input type="range" id="dev-scale" min="0.3" max="3" step="0.01" value="3"><output id="dev-scale-v">3.00</output></div>
     <div class="dev-row"><label>Speed</label><input type="range" id="dev-speed" min="0" max="0.05" step="0.001" value="0.05"><output id="dev-speed-v">0.05</output></div>
     <div class="dev-row"><label>Warp</label><input type="range" id="dev-warp" min="0" max="0.6" step="0.01" value="0"><output id="dev-warp-v">0.00</output></div>
-    <div class="dev-row"><label>Interactive</label><input type="checkbox" id="dev-interactive"></div>
+    <div class="dev-row"><label>Interactive</label><input type="checkbox" id="dev-interactive" checked></div>
     <div class="dev-row"><label>Particle influence</label><input type="range" id="dev-particle-influence" min="0" max="1" step="0.01" value="0"><output id="dev-particle-influence-v">0.00</output></div>
   </div>
 
@@ -255,6 +255,7 @@
         <option value="default">` .:-=+*cs#%@</option>
         <option value="blocks">░▒▓█</option>
         <option value="braille">⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋</option>
+        <option value="bengali" selected>দ ব দ্ব</option>
       </select>
     </div>
   </div>
@@ -808,6 +809,7 @@
           default: " `.:-=+*cs#%@",
           blocks: "░▒▓█",
           braille: "⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋",
+          bengali: " দবদ্দব্দব্বদ্বদ্ব",
         };
         thermal = initThermalAscii(document.getElementById('thermal-ascii'), {
           art: ASCII_ART,

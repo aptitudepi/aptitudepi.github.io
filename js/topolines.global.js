@@ -214,7 +214,10 @@ void main() {
     vec4 pTex = texture2D(uParticleTex, gl_FragCoord.xy / uRes);
     pDensity = dot(pTex.rgb, vec3(0.299, 0.587, 0.114)) * pTex.a;
     // Smooth the field slightly so contour lines don't alias on individual particles
-    v = mix(v, pDensity, uParticleInfluence);
+    // Add the particle density ONTO the noise field (never replace it) so
+    // raising influence adds contours around particle clusters instead of
+    // collapsing the field toward a flat wash (which read as fewer levels).
+    v += pDensity * uParticleInfluence;
   }
 
   // Mouse bump \u2014 raise the field with a soft Gaussian around the cursor so the

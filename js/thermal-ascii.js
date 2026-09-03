@@ -14,6 +14,25 @@
 //     used when no art is supplied (kept for the old look).
 
 const RAMP = " `.:-=+*cs#%@";
+// Bengali shimmer ramp: blank, singular do (দ) and bo (ব), then every
+// ordered do/bo conjunct pairing — dda (দ্দ), dba (দ্ব), bda (ব্দ),
+// bba (ব্ব) — with dba doubled as the finale. Each conjunct is multiple
+// code units, so ALWAYS index this via segmentRamp() below: plain string
+// indexing would land inside a ligature and paint dangling fragments.
+export const RAMP_BENGALI = ' দবদ্দব্দব্বদ্বদ্ব';
+
+// Split a ramp string into visual graphemes (one entry per rendered unit)
+// so multi-unit ligatures are never split. Intl.Segmenter keeps each
+// conjunct (e.g. দ্ব = দ + ্ + ব) whole per UTS-18 grapheme rules.
+let rampSegmenter = null;
+export function segmentRamp(rampStr) {
+  try {
+    if (!rampSegmenter) rampSegmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+    return Array.from(rampSegmenter.segment(rampStr), (s) => s.segment);
+  } catch (_) {
+    return Array.from(rampStr);
+  }
+}
 const HEIGHT = 240; // CSS px height for the sparse-noise fallback mode
 
 // Fallback flare colour when the site's --nav-cycle can't be read yet (e.g.
@@ -154,6 +173,10 @@ export function initThermalAscii(canvas, options = {}) {
     art = null, // array of ANSI lines (shell.js ASCII_ART) — portrait mode
   } = options;
 
+  // Grapheme steps for the active ramp (see RAMP_BENGALI note above): one
+  // entry per rendered unit, so conjuncts stay whole when indexed below.
+  const rampGlyphs = segmentRamp(ramp);
+
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     console.warn("thermal-ascii: no 2D context");
@@ -281,7 +304,7 @@ export function initThermalAscii(canvas, options = {}) {
         layerCtx.fillText(glyphs[i], colIdx * cellW, rowIdx * cellH);
       } else {
         layerCtx.fillStyle = `rgb(${pal.base.join(",")})`;
-        layerCtx.fillText(ramp[field[i]], colIdx * cellW, rowIdx * cellH);
+        layerCtx.fillText(rampGlyphs[field[i]] ?? ' ', colIdx * cellW, rowIdx * cellH);
       }
     }
     return layer;
@@ -317,8 +340,8 @@ export function initThermalAscii(canvas, options = {}) {
       const mix = Math.min(1, currentHeat * currentPal.boost);
       // Character scramble: a heated glyph gains WEIGHT through the ramp
       // (`.`` becomes `+` becomes `@`) as heat rises — on the portrait too.
-      const scrambleIdx = Math.min(ramp.length - 1, base + Math.round(currentHeat * 6));
-      const scrambleGlyph = ramp[scrambleIdx];
+      const scrambleIdx = Math.min(rampGlyphs.length - 1, base + Math.round(currentHeat * 6));
+      const scrambleGlyph = rampGlyphs[scrambleIdx];
       // Lerp the cell's ink toward the live nav-cycle flare (or burn to black
       // on a light page). Portrait cells start from their decoded colour;
       // noise cells start from the shared base grey.

@@ -3,7 +3,7 @@ import { store } from './state.js';
 import { initParticles, setKonami } from './three-particles.js';
 import { initAnimations } from './animations.js';
 import { initGitHubStats } from './github-stats.js';
-import { initThermalAscii } from './thermal-ascii.js';
+import { initThermalAscii, RAMP_BENGALI } from './thermal-ascii.js';
 import { initNav } from './nav.js';
 import { createTerminal, startBoot, getTerm } from './terminal.js';
 import { executeCommand, ASCII_ART } from './shell.js';
@@ -100,7 +100,7 @@ function init() {
 
   const thermalCanvas = document.getElementById('thermal-ascii');
   if (thermalCanvas) {
-    initThermalAscii(thermalCanvas, { art: ASCII_ART });
+    initThermalAscii(thermalCanvas, { art: ASCII_ART, ramp: RAMP_BENGALI });
   }
 
   // Subscribe to universal reactive store
