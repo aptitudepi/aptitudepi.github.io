@@ -9,69 +9,79 @@ let bootDone = false;
 let v86InputHandler = null;
 let v86ExitBuffer = '';
 
-function handleTabCompletion(term) {
-  if (!bootDone || !inputBuffer.trim()) return;
-  const partial = inputBuffer.trim().toLowerCase();
-  const isPath = partial.startsWith('./') || partial.startsWith('/') || partial.startsWith('~');
-  let candidates = [];
-  // Candidates are matched against the last word for multi-word input, or
-  // the full input otherwise — completions slice relative to that base.
-  let completeBase = partial;
+function collectTabCandidates(partial, isPath) {
+  const candidates = [];
+  const parts = partial.split(/\s+/);
+  const completeBase = !isPath && parts.length > 1 ? parts[parts.length - 1] : partial;
   if (isPath) {
     for (const key of vfs.keys()) {
       const base = partial.startsWith('/') ? key : key.replace(/^\/home\/db\//, './');
       if (base.startsWith(partial)) candidates.push(base);
     }
+    return { candidates, completeBase };
+  }
+  const lastWord = parts[parts.length - 1];
+  if (parts.length > 1) {
+    for (const key of vfs.keys()) {
+      const base = key.replace(/^\/home\/db\//, '');
+      if (base.startsWith(lastWord)) candidates.push(base);
+    }
+    if (!candidates.length) {
+      for (const c of COMMANDS) {
+        if (c.startsWith(lastWord)) candidates.push(c);
+      }
+    }
   } else {
-    const parts = partial.split(/\s+/);
-    const lastWord = parts[parts.length - 1];
-    if (parts.length > 1) {
-      completeBase = lastWord;
+    for (const c of COMMANDS) {
+      if (c.startsWith(partial)) candidates.push(c);
+    }
+    if (!candidates.length) {
       for (const key of vfs.keys()) {
         const base = key.replace(/^\/home\/db\//, '');
-        if (base.startsWith(lastWord)) candidates.push(base);
-      }
-      if (!candidates.length) {
-        for (const c of COMMANDS) {
-          if (c.startsWith(lastWord)) candidates.push(c);
-        }
-      }
-    } else {
-      for (const c of COMMANDS) {
-        if (c.startsWith(partial)) candidates.push(c);
-      }
-      if (!candidates.length) {
-        for (const key of vfs.keys()) {
-          const base = key.replace(/^\/home\/db\//, '');
-          const display = base.endsWith('.txt') || base.endsWith('.md') || base.endsWith('.pdf') ? base : base + '/';
-          if (display.startsWith(partial)) candidates.push(display);
-        }
+        const display = base.endsWith('.txt') || base.endsWith('.md') || base.endsWith('.pdf') ? base : base + '/';
+        if (display.startsWith(partial)) candidates.push(display);
       }
     }
   }
+  return { candidates, completeBase };
+}
+
+function applySingleCompletion(activeTerm, completion, completeBase) {
+  const rest = completion.slice(completeBase.length);
+  const addTrailing = !completion.endsWith('/') && !completion.endsWith('.txt') && !completion.endsWith('.md');
+  const suffix = addTrailing ? ' ' : '';
+  for (const ch of `${rest}${suffix}`) { inputBuffer += ch; activeTerm.write(ch); }
+}
+
+function applyCompletionList(activeTerm, candidates, completeBase) {
+  const prefixLen = candidates.reduce((len, c) => {
+    let i = 0;
+    while (i < len && i < c.length && c[i] === candidates[0][i]) i++;
+    return i;
+  }, Infinity);
+  if (prefixLen > completeBase.length) {
+    const common = candidates[0].slice(completeBase.length, prefixLen);
+    for (const ch of common) { inputBuffer += ch; activeTerm.write(ch); }
+    return true;
+  }
+  activeTerm.write('\r\n');
+  candidates.forEach(c => activeTerm.writeln(`${SITE_FAINT}${c}${ANSI_RESET}`));
+  writePrompt(activeTerm);
+  activeTerm.write(inputBuffer);
+  return true;
+}
+
+function handleTabCompletion(activeTerm) {
+  if (!bootDone || !inputBuffer.trim()) return;
+  const partial = inputBuffer.trim().toLowerCase();
+  const isPath = partial.startsWith('./') || partial.startsWith('/') || partial.startsWith('~');
+  const { candidates, completeBase } = collectTabCandidates(partial, isPath);
   if (candidates.length === 1) {
-    const completion = candidates[0];
-    const rest = completion.slice(completeBase.length);
-    const addTrailing = !completion.endsWith('/') && !completion.endsWith('.txt') && !completion.endsWith('.md');
-    const suffix = addTrailing ? ' ' : '';
-    for (const ch of rest + suffix) { inputBuffer += ch; term.write(ch); }
+    applySingleCompletion(activeTerm, candidates[0], completeBase);
   } else if (candidates.length > 1) {
-    const prefixLen = candidates.reduce((len, c) => {
-      let i = 0;
-      while (i < len && i < c.length && c[i] === candidates[0][i]) i++;
-      return i;
-    }, Infinity);
-    if (prefixLen > completeBase.length) {
-      const common = candidates[0].slice(completeBase.length, prefixLen);
-      for (const ch of common) { inputBuffer += ch; term.write(ch); }
-    } else {
-      term.write('\r\n');
-      candidates.forEach(c => term.writeln(`${SITE_FAINT}${c}${ANSI_RESET}`));
-      writePrompt(term);
-      term.write(inputBuffer);
-    }
+    applyCompletionList(activeTerm, candidates, completeBase);
   } else {
-    term.write('\x07');
+    activeTerm.write('\x07');
   }
 }
 
