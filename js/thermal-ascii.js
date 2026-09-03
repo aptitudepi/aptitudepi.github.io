@@ -6,9 +6,10 @@
 // --nav-cycle tone (blue↔red), so the flare moves in phase with the nav bar.
 //
 // Two modes:
-//   • portrait (default): options.art = array of ANSI 38;2;R;G;B strings
-//     (e.g. shell.js's ASCII_ART). Glyphs + true colors are decoded so the
-//     portrait renders at its native 30×60 geometry; heat scrambles the cells.
+//   • portrait (default): options.art = array of art lines (shell.js's
+//     ASCII_ART). Lines may be ANSI 38;2;R;G;B runs (true colours) OR plain
+//     braille (a detailed headshot) — blank braille keeps transparency while
+//     drawn cells get a gray shaded by dot density; heat scrambles the cells.
 //   • spaRse noise fallback: same heat behaviour over a sparse glyph field,
 //     used when no art is supplied (kept for the old look).
 
@@ -86,16 +87,53 @@ function parseFragment(frag) {
   };
 }
 
-// Decode an array of ANSI art lines into { cols, rows, cells: {glyph,r,g,b}[] }.
+// Exactly how many dots a braille char stamps (0-8). Used to shade a plain
+// (monochrome) art: the denser the glyph, the brighter its resting ink, so the
+// headshot keeps dimensionality before the cursor even passes over it.
+function brailleDotCount(ch) {
+  const codePoint = ch.codePointAt(0);
+  if (codePoint < 0x2800 || codePoint > 0x28ff) return 0; // not a braille cell (space etc.)
+  let bits = codePoint - 0x2800;
+  let count = 0;
+  // U+2800 blank braille has 0 dots -> treated as transparent background.
+  while (bits !== 0) {
+    count += bits & 1;
+    bits >>= 1;
+  }
+  return count;
+}
+
+// Decode an array of art lines into { cols, rows, cells: {glyph,r,g,b}[] }.
+// Each line is either ANSI-colorized (38;2 runs) OR plain braille (a headshot):
+//   • ANSI  -> true colors come straight from the escape codes.
+//   • plain -> blank cells stay transparent (field 0) at their native grid
+//              position; drawn cells get a neutral gray whose value scales with
+//              braille dot density (dimmer shadows, brighter faces), so the
+//              headshot reads before heat colours it in.
 export function parseAnsiArt(artLines) {
   const rows = [];
   for (const line of artLines) {
     const row = [];
-    // Split into <ESC[38;2;R;G;Bm> + single char + <ESC[0m> runs
-    const toks = line.split('\u001b[0m');
-    for (const tok of toks) {
-      const frag = parseFragment(tok);
-      if (frag) row.push(frag);
+    if (line.includes(FRAG_PREFIX)) {
+      // Split into <ESC[38;2;R;G;Bm> + single char + <ESC[0m> runs
+      const toks = line.split('\u001b[0m');
+      for (const tok of toks) {
+        const frag = parseFragment(tok);
+        if (frag) row.push(frag);
+      }
+    } else {
+      for (const ch of line) {
+        const dots = brailleDotCount(ch);
+        if (dots === 0) {
+          // Blank braille / space -> keep the cell position but mark it empty
+          // (field 0) so nothing draws yet the grid geometry stays intact.
+          row.push({ glyph: ' ', r: 0, g: 0, b: 0 });
+        } else {
+          // Base gray from 68 (sparse edges) up to 152 (dense highlights).
+          const gray = Math.round(68 + (dots / 8) * 84);
+          row.push({ glyph: ch, r: gray, g: gray, b: gray });
+        }
+      }
     }
     rows.push(row);
   }
