@@ -489,9 +489,8 @@ function neofetch(term) {
   const gap = 4;
   const maxArtW = Math.max(...ASCII_ART.map(visibleLen));
 
-  // Classic neofetch colour palette (two rows of eight blocks) is appended to
-  // the final info rows so the banner stays compact instead of ending with two
-  // lonely, full-width padding lines.
+  // Classic neofetch colour palette (two rows of eight blocks) on their own
+  // two lines below the info block.
   const phase = getBlueRedPhase();
   const bPhase = phase.map(c => Math.min(255, Math.round(c * 1.3)));
   const blockColors = [
@@ -507,6 +506,8 @@ function neofetch(term) {
     .join('');
   const blocks1 = blockRow(blockColors.slice(0, 8));
   const blocks2 = blockRow(blockColors.slice(8, 16));
+  // Indent under the portrait edge when art is shown, else to the info column.
+  const blockIndent = SHOW_TERMINAL_ART ? maxArtW + gap : gap;
 
   const infoLines = [
     { label: '', value: `${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET}` },
@@ -520,8 +521,8 @@ function neofetch(term) {
     { label: 'Shell', value: `fish 3.7` },
     { label: 'Uptime', value: uptimeStr() },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
-    { label: '', value: `${ANSI_BOLD}${SITE_WHITE}Try:${ANSI_RESET} matrix · vm · ai · weather · hn · md · wall${' '.repeat(6)}${blocks1}` },
-    { label: '', value: `${SITE_MUTED}type${ANSI_RESET} \`${SITE_WHITE}help${ANSI_RESET}\` ${SITE_MUTED}for the full command list${ANSI_RESET}${' '.repeat(6)}${blocks2}` },
+    { label: '', value: `${ANSI_BOLD}${SITE_WHITE}Try:${ANSI_RESET} matrix · vm · ai · weather · hn · md · wall` },
+    { label: '', value: `${SITE_MUTED}type${ANSI_RESET} \`${SITE_WHITE}help${ANSI_RESET}\` ${SITE_MUTED}for the full command list${ANSI_RESET}` },
   ];
 
   if (SHOW_TERMINAL_ART) {
@@ -545,6 +546,11 @@ function neofetch(term) {
       term.writeln(`${info.label ? `${SITE_LABEL}${info.label}${ANSI_RESET}: ` : ''}${info.value}`);
     }
   }
+
+  // Two rows of colour blocks on their own lines.
+  term.writeln('');
+  term.writeln(`${' '.repeat(blockIndent)}${blocks1}`);
+  term.writeln(`${' '.repeat(blockIndent)}${blocks2}`);
 }
 
 const resfetch = neofetch;
