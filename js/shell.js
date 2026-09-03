@@ -457,7 +457,7 @@ function getBlueRedPhase() {
 // The ASCII portrait duplicated the thermal column, so it is hidden by
 // default (the info block, color blocks and every command still work).
 // Set to `true` to restore the classic terminal portrait in neofetch/boot.
-let SHOW_TERMINAL_ART = false;
+const SHOW_TERMINAL_ART = false;
 
 function neofetch(term) {
   const artHeight = ASCII_ART.length;

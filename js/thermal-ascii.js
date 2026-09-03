@@ -25,13 +25,20 @@ function getPalette() {
     : { base: [150, 158, 168], hot: ACCENT, boost: 2.6 };
 }
 
-// Parse one ANSI "38;2;R;G;Bm<glyph>" fragment into { glyph, r, g, b }.
+// Matches an ANSI "38;2;R;G;Bm<glyph>" fragment. Uses the \u001b unicode
+// escape (not a raw control byte) and the `u` flag to stay linter-friendly.
+const FRAG_RE = /^\u001b\[38;2;(\d+);(\d+);(\d+)m([\s\S])$/u;
+
+// Parse one ANSI fragment into { glyph, r, g, b }. Splitting the line on
+// \u001b[0m gives runs of <prefix + single char>.
 function parseFragment(frag) {
-  const m = frag.match(/^\x1b\[38;2;(\d+);(\d+);(\d+)m([\s\S])$/);
-  if (!m) return null;
+  const match = frag.match(FRAG_RE);
+  if (!match) return null;
   return {
-    glyph: m[4] === '\u0000' ? ' ' : m[4],
-    r: +m[1], g: +m[2], b: +m[3],
+    glyph: match[4],
+    r: Number(match[1]),
+    g: Number(match[2]),
+    b: Number(match[3]),
   };
 }
 
@@ -91,7 +98,7 @@ export function initThermalAscii(canvas, options = {}) {
     const decoded = parseAnsiArt(art);
     if (decoded && decoded.rows > 0 && decoded.cols > 0) artGrid = decoded;
   }
-  const portraitMode = !!artGrid;
+  const portraitMode = Boolean(artGrid);
 
   function getFont() {
     fontFamily = getComputedStyle(canvas).fontFamily || "'JetBrains Mono', ui-monospace, monospace";
@@ -168,28 +175,28 @@ export function initThermalAscii(canvas, options = {}) {
     }
 
     pal = getPalette();
-    staticLayer = createStaticLayer(canvas);
+    staticLayer = createStaticLayer();
   }
 
-  function createStaticLayer(canvas) {
+  function createStaticLayer() {
     const layer = document.createElement("canvas");
     layer.width = canvas.width;
     layer.height = canvas.height;
-    const s = layer.getContext("2d");
-    if (!s) return null;
-    s.scale(dpr, dpr);
-    s.font = `${renderFontPx}px ${fontFamily}`;
-    s.textBaseline = "top";
+    const layerCtx = layer.getContext("2d");
+    if (!layerCtx) return null;
+    layerCtx.scale(dpr, dpr);
+    layerCtx.font = `${renderFontPx}px ${fontFamily}`;
+    layerCtx.textBaseline = "top";
     for (let i = 0; i < field.length; i++) {
       if (field[i] === 0) continue;
       const colIdx = i % COLS;
       const rowIdx = (i / COLS) | 0;
       if (portraitMode) {
-        s.fillStyle = `rgb(${baseColors[i * 3] | 0},${baseColors[i * 3 + 1] | 0},${baseColors[i * 3 + 2] | 0})`;
-        s.fillText(glyphs[i], colIdx * cellW, rowIdx * cellH);
+        layerCtx.fillStyle = `rgb(${baseColors[i * 3] | 0},${baseColors[i * 3 + 1] | 0},${baseColors[i * 3 + 2] | 0})`;
+        layerCtx.fillText(glyphs[i], colIdx * cellW, rowIdx * cellH);
       } else {
-        s.fillStyle = `rgb(${pal.base.join(",")})`;
-        s.fillText(ramp[field[i]], colIdx * cellW, rowIdx * cellH);
+        layerCtx.fillStyle = `rgb(${pal.base.join(",")})`;
+        layerCtx.fillText(ramp[field[i]], colIdx * cellW, rowIdx * cellH);
       }
     }
     return layer;
@@ -216,12 +223,11 @@ export function initThermalAscii(canvas, options = {}) {
       const colIdx = i % COLS;
       const rowIdx = (i / COLS) | 0;
       const mix = Math.min(1, currentHeat * currentPal.boost);
-      let col;
       if (portraitMode) {
         const baseR = baseColors[i * 3];
         const baseG = baseColors[i * 3 + 1];
         const baseB = baseColors[i * 3 + 2];
-        col = [
+        const col = [
           Math.round(baseR + (currentPal.hot[0] - baseR) * mix),
           Math.round(baseG + (currentPal.hot[1] - baseG) * mix),
           Math.round(baseB + (currentPal.hot[2] - baseB) * mix),
@@ -231,7 +237,7 @@ export function initThermalAscii(canvas, options = {}) {
         ctx.fillText(glyphs[i], colIdx * cellW, rowIdx * cellH);
       } else {
         const idx = Math.min(ramp.length - 1, base + Math.round(currentHeat * 6));
-        col = currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (currentPal.hot[colorIdx] - baseColor) * mix));
+        const col = currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (currentPal.hot[colorIdx] - baseColor) * mix));
         ctx.clearRect(colIdx * cellW, rowIdx * cellH, cellW, cellH);
         ctx.fillStyle = `rgb(${col.join(",")})`;
         ctx.fillText(ramp[idx], colIdx * cellW, rowIdx * cellH);
