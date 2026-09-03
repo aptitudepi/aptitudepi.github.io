@@ -9,6 +9,72 @@ let bootDone = false;
 let v86InputHandler = null;
 let v86ExitBuffer = '';
 
+function handleTabCompletion(term) {
+  if (!bootDone || !inputBuffer.trim()) return;
+  const partial = inputBuffer.trim().toLowerCase();
+  const isPath = partial.startsWith('./') || partial.startsWith('/') || partial.startsWith('~');
+  let candidates = [];
+  // Candidates are matched against the last word for multi-word input, or
+  // the full input otherwise — completions slice relative to that base.
+  let completeBase = partial;
+  if (isPath) {
+    for (const key of vfs.keys()) {
+      const base = partial.startsWith('/') ? key : key.replace(/^\/home\/db\//, './');
+      if (base.startsWith(partial)) candidates.push(base);
+    }
+  } else {
+    const parts = partial.split(/\s+/);
+    const lastWord = parts[parts.length - 1];
+    if (parts.length > 1) {
+      completeBase = lastWord;
+      for (const key of vfs.keys()) {
+        const base = key.replace(/^\/home\/db\//, '');
+        if (base.startsWith(lastWord)) candidates.push(base);
+      }
+      if (!candidates.length) {
+        for (const c of COMMANDS) {
+          if (c.startsWith(lastWord)) candidates.push(c);
+        }
+      }
+    } else {
+      for (const c of COMMANDS) {
+        if (c.startsWith(partial)) candidates.push(c);
+      }
+      if (!candidates.length) {
+        for (const key of vfs.keys()) {
+          const base = key.replace(/^\/home\/db\//, '');
+          const display = base.endsWith('.txt') || base.endsWith('.md') || base.endsWith('.pdf') ? base : base + '/';
+          if (display.startsWith(partial)) candidates.push(display);
+        }
+      }
+    }
+  }
+  if (candidates.length === 1) {
+    const completion = candidates[0];
+    const rest = completion.slice(completeBase.length);
+    const addTrailing = !completion.endsWith('/') && !completion.endsWith('.txt') && !completion.endsWith('.md');
+    const suffix = addTrailing ? ' ' : '';
+    for (const ch of rest + suffix) { inputBuffer += ch; term.write(ch); }
+  } else if (candidates.length > 1) {
+    const prefixLen = candidates.reduce((len, c) => {
+      let i = 0;
+      while (i < len && i < c.length && c[i] === candidates[0][i]) i++;
+      return i;
+    }, Infinity);
+    if (prefixLen > completeBase.length) {
+      const common = candidates[0].slice(completeBase.length, prefixLen);
+      for (const ch of common) { inputBuffer += ch; term.write(ch); }
+    } else {
+      term.write('\r\n');
+      candidates.forEach(c => term.writeln(`${SITE_FAINT}${c}${ANSI_RESET}`));
+      writePrompt(term);
+      term.write(inputBuffer);
+    }
+  } else {
+    term.write('\x07');
+  }
+}
+
 function handleInput(data) {
   if (mode === 'v86') {
     v86ExitBuffer = (v86ExitBuffer + data.toLowerCase()).slice(-30);
@@ -52,72 +118,7 @@ function handleInput(data) {
 
   if (data === '\x1b[C' || data === '\x1b[D') return;
 
-  if (data === '\t') {
-    if (!bootDone || !inputBuffer.trim()) return;
-    const partial = inputBuffer.trim().toLowerCase();
-    const isPath = partial.startsWith('./') || partial.startsWith('/') || partial.startsWith('~');
-    let candidates = [];
-    // Candidates are matched against the last word for multi-word input, or
-    // the full input otherwise — completions slice relative to that base.
-    let completeBase = partial;
-    if (isPath) {
-      for (const key of vfs.keys()) {
-        const base = partial.startsWith('/') ? key : key.replace(/^\/home\/db\//, './');
-        if (base.startsWith(partial)) candidates.push(base);
-      }
-    } else {
-      const parts = partial.split(/\s+/);
-      const lastWord = parts[parts.length - 1];
-      if (parts.length > 1) {
-        completeBase = lastWord;
-        for (const key of vfs.keys()) {
-          const base = key.replace(/^\/home\/db\//, '');
-          if (base.startsWith(lastWord)) candidates.push(base);
-        }
-        if (!candidates.length) {
-          for (const c of COMMANDS) {
-            if (c.startsWith(lastWord)) candidates.push(c);
-          }
-        }
-      } else {
-        for (const c of COMMANDS) {
-          if (c.startsWith(partial)) candidates.push(c);
-        }
-        if (!candidates.length) {
-          for (const key of vfs.keys()) {
-            const base = key.replace(/^\/home\/db\//, '');
-            const display = base.endsWith('.txt') || base.endsWith('.md') || base.endsWith('.pdf') ? base : base + '/';
-            if (display.startsWith(partial)) candidates.push(display);
-          }
-        }
-      }
-    }
-    if (candidates.length === 1) {
-      const completion = candidates[0];
-      const rest = completion.slice(completeBase.length);
-      const addTrailing = !completion.endsWith('/') && !completion.endsWith('.txt') && !completion.endsWith('.md');
-      const suffix = addTrailing ? ' ' : '';
-      for (const ch of rest + suffix) { inputBuffer += ch; term.write(ch); }
-    } else if (candidates.length > 1) {
-      const prefixLen = candidates.reduce((len, c) => {
-        let i = 0;
-        while (i < len && i < c.length && c[i] === candidates[0][i]) i++;
-        return i;
-      }, Infinity);
-      if (prefixLen > completeBase.length) {
-        const common = candidates[0].slice(completeBase.length, prefixLen);
-        for (const ch of common) { inputBuffer += ch; term.write(ch); }
-      } else {
-        term.write('\r\n');
-        candidates.forEach(c => term.writeln(`${SITE_FAINT}${c}${ANSI_RESET}`));
-        writePrompt(term);
-        term.write(inputBuffer);
-      }
-    } else {
-      term.write('\x07');
-    }
-    return;
-  }
+  if (data === '\t') { handleTabCompletion(term); return; }
 
   for (const char of data) {
     if (char === '\r') {

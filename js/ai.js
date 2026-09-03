@@ -80,7 +80,7 @@ Answer concisely, accurately, and naturally based on the baseline profile, memor
 // — long instructions + tool-call docs + history push CV details out of their
 // effective working memory, so they ramble instead of answering from context.
 // They get a compact brief (context only, no memory, no tool docs) instead.
-const LOCAL_SYSTEM_PROMPT = `You are Devkumar Banerjee's portfolio assistant on dvxb.io. Answer briefly and ONLY from the context below. If the answer is not in the context, say you don't know. Do not emit tool tags.`;
+const LOCAL_SYSTEM_PROMPT = "You are Devkumar Banerjee's portfolio assistant on dvxb.io. Answer briefly and ONLY from the context below. If the answer is not in the context, say you don't know. Do not emit tool tags.";
 
 function processToolCalls(fullText, term) {
   const toolRegex = /\[\[TOOL:\s*exec\("([^"]+)"\)]\]/g;
@@ -126,9 +126,19 @@ function toolAllowed(raw) {
 // Local copy of shell.js's stripAnsi (kept inline to avoid a shell↔ai import
 // cycle): strips terminal control chars from model-controlled text echoed to
 // xterm so the model can't inject escape sequences into the display.
+// Range checks (no regex literal) avoid JS-0004 control-char escapes.
 function stripAnsi(s) {
   if (s === null || s === undefined) return '';
-  return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFEFF]/g, '');
+  const str = String(s);
+  let out = '';
+  for (const ch of str) {
+    const cp = ch.codePointAt(0);
+    const isBad = cp < 0x20
+      ? cp !== 0x0A && cp !== 0x0D && cp !== 0x09
+      : cp === 0x7F || (cp >= 0x202A && cp <= 0x202E) || (cp >= 0x2066 && cp <= 0x2069) || cp === 0xFEFF;
+    if (!isBad) out += ch;
+  }
+  return out;
 }
 
 async function streamGroq(prompt, context, term) {

@@ -723,9 +723,19 @@ function stripHtml(html) {
 // inject ANSI escape sequences into the viewer's xterm (display spoofing).
 // Keeps \n \r \t; drops all other C0 controls (incl. ESC and BEL), DEL, and
 // Unicode bidi/isolate overrides.
+// Range checks (no regex literal) avoid JS-0004 control-char escapes.
 function stripAnsi(s) {
   if (s === null || s === undefined) return '';
-  return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFEFF]/g, '');
+  const str = String(s);
+  let out = '';
+  for (const ch of str) {
+    const cp = ch.codePointAt(0);
+    const isBad = cp < 0x20
+      ? cp !== 0x0A && cp !== 0x0D && cp !== 0x09
+      : cp === 0x7F || (cp >= 0x202A && cp <= 0x202E) || (cp >= 0x2066 && cp <= 0x2069) || cp === 0xFEFF;
+    if (!isBad) out += ch;
+  }
+  return out;
 }
 
 function renderComment(term, item, depth) {
@@ -862,12 +872,12 @@ function mdCommand(term, args) {
     closeBtn.textContent = '✕';
     closeBtn.style.cssText = 'position:fixed;top:16px;right:16px;z-index:10000;width:36px;height:36px;border-radius:50%;border:1px solid oklch(0.3 0.02 260);background:oklch(0.1 0.01 260 / 0.8);color:oklch(0.9 0.01 260);font-size:18px;cursor:pointer;backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center';
     // Single close path (✕ button or Esc) so the keydown listener never leaks.
-    const closeViewer = () => {
+    function closeViewer() {
       iframe.remove();
       closeBtn.remove();
       document.removeEventListener('keydown', onEsc);
-    };
-    const onEsc = (e) => { if (e.key === 'Escape') closeViewer(); };
+    }
+    function onEsc(e) { if (e.key === 'Escape') closeViewer(); }
     closeBtn.addEventListener('click', closeViewer);
     document.body.appendChild(closeBtn);
     term.writeln(`${SITE_GREEN}md viewer opened. Press ✕ or Esc to close${ANSI_RESET}`);
