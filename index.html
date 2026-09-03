@@ -167,7 +167,14 @@
       </nav>
       <span class="terminal-clock" id="headerClock"></span>
     </nav>
-    <div class="terminal-body" id="terminal-container"></div>
+    <div class="terminal-body two-column">
+      <div class="thermal-column">
+        <canvas id="thermal-ascii" aria-label="thermal ascii field" aria-hidden="true"></canvas>
+      </div>
+      <div class="terminal-column">
+        <div id="terminal-container"></div>
+      </div>
+    </div>
       </div>
 </section>
 

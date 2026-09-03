@@ -77,6 +77,59 @@
   background: transparent !important;
 }
 
+/* ── Two-column layout (thermal ASCII + xterm) ───── */
+.terminal-body.two-column {
+  display: flex;
+  /* no gap - seamless single pane look */
+  height: 100%;
+  min-height: 0;
+}
+.thermal-column {
+  flex: 0 0 38%;
+  min-width: 260px;
+  position: sticky;
+  top: 0;
+  height: 240px; /* thermal canvas height */
+}
+.thermal-column canvas {
+  width: 100%;
+  height: 240px;
+  display: block;
+}
+.terminal-column {
+  flex: 1;
+  min-width: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 70vh;
+}
+/* Hide scrollbar but keep scroll */
+.terminal-column::-webkit-scrollbar { display: none; }
+.terminal-column { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Thermal canvas transparent */
+#thermal-ascii {
+  background: transparent !important;
+}
+
+/* On small screens stack columns */
+@media (max-width: 900px) {
+  .terminal-body.two-column {
+    flex-direction: column;
+  }
+  .thermal-column {
+    position: relative;
+    height: 200px;
+    min-width: 100%;
+  }
+  .thermal-column canvas {
+    height: 200px;
+  }
+  .terminal-column {
+    max-height: 60vh;
+  }
+}
+
 /* Thought orb, shown while the local model loads and while it generates. It
    lives inside an xterm decoration (js/orb.js), which owns the positioning and
    the stacking — the rows it sits on are part of the buffer, so it scrolls with

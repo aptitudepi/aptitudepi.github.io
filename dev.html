@@ -244,6 +244,21 @@
     <div class="dev-row"><label>Opacity</label><input type="range" id="dev-vn-opacity" min="0" max="1" step="0.01" value="1"><output id="dev-vn-opacity-v">1.00</output></div>
   </div>
 
+  <h3>Thermal ASCII</h3>
+  <div class="dev-section">
+    <div class="dev-row"><label>Enabled</label><input type="checkbox" id="dev-thermal-enabled" checked></div>
+    <div class="dev-row"><label>Heat radius</label><input type="range" id="dev-thermal-radius" min="1" max="5" step="1" value="3"><output id="dev-thermal-radius-v">3</output></div>
+    <div class="dev-row"><label>Decay</label><input type="range" id="dev-thermal-decay" min="0.85" max="0.99" step="0.01" value="0.93"><output id="dev-thermal-decay-v">0.93</output></div>
+    <div class="dev-row"><label>Base density</label><input type="range" id="dev-thermal-density" min="0.3" max="0.7" step="0.01" value="0.45"><output id="dev-thermal-density-v">0.45</output></div>
+    <div class="dev-row"><label>Ramp</label>
+      <select id="dev-thermal-ramp">
+        <option value="default">` .:-=+*cs#%@</option>
+        <option value="blocks">░▒▓█</option>
+        <option value="braille">⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋</option>
+      </select>
+    </div>
+  </div>
+
   <h3>Export</h3>
   <div class="dev-section">
     <div class="dev-row"><button id="dev-export" style="flex:1;cursor:pointer;">📋 Copy settings JSON</button></div>
@@ -259,7 +274,8 @@
     <code>.spotlight-card</code>, <code>.footer</code>.<br>
     <b>Particles</b>: "Override" lets you pin quality manually; uncheck to
     resume auto-scaling.<br>
-    <b>Velocity Network</b>: connects particles with similar velocity directions.
+    <b>Velocity Network</b>: connects particles with similar velocity directions.<br>
+    <b>Thermal ASCII</b>: sparse glyph field that shimmers under cursor (sticky left column).
   </p>
 </div>
 
@@ -759,6 +775,63 @@
     waitForParticles();
   });
 
+  /* ── Thermal ASCII ───────────────────────────── */
+  import('../js/thermal-ascii.js').then(({ initThermalAscii }) => {
+    function waitForCanvas() {
+      const canvas = document.getElementById('thermal-ascii');
+      if (!canvas) { requestAnimationFrame(waitForCanvas); return; }
+      let thermal = initThermalAscii(canvas);
+
+      const th = {
+        enabled:   $('dev-thermal-enabled'),
+        radius:    $('dev-thermal-radius'),
+        decay:     $('dev-thermal-decay'),
+        density:   $('dev-thermal-density'),
+        ramp:      $('dev-thermal-ramp'),
+      };
+      const thOut = {
+        radius:  $('dev-thermal-radius-v'),
+        decay:   $('dev-thermal-decay-v'),
+        density: $('dev-thermal-density-v'),
+      };
+
+      function pushThermal() {
+        if (!thermal) return;
+        // Re-init with new options
+        thermal.destroy();
+        const rampMap = {
+          default: " `.:-=+*cs#%@",
+          blocks: "░▒▓█",
+          braille: "⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋",
+        };
+        thermal = initThermalAscii(document.getElementById('thermal-ascii'), {
+          heatRadius: +th.radius.value,
+          heatDecay: +th.decay.value,
+          ramp: rampMap[th.ramp.value] || rampMap.default,
+        });
+        thOut.radius.textContent = th.radius.value;
+        thOut.decay.textContent = (+th.decay.value).toFixed(2);
+        thOut.density.textContent = (+th.density.value).toFixed(2);
+      }
+
+      th.enabled.addEventListener('change', () => {
+        if (!th.enabled.checked) {
+          thermal?.destroy();
+          thermal = null;
+        } else {
+          pushThermal();
+        }
+      });
+      Object.values(th).forEach(inp => {
+        inp.addEventListener('input', pushThermal);
+        inp.addEventListener('change', pushThermal);
+      });
+
+      pushThermal();
+    }
+    waitForCanvas();
+  });
+
   /* ── Export ─────────────────────────────────── */
   $('dev-export').addEventListener('click', () => {
     const val = (id) => {
@@ -796,6 +869,13 @@
       vn: {
         enabled: val('dev-vn-enabled'),
         opacity: val('dev-vn-opacity'),
+      },
+      thermal: {
+        enabled:   val('dev-thermal-enabled'),
+        radius:    val('dev-thermal-radius'),
+        decay:     val('dev-thermal-decay'),
+        density:   val('dev-thermal-density'),
+        ramp:      val('dev-thermal-ramp'),
       },
       acrylic: {
         blur:       val('dev-blur'),

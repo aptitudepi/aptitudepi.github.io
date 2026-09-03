@@ -3,6 +3,7 @@ import { store } from './state.js';
 import { initParticles, setKonami } from './three-particles.js';
 import { initAnimations } from './animations.js';
 import { initGitHubStats } from './github-stats.js';
+import { initThermalAscii } from './thermal-ascii.js';
 import { initNav } from './nav.js';
 import { createTerminal, startBoot, getTerm } from './terminal.js';
 import { executeCommand } from './shell.js';
@@ -95,6 +96,11 @@ function init() {
   if (container && typeof Terminal !== 'undefined') {
     createTerminal(container);
     startBoot();
+  }
+
+  const thermalCanvas = document.getElementById('thermal-ascii');
+  if (thermalCanvas) {
+    initThermalAscii(thermalCanvas);
   }
 
   // Subscribe to universal reactive store
