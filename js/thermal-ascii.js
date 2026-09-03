@@ -47,7 +47,7 @@ export function initThermalAscii(canvas, options = {}) {
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     console.warn("thermal-ascii: no 2D context");
-    return { destroy() {} };
+    return { destroy() { /* no-op */ } };
   }
 
   let width = 0, dpr = 1, cellW = 0, cellH = 0;
@@ -135,12 +135,12 @@ export function initThermalAscii(canvas, options = {}) {
     const radius = heatRadius;
     for (let dr = -radius; dr <= radius; dr++) {
       for (let dc = -radius; dc <= radius; dc++) {
-        const r = Math.round(rowPos + dr);
-        const c = Math.round(colPos + dc);
-        if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
+        const rowIdx = Math.round(rowPos + dr);
+        const colIdx = Math.round(colPos + dc);
+        if (rowIdx < 0 || rowIdx >= ROWS || colIdx < 0 || colIdx >= COLS) continue;
         const distSq = dr * dr + dc * dc;
         if (distSq > radius * radius) continue;
-        const i = r * COLS + c;
+        const i = rowIdx * COLS + colIdx;
         heat[i] = Math.min(1, heat[i] + Math.exp(-distSq / 3));
       }
     }
