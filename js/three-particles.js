@@ -412,7 +412,11 @@ void main(){
     outRT = mkFull();
     postOut = mkFull();
     postMat.uniforms.uRez.value.set(iW, iH);
-    blitMat.uniforms.uRez.value.set(W(), H());
+    // NOTE: the blit renders to the canvas drawing buffer (physical pixels),
+    // so its uRez must be physical too — CSS pixels under-divide gl_FragCoord
+    // whenever PR>1 and ClampToEdge smears bright edge texels into thin
+    // axis-aligned lines anchored at the right/top edges.
+    blitMat.uniforms.uRez.value.set(iW, iH);
     trailMat.fragmentShader = buildTrailFrag(iW, iH);
     trailMat.needsUpdate = true;
   }
