@@ -509,8 +509,8 @@ function neofetch(term) {
   // Left-align both block rows at one column: pad the shorter row so the
   // block sequences start together, a few spaces past the longer text.
   const tryText = `${ANSI_BOLD}${SITE_WHITE}Try:${ANSI_RESET} matrix · vm · ai · weather · hn · md · wall`;
-  const helpText = `${SITE_MUTED}type${ANSI_RESET} \`${SITE_WHITE}help${ANSI_RESET}\` ${SITE_MUTED}for the full command list${ANSI_RESET}`;
-  const blockCol = Math.max(visibleLen(tryText), visibleLen(helpText)) + 6;
+  const helpHintText = `${SITE_MUTED}type${ANSI_RESET} \`${SITE_WHITE}help${ANSI_RESET}\` ${SITE_MUTED}for the full command list${ANSI_RESET}`;
+  const blockCol = Math.max(visibleLen(tryText), visibleLen(helpHintText)) + 6;
 
   const infoLines = [
     { label: '', value: `${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET}` },
@@ -525,7 +525,7 @@ function neofetch(term) {
     { label: 'Uptime', value: uptimeStr() },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
     { label: '', value: `${tryText}${' '.repeat(blockCol - visibleLen(tryText))}${blocks1}` },
-    { label: '', value: `${helpText}${' '.repeat(blockCol - visibleLen(helpText))}${blocks2}` },
+    { label: '', value: `${helpHintText}${' '.repeat(blockCol - visibleLen(helpHintText))}${blocks2}` },
   ];
 
   if (SHOW_TERMINAL_ART) {
