@@ -118,6 +118,9 @@ function initParticles() {
   const N_MAX = 256 * 256;
   let activeCount = N_MAX;
   let caStrength = 1;
+  // Manual trail-decay override (dev sidebar). The frame loop owns uDecay by
+  // default (hover-responsive); setTrailDecay pins it until reload.
+  let decayOverride = null;
 
   window.addEventListener('scroll', () => { scrollOffset = window.scrollY; }, { passive: true });
 
@@ -374,7 +377,7 @@ void main(){
   /* ── Post-out RT + blit pass ────────────────────────── */
   let postOut = mkFull();
   const blitMat = new THREE.ShaderMaterial({
-    uniforms: { uTex: { value: null }, uRez: { value: new THREE.Vector2(1, 1) } },
+    uniforms: { uTex: { value: null }, uRez: { value: new THREE.Vector2(iW, iH) } },
     vertexShader: 'void main(){gl_Position=vec4(position,1.);}',
     fragmentShader: 'precision highp float;uniform sampler2D uTex;uniform vec2 uRez;void main(){gl_FragColor=texture2D(uTex,gl_FragCoord.xy/uRez);}',
   });
@@ -500,7 +503,7 @@ void main(){
     trailMat.uniforms.uPrev.value = trailA.texture;
     trailMat.uniforms.uParts.value = outRT.texture;
     trailMat.uniforms.uTime.value = t;
-    trailMat.uniforms.uDecay.value = 0.8 - hP * 0.04;
+    trailMat.uniforms.uDecay.value = decayOverride ?? (0.8 - hP * 0.04);
     R.setRenderTarget(trailB);
     R.clear();
     R.render(trailScene, flatCam);
@@ -565,7 +568,8 @@ void main(){
       setCA(v) { caStrength = Math.max(0, Math.min(1, v)); },
       getCA() { return caStrength; },
       setTrailDecay(v) {
-        trailMat.uniforms.uDecay.value = Math.max(0.8, Math.min(0.99, v));
+        decayOverride = Math.max(0.8, Math.min(0.99, v));
+        trailMat.uniforms.uDecay.value = decayOverride;
       },
       getTrailDecay() { return trailMat.uniforms.uDecay.value; },
       setRainbow(on) { uRainbow = on ? 1 : 0; },

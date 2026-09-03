@@ -55,7 +55,7 @@ const STOPWORDS = new Set([
 ]);
 
 function computeKeywordScore(userQuery, item) {
-  const rawWords = userQuery.toLowerCase().split(/\W+/).filter(w => w.length > 2);
+  const rawWords = userQuery.toLowerCase().split(/\W+/).filter(w => w.length > 1);
   const keywords = rawWords.filter(w => !STOPWORDS.has(w));
   const activeKeywords = keywords.length > 0 ? keywords : rawWords;
 
@@ -72,7 +72,7 @@ function computeKeywordScore(userQuery, item) {
 
 function rerankChunks(userQuery, candidates) {
   const queryLower = userQuery.toLowerCase().trim();
-  const rawWords = queryLower.split(/\W+/).filter(w => w.length > 2 && !STOPWORDS.has(w));
+  const rawWords = queryLower.split(/\W+/).filter(w => w.length > 1 && !STOPWORDS.has(w));
 
   return candidates.map(chunk => {
     let rerankScore = chunk.score || 0;

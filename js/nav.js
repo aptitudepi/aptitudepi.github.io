@@ -100,8 +100,14 @@ function initActiveTracking() {
     });
   }
 
+  // The Motion library is currently not loaded (footer credit only), so this
+  // would poll forever and scroll-spy would never init — cap the retries.
+  let motionTries = 0;
   const checkMotion = setInterval(() => {
-    if (!window.Motion) return;
+    if (!window.Motion) {
+      if (++motionTries > 100) clearInterval(checkMotion); // ~20s, then give up
+      return;
+    }
     clearInterval(checkMotion);
     window.Motion.scroll(() => {
       if (isAnimatingScroll) return;

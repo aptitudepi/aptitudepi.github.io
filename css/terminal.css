@@ -113,6 +113,12 @@
 /* Hide scrollbar but keep scroll */
 .terminal-column::-webkit-scrollbar { display: none; }
 .terminal-column { -ms-overflow-style: none; scrollbar-width: none; }
+/* Belt-and-braces: no visible scrollbar on ANY scroller inside the terminal
+   pane (xterm viewport/screen, container, columns) on any engine. Scroll
+   itself (wheel / Shift+PgUp / touch) keeps working. */
+.terminal-body, .terminal-body * { scrollbar-width: none; -ms-overflow-style: none; }
+.terminal-body::-webkit-scrollbar,
+.terminal-body ::-webkit-scrollbar { display: none; }
 
 /* Thermal canvas transparent */
 #thermal-ascii {

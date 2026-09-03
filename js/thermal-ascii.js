@@ -168,8 +168,8 @@ export function initThermalAscii(canvas, options = {}) {
   let glyphs = null;       // Array of cell chars (portrait mode)
   let heat = new Float32Array(0);
   let pal = getPalette();
-  let hotColor = readCycleColor(canvas.closest('.doc-nav')); // live --nav-cycle
-  let navEl = canvas.closest('.doc-nav');
+  let hotColor = readCycleColor(document.querySelector('.doc-nav')); // live --nav-cycle
+  let navEl = document.querySelector('.doc-nav');
   let staticLayer = null;
   let raf = 0;
   let loopRunning = false;
@@ -259,7 +259,7 @@ export function initThermalAscii(canvas, options = {}) {
     }
 
     pal = getPalette();
-    navEl = canvas.closest('.doc-nav');
+    navEl = document.querySelector('.doc-nav');
     staticLayer = createStaticLayer();
   }
 

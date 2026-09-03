@@ -718,13 +718,23 @@ function stripHtml(html) {
   return div.textContent || '';
 }
 
+// Strip terminal control characters from untrusted text (guestbook posts,
+// HN titles/comments, search results, model output) so remote content can't
+// inject ANSI escape sequences into the viewer's xterm (display spoofing).
+// Keeps \n \r \t; drops all other C0 controls (incl. ESC and BEL), DEL, and
+// Unicode bidi/isolate overrides.
+function stripAnsi(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFEFF]/g, '');
+}
+
 function renderComment(term, item, depth) {
   if (!item || item.deleted || item.dead) return;
   const indent = '  '.repeat(depth);
   const ago = item.time ? timeAgo(item.time) : '';
-  term.writeln(`${indent}${SITE_GREEN}${item.by || 'anonymous'}${ANSI_RESET} ${SITE_FAINT}${ago}${ANSI_RESET}`);
+  term.writeln(`${indent}${SITE_GREEN}${stripAnsi(item.by) || 'anonymous'}${ANSI_RESET} ${SITE_FAINT}${ago}${ANSI_RESET}`);
   if (item.text) {
-    const text = stripHtml(item.text);
+    const text = stripAnsi(stripHtml(item.text));
     const wrap = Math.max(20, 72 - indent.length);
     const lines = text.match(new RegExp(`.{1,${wrap}}`, 'g')) || [];
     lines.forEach(line => term.writeln(`${indent}${line}`));
@@ -756,18 +766,18 @@ async function hnCommand(term, args) {
       const story = await storyResp.json();
       if (!story) throw new Error('empty');
 
-      term.writeln(`${ANSI_BOLD}${SITE_WHITE}${story.title}${ANSI_RESET}`);
-      const by = story.by || 'anonymous';
+      term.writeln(`${ANSI_BOLD}${SITE_WHITE}${stripAnsi(story.title)}${ANSI_RESET}`);
+      const by = stripAnsi(story.by) || 'anonymous';
       const pts = story.score || 0;
       const cmts = story.descendants || 0;
       const ago = story.time ? timeAgo(story.time) : '';
       term.writeln(`${SITE_MUTED}by ${SITE_GREEN}${by}${SITE_MUTED} | ${pts} points | ${cmts} comments | ${ago}${ANSI_RESET}`);
       if (story.url) {
-        term.writeln(`${SITE_BLUE}${story.url}${ANSI_RESET}`);
+        term.writeln(`${SITE_BLUE}${stripAnsi(story.url)}${ANSI_RESET}`);
       }
       if (story.text) {
         term.writeln('');
-        term.writeln(stripHtml(story.text));
+        term.writeln(stripAnsi(stripHtml(story.text)));
       }
 
       if (story.kids && story.kids.length > 0) {
@@ -841,16 +851,27 @@ function mdCommand(term, args) {
     const iframe = document.createElement('iframe');
     iframe.id = 'md-viewer-iframe';
     iframe.src = `md-viewer.html?url=${encodeURIComponent(url)}`;
+    // Sandboxed (scripts allowed, same-origin denied) so a compromised or
+    // malicious markdown payload can't reach the parent page. The viewer only
+    // needs fetch + DOMPurify + a click/Enter toolbar (no forms/storage).
+    iframe.sandbox = 'allow-scripts';
     iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:9999;border:none;background:oklch(0 0 0)';
     document.body.appendChild(iframe);
     const closeBtn = document.createElement('button');
     closeBtn.id = 'md-viewer-close';
     closeBtn.textContent = '✕';
     closeBtn.style.cssText = 'position:fixed;top:16px;right:16px;z-index:10000;width:36px;height:36px;border-radius:50%;border:1px solid oklch(0.3 0.02 260);background:oklch(0.1 0.01 260 / 0.8);color:oklch(0.9 0.01 260);font-size:18px;cursor:pointer;backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center';
-    closeBtn.addEventListener('click', () => { iframe.remove(); closeBtn.remove(); });
+    // Single close path (✕ button or Esc) so the keydown listener never leaks.
+    const closeViewer = () => {
+      iframe.remove();
+      closeBtn.remove();
+      document.removeEventListener('keydown', onEsc);
+    };
+    const onEsc = (e) => { if (e.key === 'Escape') closeViewer(); };
+    closeBtn.addEventListener('click', closeViewer);
     document.body.appendChild(closeBtn);
     term.writeln(`${SITE_GREEN}md viewer opened. Press ✕ or Esc to close${ANSI_RESET}`);
-    document.addEventListener('keydown', function onEsc(e) { if (e.key === 'Escape') { iframe.remove(); closeBtn.remove(); document.removeEventListener('keydown', onEsc); } });
+    document.addEventListener('keydown', onEsc);
   } catch {
     term.writeln(`${SITE_ERR}Failed to open markdown viewer${ANSI_RESET}`);
   }
@@ -1036,11 +1057,11 @@ function executeCommand(input, term) {
           if (!data.results || !data.results.length) {
             term.writeln(`${SITE_MUTED}No search results found.${ANSI_RESET}`);
           } else {
-            term.writeln(`${SITE_GREEN}\x1b[1mSearch Results for "${q}":\x1b[0m${ANSI_RESET}`);
+            term.writeln(`${SITE_GREEN}\x1b[1mSearch Results for "${stripAnsi(q)}":\x1b[0m${ANSI_RESET}`);
             data.results.forEach((r, i) => {
-              term.writeln(`  ${SITE_GREEN}[${i + 1}] ${r.title}${ANSI_RESET}`);
-              term.writeln(`      ${SITE_FAINT}${r.snippet}${ANSI_RESET}`);
-              term.writeln(`      \x1b[34m\x1b[4m${r.url}\x1b[0m\n`);
+              term.writeln(`  ${SITE_GREEN}[${i + 1}] ${stripAnsi(r.title)}${ANSI_RESET}`);
+              term.writeln(`      ${SITE_FAINT}${stripAnsi(r.snippet)}${ANSI_RESET}`);
+              term.writeln(`      \x1b[34m\x1b[4m${stripAnsi(r.url)}\x1b[0m\n`);
             });
           }
           writePrompt(term);
@@ -1060,11 +1081,11 @@ function executeCommand(input, term) {
         .then(info => {
           const latency = Math.round(performance.now() - t0);
           term.writeln(`${SITE_GREEN}\x1b[1mNetwork Diagnostics & IP Location:\x1b[0m${ANSI_RESET}`);
-          term.writeln(`  \x1b[36mPublic IP:\x1b[0m ${info.ip}`);
-          term.writeln(`  \x1b[36mLocation:\x1b[0m ${info.city}, ${info.country} (${info.continent})`);
-          term.writeln(`  \x1b[36mISP / ASN:\x1b[0m ${info.asOrganization} (AS${info.asn})`);
+          term.writeln(`  \x1b[36mPublic IP:\x1b[0m ${stripAnsi(info.ip)}`);
+          term.writeln(`  \x1b[36mLocation:\x1b[0m ${stripAnsi(info.city)}, ${stripAnsi(info.country)} (${stripAnsi(info.continent)})`);
+          term.writeln(`  \x1b[36mISP / ASN:\x1b[0m ${stripAnsi(info.asOrganization)} (AS${stripAnsi(info.asn)})`);
           term.writeln(`  \x1b[36mLatency:\x1b[0m ${latency}ms`);
-          term.writeln(`  \x1b[36mRay ID:\x1b[0m ${info.ray}`);
+          term.writeln(`  \x1b[36mRay ID:\x1b[0m ${stripAnsi(info.ray)}`);
           writePrompt(term);
         })
         .catch(err => {
@@ -1079,7 +1100,7 @@ function executeCommand(input, term) {
       } else {
         for (let i = 0; i < CMD_HISTORY.length; i++) {
           const idx = String(i + 1).padStart(3, ' ');
-          term.writeln(`${SITE_FAINT}${idx}  ${ANSI_RESET}${SITE_WHITE}${CMD_HISTORY[i]}${ANSI_RESET}`);
+          term.writeln(`${SITE_FAINT}${idx}  ${ANSI_RESET}${SITE_WHITE}${stripAnsi(CMD_HISTORY[i])}${ANSI_RESET}`);
         }
       }
       break;
@@ -1125,9 +1146,9 @@ function executeCommand(input, term) {
               term.writeln(`${SITE_MUTED}No entries yet. Be the first to leave a message using: wall <your message>${ANSI_RESET}`);
             } else {
               posts.forEach(p => {
-                term.writeln(`  ${SITE_CYAN}[${p.timestamp}] ${p.name}:${ANSI_RESET} "${p.message}"`);
+                term.writeln(`  ${SITE_CYAN}[${stripAnsi(p.timestamp)}] ${stripAnsi(p.name)}:${ANSI_RESET} "${stripAnsi(p.message)}"`);
                 if (p.aiReply) {
-                  term.writeln(`      ${SITE_GREEN}AI Signature Reply:${ANSI_RESET} ${SITE_FAINT}${p.aiReply}${ANSI_RESET}`);
+                  term.writeln(`      ${SITE_GREEN}AI Signature Reply:${ANSI_RESET} ${SITE_FAINT}${stripAnsi(p.aiReply)}${ANSI_RESET}`);
                 }
               });
             }
@@ -1150,8 +1171,8 @@ function executeCommand(input, term) {
         .then(data => {
           if (data.post) {
             term.writeln(`${SITE_GREEN}\x1b[1mMessage posted to global wall!${ANSI_RESET}`);
-            term.writeln(`  ${SITE_CYAN}${data.post.name}:${ANSI_RESET} "${data.post.message}"`);
-            term.writeln(`  ${SITE_GREEN}AI Reply:${ANSI_RESET} ${data.post.aiReply}`);
+            term.writeln(`  ${SITE_CYAN}${stripAnsi(data.post.name)}:${ANSI_RESET} "${stripAnsi(data.post.message)}"`);
+            term.writeln(`  ${SITE_GREEN}AI Reply:${ANSI_RESET} ${stripAnsi(data.post.aiReply)}`);
           } else {
             term.writeln(`${SITE_ERR}Failed to post: ${data.error || 'Unknown error'}${ANSI_RESET}`);
           }
@@ -1194,4 +1215,4 @@ function executeCommand(input, term) {
 
 window.executeTerminalCommand = executeCommand;
 
-export { ASCII_ART, vfs, RESUME, CMD_HISTORY, BOOT_MSGS, SHOW_TERMINAL_ART, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS };
+export { ASCII_ART, vfs, RESUME, CMD_HISTORY, BOOT_MSGS, SHOW_TERMINAL_ART, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, stripAnsi, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS };

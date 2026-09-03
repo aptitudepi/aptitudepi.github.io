@@ -2,7 +2,7 @@ import { startThinkingOrb, setThinkingOrbState, stopThinkingOrb } from './orb.js
 import { retrieveContext } from './rag.js';
 
 const MODELS = [
-  { id: 'qwen/qwen3.6-27b', name: 'qwen3.6-27b', size: '0MB (Cloud)', dtype: 'api', desc: 'qwen3.6-27b + bge-small-en (default)' },
+  { id: 'qwen/qwen3.8-27b', name: 'qwen3.8-27b', size: '0MB (Cloud)', dtype: 'api', desc: 'qwen3.8-27b + bge-small-en (default)' },
   { id: 'onnx-community/SmolLM2-135M-ONNX', name: 'SmolLM2-135M', size: '135MB', dtype: 'q4', desc: 'lightweight local' },
   { id: 'onnx-community/SmolLM2-360M-ONNX', name: 'SmolLM2-360M', size: '360MB', dtype: 'q4', desc: 'balanced local' },
   { id: 'onnx-community/Qwen2.5-0.5B-Instruct', name: 'Qwen2.5-0.5B', size: '350MB', dtype: 'q4', desc: 'smart local' },
@@ -76,6 +76,12 @@ Examples:
 Real-Time / Time Queries: If asked about current time/date, state that you operate within the current portfolio timeline (2026).
 Answer concisely, accurately, and naturally based on the baseline profile, memory history, and retrieved context below.`;
 
+// Small local models (≤1.5B, e.g. Qwen2.5-0.5B) drown in the full brief above
+// — long instructions + tool-call docs + history push CV details out of their
+// effective working memory, so they ramble instead of answering from context.
+// They get a compact brief (context only, no memory, no tool docs) instead.
+const LOCAL_SYSTEM_PROMPT = `You are Devkumar Banerjee's portfolio assistant on dvxb.io. Answer briefly and ONLY from the context below. If the answer is not in the context, say you don't know. Do not emit tool tags.`;
+
 function processToolCalls(fullText, term) {
   const toolRegex = /\[\[TOOL:\s*exec\("([^"]+)"\)]\]/g;
   let match;
@@ -83,12 +89,46 @@ function processToolCalls(fullText, term) {
   while ((match = toolRegex.exec(fullText)) !== null) {
     const cmdToExec = match[1];
     cleanText = cleanText.replace(match[0], '').trim();
-    if (term) term.writeln(`\x1b[32m\x1b[1m[Executing Tool: ${cmdToExec}]\x1b[0m`);
+    if (!toolAllowed(cmdToExec)) {
+      if (term) term.writeln(`\x1b[33m\x1b[1m[Tool blocked: ${stripAnsi(cmdToExec)} — not in the read-only allowlist]\x1b[0m`);
+      continue;
+    }
+    if (term) term.writeln(`\x1b[32m\x1b[1m[Executing Tool: ${stripAnsi(cmdToExec)}]\x1b[0m`);
     if (typeof window !== 'undefined' && typeof window.executeTerminalCommand === 'function') {
       setTimeout(() => window.executeTerminalCommand(cmdToExec, term), 100);
     }
   }
   return cleanText;
+}
+
+// Commands the assistant may invoke via [[TOOL: exec("…")]]. Read-only /
+// display-only by design: anything that boots a VM (vm), recurses into the
+// model (ai/llm), mutates settings (ai-model), opens arbitrary-URL iframes
+// (md), posts publicly (wall with a message) or wipes the screen (clear) is
+// refused. Model output is untrusted (prompt injection via RAG context, web
+// results or memory), so this is default-deny. `wall` is allowed only bare
+// (read the guestbook, don't post).
+const TOOL_ALLOWLIST = new Set([
+  'whoami', 'hostname', 'date', 'uptime', 'uname', 'pwd', 'cat', 'ls', 'echo',
+  'neofetch', 'resfetch', 'about', 'fortune', 'cowsay', 'help', 'matrix',
+  'weather', 'hn', 'cv', 'search', 'google', 'ddg', 'myip', 'ping', 'history',
+  'ai-models', 'ai-memory', 'crt', 'noise',
+]);
+
+function toolAllowed(raw) {
+  const parts = String(raw).trim().match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+  if (!parts.length) return false;
+  const name = parts[0].toLowerCase();
+  if (name === 'wall') return parts.length === 1;
+  return TOOL_ALLOWLIST.has(name);
+}
+
+// Local copy of shell.js's stripAnsi (kept inline to avoid a shell↔ai import
+// cycle): strips terminal control chars from model-controlled text echoed to
+// xterm so the model can't inject escape sequences into the display.
+function stripAnsi(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFEFF]/g, '');
 }
 
 async function streamGroq(prompt, context, term) {
@@ -120,21 +160,21 @@ async function streamGroq(prompt, context, term) {
             const emit = tail.slice(0, tail.length - k);
             if (emit) {
               fullResponse += emit;
-              term.write(emit);
+              term.write(stripAnsi(emit));
             }
             hold = tail.slice(tail.length - k);
             return;
           }
           if (tail) {
             fullResponse += tail;
-            term.write(tail);
+            term.write(stripAnsi(tail));
           }
           return;
         }
         const before = str.slice(cursor, start);
         if (before) {
           fullResponse += before;
-          term.write(before);
+          term.write(stripAnsi(before));
         }
         inThink = true;
         cursor = start + OPEN.length;
@@ -158,7 +198,7 @@ async function streamGroq(prompt, context, term) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'qwen/qwen3.6-27b',
+        model: 'qwen/qwen3.8-27b',
         messages: [
           { role: 'system', content: fullSystemContent },
           { role: 'user', content: prompt }
@@ -222,16 +262,17 @@ async function streamLocal(p, prompt, context, term) {
     skip_prompt: true,
     callback_function: (text) => {
       fullResponse += text;
-      term.write(text);
+      term.write(stripAnsi(text));
     }
   });
 
-  const memoryContext = buildMemoryPromptContext();
-  const fullPrompt = `<|im_start|>system\n${BASELINE_SYSTEM_PROMPT}\n\n${memoryContext}Retrieved Context:\n${context}<|im_end|>\n<|im_start|>user\n${prompt}<|im_end|>\n<|im_start|>assistant\n`;
+  // Compact brief for small local models (see LOCAL_SYSTEM_PROMPT): full
+  // baseline + history + tool docs bury the retrieved CV chunks.
+  const fullPrompt = `<|im_start|>system\n${LOCAL_SYSTEM_PROMPT}\n\nRetrieved Context:\n${context}<|im_end|>\n<|im_start|>user\n${prompt}<|im_end|>\n<|im_start|>assistant\n`;
 
   await p(fullPrompt, {
     max_new_tokens: 256,
-    temperature: 0.7,
+    temperature: 0.4,
     do_sample: true,
     streamer
   });
