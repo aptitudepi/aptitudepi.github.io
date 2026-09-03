@@ -45,7 +45,6 @@ function parseColorToRgb(colorStr) {
   }
   if (!cssParseCtx) return null;
   cssParseCtx.clearRect(0, 0, 1, 1);
-  cssParseCtx.fillStyle = "#000";
   cssParseCtx.fillStyle = colorStr;
   cssParseCtx.fillRect(0, 0, 1, 1);
   const data = cssParseCtx.getImageData(0, 0, 1, 1).data;
@@ -282,19 +281,16 @@ export function initThermalAscii(canvas, options = {}) {
       // (`.`` becomes `+` becomes `@`) as heat rises — on the portrait too.
       const scrambleIdx = Math.min(ramp.length - 1, base + Math.round(currentHeat * 6));
       const scrambleGlyph = ramp[scrambleIdx];
-      let col;
-      if (portraitMode) {
-        const baseR = baseColors[i * 3];
-        const baseG = baseColors[i * 3 + 1];
-        const baseB = baseColors[i * 3 + 2];
-        col = [
-          Math.round(baseR + (hotTarget[0] - baseR) * mix),
-          Math.round(baseG + (hotTarget[1] - baseG) * mix),
-          Math.round(baseB + (hotTarget[2] - baseB) * mix),
-        ];
-      } else {
-        col = currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (hotTarget[colorIdx] - baseColor) * mix));
-      }
+      // Lerp the cell's ink toward the live nav-cycle flare (or burn to black
+      // on a light page). Portrait cells start from their decoded colour;
+      // noise cells start from the shared base grey.
+      const col = portraitMode
+        ? [
+            Math.round(baseColors[i * 3] + (hotTarget[0] - baseColors[i * 3]) * mix),
+            Math.round(baseColors[i * 3 + 1] + (hotTarget[1] - baseColors[i * 3 + 1]) * mix),
+            Math.round(baseColors[i * 3 + 2] + (hotTarget[2] - baseColors[i * 3 + 2]) * mix),
+          ]
+        : currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (hotTarget[colorIdx] - baseColor) * mix));
       ctx.clearRect(colIdx * cellW, rowIdx * cellH, cellW, cellH);
       ctx.fillStyle = `rgb(${col.join(",")})`;
       ctx.fillText(scrambleGlyph, colIdx * cellW, rowIdx * cellH);
