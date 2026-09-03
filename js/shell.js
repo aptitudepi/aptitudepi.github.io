@@ -519,7 +519,7 @@ function neofetch(term) {
     }
   } else {
     // Portrait hidden — render a compact banner + the info block instead.
-    term.writeln(`${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET} ${SITE_MUTED}· neofetch (portrait shown in thermal column)${ANSI_RESET}`);
+    term.writeln(`${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET}`);
     for (const info of infoLines.slice(1)) {
       term.writeln(`${info.label ? `${SITE_LABEL}${info.label}${ANSI_RESET}: ` : ''}${info.value}`);
     }
@@ -536,8 +536,11 @@ function neofetch(term) {
     bPhase,
     [255,80,255],[80,255,255],[255,255,255],
   ];
-  let blocksRow1 = ' '.repeat(maxArtW + gap);
-  let blocksRow2 = ' '.repeat(maxArtW + gap);
+  // Pull the color palette blocks back to column 0 when the art is hidden (it
+  // is the default), otherwise keep them inset under the portrait's edge.
+  const blockIndent = SHOW_TERMINAL_ART ? maxArtW + gap : gap;
+  let blocksRow1 = ' '.repeat(blockIndent);
+  let blocksRow2 = ' '.repeat(blockIndent);
   blockColors.slice(0, 8).forEach(([r,g,b]) => { blocksRow1 += `${' '.repeat(2)}${colorBlock(r,g,b)}${' '.repeat(2)}`; });
   blockColors.slice(8, 16).forEach(([r,g,b]) => { blocksRow2 += `${' '.repeat(2)}${colorBlock(r,g,b)}${' '.repeat(2)}`; });
   term.writeln(blocksRow1);
