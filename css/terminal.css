@@ -64,9 +64,12 @@
   background: transparent !important;
 }
 .terminal-body .xterm-viewport {
-  scrollbar-width: thin;
+  scrollbar-width: none;
   scrollbar-color: var(--color-terminal-border) transparent;
   background: transparent !important;
+}
+.terminal-body .xterm-viewport::-webkit-scrollbar {
+  display: none;
 }
 .terminal-body .xterm-screen {
   width: 100% !important;
@@ -90,9 +93,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  position: sticky;
-  top: 0;
   height: 100%;
+  max-height: 70vh;
   padding: 16px;
   box-sizing: border-box;
 }

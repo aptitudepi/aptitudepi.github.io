@@ -489,6 +489,25 @@ function neofetch(term) {
   const gap = 4;
   const maxArtW = Math.max(...ASCII_ART.map(visibleLen));
 
+  // Classic neofetch colour palette (two rows of eight blocks) is appended to
+  // the final info rows so the banner stays compact instead of ending with two
+  // lonely, full-width padding lines.
+  const phase = getBlueRedPhase();
+  const bPhase = phase.map(c => Math.min(255, Math.round(c * 1.3)));
+  const blockColors = [
+    [0,0,0],[200,50,50],[50,180,50],[180,180,50],
+    phase,
+    [180,50,180],[50,180,180],[200,200,200],
+    [80,80,80],[255,80,80],[80,255,80],[255,255,80],
+    bPhase,
+    [255,80,255],[80,255,255],[255,255,255],
+  ];
+  const blockRow = (colors) => colors.reduce(
+    (s, [r,g,b]) => s + `${' '.repeat(2)}${colorBlock(r,g,b)}${' '.repeat(2)}`, ''
+  );
+  const blocks1 = blockRow(blockColors.slice(0, 8));
+  const blocks2 = blockRow(blockColors.slice(8, 16));
+
   const infoLines = [
     { label: '', value: `${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET}` },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
@@ -501,8 +520,8 @@ function neofetch(term) {
     { label: 'Shell', value: `fish 3.7` },
     { label: 'Uptime', value: uptimeStr() },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
-    { label: '', value: `${ANSI_BOLD}${SITE_WHITE}Try:${ANSI_RESET} matrix · vm · ai · weather · hn · md · wall` },
-    { label: '', value: `${SITE_MUTED}type${ANSI_RESET} \`${SITE_WHITE}help${ANSI_RESET}\` ${SITE_MUTED}for the full command list${ANSI_RESET}` },
+    { label: '', value: `${ANSI_BOLD}${SITE_WHITE}Try:${ANSI_RESET} matrix · vm · ai · weather · hn · md · wall${' '.repeat(6)}${blocks1}` },
+    { label: '', value: `${SITE_MUTED}type${ANSI_RESET} \`${SITE_WHITE}help${ANSI_RESET}\` ${SITE_MUTED}for the full command list${ANSI_RESET}${' '.repeat(6)}${blocks2}` },
   ];
 
   if (SHOW_TERMINAL_ART) {
@@ -518,33 +537,14 @@ function neofetch(term) {
       term.writeln(coloredArt + infoPart);
     }
   } else {
-    // Portrait hidden — render a compact banner + the info block instead.
+    // Portrait hidden — a blank spacer separates the boot log from the banner,
+    // then the compact info block follows.
+    term.writeln('');
     term.writeln(`${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET}`);
     for (const info of infoLines.slice(1)) {
       term.writeln(`${info.label ? `${SITE_LABEL}${info.label}${ANSI_RESET}: ` : ''}${info.value}`);
     }
   }
-
-  term.writeln('');
-  const phase = getBlueRedPhase();
-  const bPhase = phase.map(c => Math.min(255, Math.round(c * 1.3)));
-  const blockColors = [
-    [0,0,0],[200,50,50],[50,180,50],[180,180,50],
-    phase,
-    [180,50,180],[50,180,180],[200,200,200],
-    [80,80,80],[255,80,80],[80,255,80],[255,255,80],
-    bPhase,
-    [255,80,255],[80,255,255],[255,255,255],
-  ];
-  // Pull the color palette blocks back to column 0 when the art is hidden (it
-  // is the default), otherwise keep them inset under the portrait's edge.
-  const blockIndent = SHOW_TERMINAL_ART ? maxArtW + gap : gap;
-  let blocksRow1 = ' '.repeat(blockIndent);
-  let blocksRow2 = ' '.repeat(blockIndent);
-  blockColors.slice(0, 8).forEach(([r,g,b]) => { blocksRow1 += `${' '.repeat(2)}${colorBlock(r,g,b)}${' '.repeat(2)}`; });
-  blockColors.slice(8, 16).forEach(([r,g,b]) => { blocksRow2 += `${' '.repeat(2)}${colorBlock(r,g,b)}${' '.repeat(2)}`; });
-  term.writeln(blocksRow1);
-  term.writeln(blocksRow2);
 }
 
 const resfetch = neofetch;
