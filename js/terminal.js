@@ -224,9 +224,9 @@ function createTerminal(container) {
     }, { passive: true });
     container.addEventListener('touchmove', e => {
       if (touchY === null || e.touches.length !== 1) { touchY = null; return; }
-      const dy = touchY - e.touches[0].clientY;
-      if (Math.abs(dy) >= rowH()) {
-        term.scrollLines(-Math.round(dy / rowH()));
+      const deltaY = touchY - e.touches[0].clientY;
+      if (Math.abs(deltaY) >= rowH()) {
+        term.scrollLines(-Math.round(deltaY / rowH()));
         touchY = e.touches[0].clientY;
       }
     }, { passive: true });
