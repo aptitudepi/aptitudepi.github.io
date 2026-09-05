@@ -203,7 +203,7 @@ function createTerminal(container) {
   // Refit once webfonts arrive: measuring with the fallback font
   // under-reports cell width and permanently narrows the terminal.
   if (document.fonts?.ready) {
-    document.fonts.ready.then(() => { if (fitAddon) try { fitAddon.fit(); } catch (_) {} });
+    document.fonts.ready.then(() => { if (fitAddon) try { fitAddon.fit(); } catch (_) { /* best-effort refit; ignore errors */ } });
   }
 
   const ro = new ResizeObserver(() => {

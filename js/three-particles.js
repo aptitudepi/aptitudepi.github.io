@@ -443,8 +443,8 @@ void main(){
     gl.readPixels(0, 0, pw, ph, gl.RGBA, gl.FLOAT, _fBuf);
     R.setRenderTarget(null);
     for (let i = 0; i < len; i++) {
-      const v = _fBuf[i] * 255;
-      _pxBuf[i] = v < 0 ? 0 : (v > 255 ? 255 : v);
+      const scaled = _fBuf[i] * 255;
+      _pxBuf[i] = scaled < 0 ? 0 : (scaled > 255 ? 255 : scaled);
     }
     const img = _topoCtx.createImageData(pw, ph);
     const row = pw * 4;
