@@ -349,8 +349,8 @@ void main(){
       uTex: { value: trailB.texture }, uRez: { value: new THREE.Vector2(iW, iH) }, uTime: { value: 0 },
       uCA: { value: 1 },
       uBrightness: { value: 2.6 },
-      uScanline: { value: 0 },
-      uVignette: { value: 1.2 },
+      uScanline: { value: 0.05 },
+      uVignette: { value: 3 },
     },
     vertexShader: 'void main(){gl_Position=vec4(position,1.);}',
     fragmentShader: `precision highp float;
