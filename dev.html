@@ -94,7 +94,10 @@
 #dev-panel {
   position: fixed;
   right: 0; top: 0; bottom: 0;
-  width: 320px;
+  width: 360px;
+  min-width: 240px;
+  max-width: 560px;
+  resize: horizontal;
   background: var(--color-glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -199,19 +202,19 @@
   <h3>Topolines</h3>
   <div class="dev-section">
     <div class="dev-row"><label>Enabled</label><input type="checkbox" id="dev-enabled" checked></div>
-    <div class="dev-row"><label>Sync w/ site</label><input type="checkbox" id="dev-sync"></div>
-    <div class="dev-row"><label>Sync saturation</label><input type="range" id="dev-sync-sat" min="0" max="1" step="0.01" value="0"><output id="dev-sync-sat-v">0.00</output></div>
+    <div class="dev-row"><label>Sync w/ site</label><input type="checkbox" id="dev-sync" checked></div>
+    <div class="dev-row"><label>Sync saturation</label><input type="range" id="dev-sync-sat" min="0" max="1" step="0.01" value="0.25"><output id="dev-sync-sat-v">0.25</output></div>
   </div>
   <div class="dev-section">
     <div class="dev-row"><label>Color</label><input type="color" id="dev-color" value="#C9B8E8"></div>
-    <div class="dev-row"><label>Opacity</label><input type="range" id="dev-opacity" min="0" max="1" step="0.01" value="0.11"><output id="dev-opacity-v">0.11</output></div>
-    <div class="dev-row"><label>Line width</label><input type="range" id="dev-linewidth" min="0.2" max="4" step="0.1" value="1.2"><output id="dev-linewidth-v">1.2</output></div>
+    <div class="dev-row"><label>Opacity</label><input type="range" id="dev-opacity" min="0" max="1" step="0.01" value="0.10"><output id="dev-opacity-v">0.10</output></div>
+    <div class="dev-row"><label>Line width</label><input type="range" id="dev-linewidth" min="0.2" max="4" step="0.1" value="0.5"><output id="dev-linewidth-v">0.5</output></div>
     <div class="dev-row"><label>Levels</label><input type="range" id="dev-levels" min="2" max="30" step="1" value="30"><output id="dev-levels-v">30</output></div>
     <div class="dev-row"><label>Scale</label><input type="range" id="dev-scale" min="0.3" max="3" step="0.01" value="3"><output id="dev-scale-v">3.00</output></div>
     <div class="dev-row"><label>Speed</label><input type="range" id="dev-speed" min="0" max="0.05" step="0.001" value="0.05"><output id="dev-speed-v">0.05</output></div>
     <div class="dev-row"><label>Warp</label><input type="range" id="dev-warp" min="0" max="0.6" step="0.01" value="0"><output id="dev-warp-v">0.00</output></div>
     <div class="dev-row"><label>Interactive</label><input type="checkbox" id="dev-interactive" checked></div>
-    <div class="dev-row"><label>Particle influence</label><input type="range" id="dev-particle-influence" min="0" max="1" step="0.01" value="0"><output id="dev-particle-influence-v">0.00</output></div>
+    <div class="dev-row"><label>Particle influence</label><input type="range" id="dev-particle-influence" min="0" max="1" step="0.01" value="1"><output id="dev-particle-influence-v">1.00</output></div>
   </div>
 
   <h3>Acrylic</h3>
@@ -232,8 +235,8 @@
     <div class="dev-row"><label>Scanline</label><input type="range" id="dev-p-scanline" min="0" max="0.05" step="0.001" value="0"><output id="dev-p-scanline-v">0.000</output></div>
     <div class="dev-row"><label>Vignette</label><input type="range" id="dev-p-vignette" min="0" max="3" step="0.05" value="1.2"><output id="dev-p-vignette-v">1.20</output></div>
     <div class="dev-row"><label>Rainbow</label><input type="checkbox" id="dev-p-rainbow"></div>
-    <div class="dev-row"><label>Sync topo</label><input type="checkbox" id="dev-p-sync-topo"></div>
-    <div class="dev-row"><label>Topo speed</label><input type="range" id="dev-p-topo-speed" min="0.01" max="1" step="0.01" value="0.15"><output id="dev-p-topo-speed-v">0.15</output></div>
+    <div class="dev-row"><label>Sync topo</label><input type="checkbox" id="dev-p-sync-topo" checked></div>
+    <div class="dev-row"><label>Topo speed</label><input type="range" id="dev-p-topo-speed" min="0.01" max="1" step="0.01" value="0.25"><output id="dev-p-topo-speed-v">0.25</output></div>
     <div class="dev-row"><label>Quality</label><input type="range" id="dev-p-quality" min="0" max="1" step="0.01" value="1" disabled><output id="dev-p-quality-v">auto</output></div>
     <div class="dev-row"><label>Override</label><input type="checkbox" id="dev-p-override"></div>
   </div>
@@ -255,7 +258,8 @@
         <option value="default">` .:-=+*cs#%@</option>
         <option value="blocks">░▒▓█</option>
         <option value="braille">⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋</option>
-        <option value="bengali" selected>দ ব দ্ব</option>
+        <option value="bengali">দ ব দ্ব</option>
+        <option value="mixed" selected>░ ⠁ দ ▒ ব ▓ দ্ব</option>
       </select>
     </div>
   </div>
@@ -329,7 +333,14 @@
       </nav>
       <span class="terminal-clock" id="headerClock"></span>
     </nav>
-    <div class="terminal-body" id="terminal-container"></div>
+    <div class="terminal-body two-column">
+      <div class="thermal-column">
+        <canvas id="thermal-ascii" aria-label="thermal ascii field" aria-hidden="true"></canvas>
+      </div>
+      <div class="terminal-column">
+        <div id="terminal-container"></div>
+      </div>
+    </div>
       </div>
 </section>
 
@@ -810,6 +821,7 @@
           blocks: "░▒▓█",
           braille: "⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋",
           bengali: " দবদ্দব্দব্বদ্বদ্ব",
+          mixed: " ░⠁দ▒ব▓দ্ব",,
         };
         thermal = initThermalAscii(document.getElementById('thermal-ascii'), {
           art: ASCII_ART,

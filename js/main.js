@@ -99,7 +99,9 @@ function init() {
   }
 
   const thermalCanvas = document.getElementById('thermal-ascii');
-  if (thermalCanvas) {
+  // Dev page owns its thermal instance via the sidebar (init + re-init +
+  // destroy); skip the shared init there so two loops never drive one canvas.
+  if (thermalCanvas && !document.getElementById('dev-panel')) {
     initThermalAscii(thermalCanvas, { art: ASCII_ART, ramp: RAMP_BENGALI });
   }
 
