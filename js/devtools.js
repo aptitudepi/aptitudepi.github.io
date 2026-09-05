@@ -142,12 +142,12 @@ ensurePanel();
     topo.color.disabled = syncOn;
     if (!syncOn) window.TopoDev.setOptions({ color: topo.color.value });
     window.TopoDev.setOptions({
-      opacity:     +topo.opacity.value,
-      lineWidth:   +topo.linewidth.value,
-      levels:      +topo.levels.value,
-      scale:       +topo.scale.value,
-      speed:       +topo.speed.value,
-      warp:        +topo.warp.value,
+      opacity:     Number(topo.opacity.value),
+      lineWidth:   Number(topo.linewidth.value),
+      levels:      Number(topo.levels.value),
+      scale:       Number(topo.scale.value),
+      speed:       Number(topo.speed.value),
+      warp:        Number(topo.warp.value),
       interactive: topo.interactive.checked,
     });
     window.TopoDev.setParticleInfluence(Number(topo.particleInfluence.value));
@@ -186,9 +186,9 @@ ensurePanel();
   };
 
   function pushAcrylic() {
-    const blurPx = +acrylic.blur.value;
-    const glassVal = +acrylic.glassAlpha.value;
-    const borderVal = +acrylic.borderAlpha.value;
+    const blurPx = Number(acrylic.blur.value);
+    const glassVal = Number(acrylic.glassAlpha.value);
+    const borderVal = Number(acrylic.borderAlpha.value);
 
     GLASS_TARGETS.forEach(sel => {
       document.querySelectorAll(sel).forEach(el => {
@@ -377,8 +377,8 @@ ensurePanel();
         };
         thermal = initThermalAscii(document.getElementById('thermal-ascii'), {
           art: ASCII_ART,
-          heatRadius: +thm.radius.value,
-          heatDecay: +thm.decay.value,
+          heatRadius: Number(thm.radius.value),
+          heatDecay: Number(thm.decay.value),
           ramp: rampMap[thm.ramp.value] || rampMap.default,
         });
         thOut.radius.textContent = thm.radius.value;
@@ -410,7 +410,7 @@ ensurePanel();
       const fieldEl = getEl(id);
       if (!fieldEl) return null;
       if (fieldEl.type === 'checkbox') return fieldEl.checked;
-      if (fieldEl.type === 'range' || fieldEl.type === 'number') return +fieldEl.value;
+      if (fieldEl.type === 'range' || fieldEl.type === 'number') return Number(fieldEl.value);
       return fieldEl.value;
     };
     const settings = {
@@ -460,7 +460,7 @@ ensurePanel();
       const statusEl = getEl('dev-export-status');
       statusEl.textContent = '\u2713 Copied to clipboard \u2014 paste in chat';
       statusEl.style.display = 'flex';
-      setTimeout(() => statusEl.style.display = 'none', 2500);
+      setTimeout(() => { statusEl.style.display = 'none'; }, 2500);
     }).catch(() => {
       const taEl = document.createElement('textarea');
       taEl.value = json;
@@ -471,7 +471,7 @@ ensurePanel();
       const statusEl = getEl('dev-export-status');
       statusEl.textContent = '\u2713 Copied to clipboard \u2014 paste in chat';
       statusEl.style.display = 'flex';
-      setTimeout(() => statusEl.style.display = 'none', 2500);
+      setTimeout(() => { statusEl.style.display = 'none'; }, 2500);
     });
   });
 document.getElementById('dev-panel-close')?.addEventListener('click', () => toggleDevPanel());
