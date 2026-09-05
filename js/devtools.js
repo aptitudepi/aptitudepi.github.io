@@ -150,16 +150,16 @@ ensurePanel();
       warp:        +topo.warp.value,
       interactive: topo.interactive.checked,
     });
-    window.TopoDev.setParticleInfluence(+topo.particleInfluence.value);
-    window.TopoDev.setSyncSaturation(+topo.syncSat.value);
-    topoOut.opacity.textContent   = (+topo.opacity.value).toFixed(2);
-    topoOut.linewidth.textContent = (+topo.linewidth.value).toFixed(1);
+    window.TopoDev.setParticleInfluence(Number(topo.particleInfluence.value));
+    window.TopoDev.setSyncSaturation(Number(topo.syncSat.value));
+    topoOut.opacity.textContent   = (Number(topo.opacity.value)).toFixed(2);
+    topoOut.linewidth.textContent = (Number(topo.linewidth.value)).toFixed(1);
     topoOut.levels.textContent    = topo.levels.value;
-    topoOut.scale.textContent     = (+topo.scale.value).toFixed(2);
-    topoOut.speed.textContent     = (+topo.speed.value).toFixed(3);
-    topoOut.warp.textContent      = (+topo.warp.value).toFixed(2);
-    topoOut.particleInfluence.textContent = (+topo.particleInfluence.value).toFixed(2);
-    topoOut.syncSat.textContent = (+topo.syncSat.value).toFixed(2);
+    topoOut.scale.textContent     = (Number(topo.scale.value)).toFixed(2);
+    topoOut.speed.textContent     = (Number(topo.speed.value)).toFixed(3);
+    topoOut.warp.textContent      = (Number(topo.warp.value)).toFixed(2);
+    topoOut.particleInfluence.textContent = (Number(topo.particleInfluence.value)).toFixed(2);
+    topoOut.syncSat.textContent = (Number(topo.syncSat.value)).toFixed(2);
   }
 
   topo.sync.addEventListener('change', pushTopo);
@@ -186,25 +186,25 @@ ensurePanel();
   };
 
   function pushAcrylic() {
-    const px = +acrylic.blur.value;
-    const ga = +acrylic.glassAlpha.value;
-    const ba = +acrylic.borderAlpha.value;
+    const blurPx = +acrylic.blur.value;
+    const glassVal = +acrylic.glassAlpha.value;
+    const borderVal = +acrylic.borderAlpha.value;
 
     GLASS_TARGETS.forEach(sel => {
       document.querySelectorAll(sel).forEach(el => {
-        el.style.backdropFilter = `blur(${px}px)`;
-        el.style.webkitBackdropFilter = `blur(${px}px)`;
+        el.style.backdropFilter = `blur(${blurPx}blurPx)`;
+        el.style.webkitBackdropFilter = `blur(${blurPx}blurPx)`;
       });
     });
 
     document.documentElement.style.setProperty('--color-glass',
-      `oklch(0.09 0.008 260 / ${ga.toFixed(2)})`);
+      `oklch(0.09 0.008 260 / ${glassVal.toFixed(2)})`);
     document.documentElement.style.setProperty('--color-glass-border',
-      `oklch(0.2 0.02 260 / ${ba.toFixed(2)})`);
+      `oklch(0.2 0.02 260 / ${borderVal.toFixed(2)})`);
 
-    acrylicOut.blur.textContent       = `${px}px`;
-    acrylicOut.glassAlpha.textContent  = ga.toFixed(2);
-    acrylicOut.borderAlpha.textContent = ba.toFixed(2);
+    acrylicOut.blur.textContent       = `${blurPx}blurPx`;
+    acrylicOut.glassAlpha.textContent  = glassVal.toFixed(2);
+    acrylicOut.borderAlpha.textContent = borderVal.toFixed(2);
   }
 
   Object.values(acrylic).forEach(inp => {
@@ -245,35 +245,35 @@ ensurePanel();
     const PDev = window.ParticleDev;
     if (!PDev) return;
 
-    PDev.setCount(+part.count.value);
-    PDev.setParticleSize(+part.size.value);
-    PDev.setFOV(+part.fov.value);
-    PDev.setCA(+part.ca.value);
-    PDev.setTrailDecay(+part.decay.value);
-    PDev.setBrightness(+part.bright.value);
-    PDev.setScanline(+part.scanline.value);
-    PDev.setVignette(+part.vignette.value);
+    PDev.setCount(Number(part.count.value));
+    PDev.setParticleSize(Number(part.size.value));
+    PDev.setFOV(Number(part.fov.value));
+    PDev.setCA(Number(part.ca.value));
+    PDev.setTrailDecay(Number(part.decay.value));
+    PDev.setBrightness(Number(part.bright.value));
+    PDev.setScanline(Number(part.scanline.value));
+    PDev.setVignette(Number(part.vignette.value));
     PDev.setRainbow(part.rainbow.checked);
     PDev.setSyncTopo(part.syncTopo.checked);
-    PDev.setTopoSpeed(+part.topoSpeed.value);
+    PDev.setTopoSpeed(Number(part.topoSpeed.value));
 
     if (part.override.checked) {
-      PDev.setQualityOverride(+part.quality.value);
-      partOut.quality.textContent = (+part.quality.value).toFixed(2);
+      PDev.setQualityOverride(Number(part.quality.value));
+      partOut.quality.textContent = (Number(part.quality.value)).toFixed(2);
     } else {
       PDev.setQualityOverride(null);
       partOut.quality.textContent = 'auto';
     }
 
     partOut.count.textContent    = part.count.value;
-    partOut.size.textContent     = (+part.size.value).toFixed(2);
+    partOut.size.textContent     = (Number(part.size.value)).toFixed(2);
     partOut.fov.textContent      = `${part.fov.value}°`;
-    partOut.ca.textContent       = (+part.ca.value).toFixed(2);
-    partOut.decay.textContent    = (+part.decay.value).toFixed(3);
-    partOut.bright.textContent   = (+part.bright.value).toFixed(2);
-    partOut.scanline.textContent = (+part.scanline.value).toFixed(3);
-    partOut.vignette.textContent = (+part.vignette.value).toFixed(2);
-    partOut.topoSpeed.textContent = (+part.topoSpeed.value).toFixed(2);
+    partOut.ca.textContent       = (Number(part.ca.value)).toFixed(2);
+    partOut.decay.textContent    = (Number(part.decay.value)).toFixed(3);
+    partOut.bright.textContent   = (Number(part.bright.value)).toFixed(2);
+    partOut.scanline.textContent = (Number(part.scanline.value)).toFixed(3);
+    partOut.vignette.textContent = (Number(part.vignette.value)).toFixed(2);
+    partOut.topoSpeed.textContent = (Number(part.topoSpeed.value)).toFixed(2);
   }
 
   part.override.addEventListener('change', () => {
@@ -317,11 +317,11 @@ ensurePanel();
       };
 
       function pushVN() {
-        const VN = window.VelocityNetwork;
-        if (!VN) return;
-        if (vnet.enabled.checked) VN.enable(); else VN.disable();
-        VN.setOpacity(+vnet.opacity.value);
-        vnOut.opacity.textContent = (+vnet.opacity.value).toFixed(2);
+        const velocityNet = window.VelocityNetwork;
+        if (!velocityNet) return;
+        if (vnet.enabled.checked) velocityNet.enable(); else velocityNet.disable();
+        velocityNet.setOpacity(Number(vnet.opacity.value));
+        vnOut.opacity.textContent = (Number(vnet.opacity.value)).toFixed(2);
       }
 
       vnet.enabled.addEventListener('change', pushVN);
@@ -382,8 +382,8 @@ ensurePanel();
           ramp: rampMap[thm.ramp.value] || rampMap.default,
         });
         thOut.radius.textContent = thm.radius.value;
-        thOut.decay.textContent = (+thm.decay.value).toFixed(2);
-        thOut.density.textContent = (+thm.density.value).toFixed(2);
+        thOut.decay.textContent = (Number(thm.decay.value)).toFixed(2);
+        thOut.density.textContent = (Number(thm.density.value)).toFixed(2);
       }
 
       thm.enabled.addEventListener('change', () => {
@@ -407,11 +407,11 @@ ensurePanel();
   /* ── Export ─────────────────────────────────── */
   getEl('dev-export').addEventListener('click', () => {
     const val = (id) => {
-      const el = getEl(id);
-      if (!el) return null;
-      if (el.type === 'checkbox') return el.checked;
-      if (el.type === 'range' || el.type === 'number') return +el.value;
-      return el.value;
+      const fieldEl = getEl(id);
+      if (!fieldEl) return null;
+      if (fieldEl.type === 'checkbox') return fieldEl.checked;
+      if (fieldEl.type === 'range' || fieldEl.type === 'number') return +fieldEl.value;
+      return fieldEl.value;
     };
     const settings = {
       topo: {
