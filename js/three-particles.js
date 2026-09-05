@@ -396,7 +396,10 @@ void main(){
   const mv = (x, y) => { mouse.x = (x / W()) * 2 - 1; mouse.y = -(y / H()) * 2 + 1; mouse.active = true; };
   window.addEventListener('mousemove', e => mv(e.clientX, e.clientY));
   window.addEventListener('mouseout', () => { mouse.active = false; });
-  window.addEventListener('touchmove', e => { e.preventDefault(); mv(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+  // Passive touch tracking for the hover field only. Deliberately never
+  // preventDefault here: a window-level cancel kills native page scroll on
+  // touch devices. (Terminal-buffer touch scroll is synthesized in terminal.js.)
+  window.addEventListener('touchmove', e => { const t = e.touches[0]; if (t) mv(t.clientX, t.clientY); }, { passive: true });
   window.addEventListener('touchend', () => { mouse.active = false; });
 
   const modeW = new THREE.Vector4(1, 0, 0, 0);

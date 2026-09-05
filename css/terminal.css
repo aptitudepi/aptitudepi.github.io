@@ -129,6 +129,9 @@
 .terminal-body, .terminal-body * { scrollbar-width: none; -ms-overflow-style: none; }
 .terminal-body::-webkit-scrollbar,
 .terminal-body ::-webkit-scrollbar { display: none; }
+/* Touch owns vertical drags inside the terminal (buffer scroll is
+   synthesized in terminal.js); the browser must not also scroll/zoom. */
+#terminal-container { touch-action: none; }
 
 /* Thermal canvas transparent */
 #thermal-ascii {
@@ -147,6 +150,7 @@
     padding: 12px;
   }
   .terminal-column {
+    min-width: 0;
     max-height: 60vh;
   }
 }

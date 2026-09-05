@@ -211,6 +211,29 @@ function createTerminal(container) {
   });
   ro.observe(container);
 
+  // Touch-scroll fallback for the terminal buffer: xterm 6.0.0 broke native
+  // touch scrolling upstream, and its canvas absorbs touches before any
+  // viewport handler sees them — so translate single-finger drags here.
+  // Multi-touch bails (native pinch preserved); sub-8px taps pass through
+  // untouched so focus/click still work. Remove if upgrading past the fix.
+  {
+    let touchY = null;
+    const rowH = () => (container.clientHeight || 1) / Math.max(1, term.rows);
+    container.addEventListener('touchstart', e => {
+      touchY = e.touches.length === 1 ? e.touches[0].clientY : null;
+    }, { passive: true });
+    container.addEventListener('touchmove', e => {
+      if (touchY === null || e.touches.length !== 1) { touchY = null; return; }
+      const dy = touchY - e.touches[0].clientY;
+      if (Math.abs(dy) >= rowH()) {
+        term.scrollLines(-Math.round(dy / rowH()));
+        touchY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+    container.addEventListener('touchend', () => { touchY = null; });
+    container.addEventListener('touchcancel', () => { touchY = null; });
+  }
+
   term.onData(handleInput);
 
   return term;
