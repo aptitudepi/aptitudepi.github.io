@@ -23,7 +23,7 @@ export const RAMP_BENGALI = ' দবদ্দব্দব্বদ্বদ্�
 // Mixed shimmer ramp: blank, then alternating block-shade / braille-dot /
 // Bengali steps (░ ⠁ দ ▒ ব ▓) with the dba ligature as the finale. Like
 // RAMP_BENGALI, the finale is multi-unit — index only via segmentRamp().
-export const RAMP_MIXED = ' ░⠁দ▒ব▓দ্ব';
+export const RAMP_MIXED = ' ░দ▒ব▓দ্ব';
 
 // Split a ramp string into visual graphemes (one entry per rendered unit)
 // so multi-unit ligatures are never split. Intl.Segmenter keeps each
