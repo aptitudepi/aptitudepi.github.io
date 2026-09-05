@@ -71,6 +71,16 @@
 .terminal-body .xterm-viewport::-webkit-scrollbar {
   display: none;
 }
+/* xterm 6: scrolling moved into VS Code's DomScrollableElement, whose
+   `.scrollbar` is real divs — native `::-webkit-scrollbar` rules cannot
+   hide it. Size the new wrapper with everything else and hide its slider. */
+.terminal-body .xterm-scrollable-element {
+  height: 100%;
+  width: 100%;
+}
+.terminal-body .xterm-scrollable-element > .scrollbar {
+  display: none !important;
+}
 .terminal-body .xterm-screen {
   width: 100% !important;
   background: transparent !important;
@@ -143,7 +153,7 @@
 
 /* Thought orb, shown while the local model loads and while it generates. It
    lives inside an xterm decoration (js/orb.js), which owns the positioning and
-   the stacking — the rows it sits on are part of the buffer, so it scrolls with
+   stacking — the rows it sits on are part of the buffer, so it scrolls with
    the output like any other line. */
 .thinking-orb {
   display: block;
@@ -178,5 +188,3 @@
     translate: none;
   }
 }
-
-

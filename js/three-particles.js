@@ -389,6 +389,7 @@ void main(){
   _topoCanvas.width = 256; _topoCanvas.height = 256;
   const _topoCtx = _topoCanvas.getContext('2d', { willReadFrequently: true });
   let _pxBuf = null;
+  let _fBuf = null;
 
   const mouse = { x: 0, y: 0, active: false };
   let hP = 0;
@@ -433,11 +434,18 @@ void main(){
       _topoCanvas.width = pw; _topoCanvas.height = ph;
     }
     const len = pw * ph * 4;
+    // postOut is RGBA16F: RGBA/UNSIGNED_BYTE readback is invalid (GL error,
+    // buffer left untouched). RGBA/FLOAT is the spec-required baseline.
+    if (!_fBuf || _fBuf.length < len) _fBuf = new Float32Array(len);
     if (!_pxBuf || _pxBuf.length < len) _pxBuf = new Uint8Array(len);
     const gl = R.getContext();
     R.setRenderTarget(postOut);
-    gl.readPixels(0, 0, pw, ph, gl.RGBA, gl.UNSIGNED_BYTE, _pxBuf);
+    gl.readPixels(0, 0, pw, ph, gl.RGBA, gl.FLOAT, _fBuf);
     R.setRenderTarget(null);
+    for (let i = 0; i < len; i++) {
+      const v = _fBuf[i] * 255;
+      _pxBuf[i] = v < 0 ? 0 : (v > 255 ? 255 : v);
+    }
     const img = _topoCtx.createImageData(pw, ph);
     const row = pw * 4;
     for (let y = 0; y < ph; y++) {

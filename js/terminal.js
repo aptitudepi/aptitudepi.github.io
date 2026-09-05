@@ -62,12 +62,12 @@ function applyCompletionList(activeTerm, candidates, completeBase) {
   if (prefixLen > completeBase.length) {
     const common = candidates[0].slice(completeBase.length, prefixLen);
     for (const ch of common) { inputBuffer += ch; activeTerm.write(ch); }
-    return true;
+  } else {
+    term.write('\r\n');
+    candidates.forEach(c => activeTerm.writeln(`${SITE_FAINT}${c}${ANSI_RESET}`));
+    writePrompt(activeTerm);
+    term.write(inputBuffer);
   }
-  activeTerm.write('\r\n');
-  candidates.forEach(c => activeTerm.writeln(`${SITE_FAINT}${c}${ANSI_RESET}`));
-  writePrompt(activeTerm);
-  activeTerm.write(inputBuffer);
   return true;
 }
 
@@ -198,6 +198,12 @@ function createTerminal(container) {
     fitAddon = new FA();
     term.loadAddon(fitAddon);
     try { fitAddon.fit(); } catch (_) {}
+  }
+
+  // Refit once webfonts arrive: measuring with the fallback font
+  // under-reports cell width and permanently narrows the terminal.
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => { if (fitAddon) try { fitAddon.fit(); } catch (_) {} });
   }
 
   const ro = new ResizeObserver(() => {
