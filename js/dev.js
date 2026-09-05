@@ -4,12 +4,12 @@
 // value to the TopoField via setOptions({ color }). The sync rAF loop
 // is the only source of frames — no double loop, no idle wake-ups.
 //
-// Exposes window.TopoDev for the dev.html sidebar (setOptions, setSync,
+// Exposes window.TopoDev for the dev sidebar (devmode) (setOptions, setSync,
 // destroy). On the production site the panel is absent and the module
 // just runs the sync silently.
 
 const TAG = '[topo]';
-const DEV = Boolean(document.getElementById('dev-panel')); // only log on dev.html
+const DEV = Boolean(document.getElementById('dev-panel')); // only log when #dev-panel pre-exists at load
 function noop() { /* silence */ }
 const log = DEV ? console.log.bind(console, TAG) : noop;
 let topo = null;
@@ -129,7 +129,7 @@ function tickColorSync() {
   }
 }
 
-/* ── Public API for dev.html sidebar ────────── */
+/* ── Public API for dev sidebar (devmode) ────────── */
 
 window.TopoDev = {
   /** Merge arbitrary TopolinesOptions into the live field. */

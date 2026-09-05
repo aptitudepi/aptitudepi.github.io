@@ -561,7 +561,7 @@ void main(){
     displayHz = knownHz.reduce((a, b) => Math.abs(b - hz) < Math.abs(a - hz) ? b : a);
     perf.onChange(applyQuality); // fires immediately with the current quality
 
-    /* ── Dev API — exposed for dev.html sidebar ──── */
+    /* ── Dev API — exposed for dev sidebar (devmode) ──── */
     window.ParticleDev = {
       /* Expose internals for velocity-network and topo wiring */
       getRenderer() { return R; },

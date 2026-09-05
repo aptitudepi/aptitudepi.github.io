@@ -1,0 +1,94 @@
+/* ── Dev sidebar ─────────────────────────── */
+#dev-panel {
+  position: fixed;
+  right: 0; top: 0; bottom: 0;
+  width: 360px;
+  min-width: 240px;
+  max-width: 560px;
+  resize: horizontal;
+  background: var(--color-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-left: 1px solid var(--color-border);
+  padding: 1rem;
+  overflow-y: auto;
+  z-index: 10000;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-text);
+}
+#dev-panel h3 {
+  font-family: var(--font-display);
+  margin: 0 0 0.5rem 0;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+}
+.dev-section {
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+}
+.dev-section:first-child {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+.dev-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+}
+.dev-row label {
+  min-width: 90px;
+  flex-shrink: 0;
+  color: var(--color-text-faint);
+  font-size: 0.75rem;
+}
+.dev-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--color-primary, #00f);
+}
+.dev-row output {
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  font-size: 0.75rem;
+}
+.dev-row input[type="checkbox"] {
+  width: 1rem; height: 1rem;
+  accent-color: var(--color-primary, #00f);
+}
+.dev-row input[type="color"] {
+  width: 2rem; height: 1.5rem;
+  border: 1px solid var(--color-border);
+  background: none;
+  cursor: pointer;
+}
+.dev-row input:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.dev-note {
+  font-size: 0.65rem;
+  color: var(--color-text-faint);
+  margin-top: 0.75rem;
+  line-height: 1.4;
+}
+/* Dev panel dismiss (index integration; dev.html had no close affordance). */
+.dev-close {
+  float: right;
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-faint);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0.3rem 0.55rem;
+  cursor: pointer;
+}
+.dev-close:hover { color: var(--color-text); border-color: var(--color-text-faint); }

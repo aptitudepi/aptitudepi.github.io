@@ -457,7 +457,7 @@ function levenshtein(a, b) {
   return dp[m][n];
 }
 
-const COMMANDS = ['whoami', 'hostname', 'date', 'uptime', 'uname', 'pwd', 'cat', 'ls', 'echo', 'clear', 'neofetch', 'resfetch', 'about', 'fortune', 'cowsay', 'help', 'matrix', 'vm', 'ai', 'ai-models', 'ai-model', 'ai-memory', 'history', 'crt', 'noise', 'weather', 'hn', 'md', 'wall', 'cv', 'search', 'google', 'ddg', 'myip', 'ping'];
+const COMMANDS = ['whoami', 'hostname', 'date', 'uptime', 'uname', 'pwd', 'cat', 'ls', 'echo', 'clear', 'neofetch', 'resfetch', 'about', 'fortune', 'cowsay', 'help', 'matrix', 'vm', 'ai', 'ai-models', 'ai-model', 'ai-memory', 'history', 'crt', 'noise', 'weather', 'hn', 'md', 'wall', 'cv', 'search', 'google', 'ddg', 'myip', 'ping', 'devmode'];
 
 function suggestCommand(input) {
   let best = null, bestDist = Infinity;
@@ -589,6 +589,7 @@ function helpText(term) {
     ['ai-model <id>', 'Switch AI model (0-5)'],
     ['ai-memory', 'Show AI assistant conversation memory'],
     ['help', 'Show this help'],
+    ['devmode', 'Toggle developer sidebar'],
   ];
   term.writeln(`${ANSI_BOLD}${SITE_WHITE}Available commands${ANSI_RESET}`);
   term.writeln(`${SITE_MUTED}────────────────────${ANSI_RESET}`);
@@ -1046,6 +1047,16 @@ function executeCommand(input, term) {
     case 'ai':
     case 'llm':
       generateOutput(args.join(' '), term).then(() => writePrompt(term));
+      return;
+    case 'devmode':
+      term.writeln(`${SITE_MUTED}Loading dev panel…${ANSI_RESET}`);
+      import('./devtools.js').then((devtools) => {
+        devtools.toggleDevPanel();
+        writePrompt(term);
+      }).catch((err) => {
+        term.writeln(`${SITE_ERR}Failed to load dev panel: ${err.message}${ANSI_RESET}`);
+        writePrompt(term);
+      });
       return;
     case 'ai-models':
       showModelSelector(term);
