@@ -102,7 +102,9 @@ function init() {
   // Dev page owns its thermal instance via the sidebar (init + re-init +
   // destroy); skip the shared init there so two loops never drive one canvas.
   if (thermalCanvas && !document.getElementById('dev-panel')) {
-    initThermalAscii(thermalCanvas, { art: ASCII_ART, ramp: RAMP_BENGALI });
+    // Stashed for devtools: opening devmode destroys this loop so only one
+    // driver paints the canvas (see toggleDevPanel thermal wiring).
+    window.__mainThermal = initThermalAscii(thermalCanvas, { art: ASCII_ART, ramp: RAMP_BENGALI });
   }
 
   // Subscribe to universal reactive store

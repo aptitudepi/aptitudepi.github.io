@@ -349,6 +349,9 @@ ensurePanel();
     function waitForCanvas() {
       const canvas = document.getElementById('thermal-ascii');
       if (!canvas) { requestAnimationFrame(waitForCanvas); return; }
+      // main.js owns a loop on this canvas until devmode takes over — retire
+      // it once so slider-driven re-inits are the sole painter afterwards.
+      if (window.__mainThermal) { window.__mainThermal.destroy(); window.__mainThermal = null; }
       let thermal = initThermalAscii(canvas, { art: ASCII_ART });
 
       const thm = {
@@ -364,23 +367,26 @@ ensurePanel();
         density: getEl('dev-thermal-density-v'),
       };
 
-      function pushThermal() {
-        if (!thermal) return;
-        // Re-init with new options
-        thermal.destroy();
-        const rampMap = {
+      const rampMap = {
           default: " `.:-=+*cs#%@",
           blocks: "░▒▓█",
           braille: "⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋",
           bengali: " দবদ্দব্দব্বদ্বদ্ব",
           mixed: " ░দ▒ব▓দ্ব",
         };
-        thermal = initThermalAscii(document.getElementById('thermal-ascii'), {
+      function thermalOptions() {
+        return {
           art: ASCII_ART,
           heatRadius: Number(thm.radius.value),
           heatDecay: Number(thm.decay.value),
           ramp: rampMap[thm.ramp.value] || rampMap.default,
-        });
+        };
+      }
+      function pushThermal() {
+        if (!thermal) return;
+        // Re-init with new options
+        thermal.destroy();
+        thermal = initThermalAscii(document.getElementById('thermal-ascii'), thermalOptions());
         thOut.radius.textContent = thm.radius.value;
         thOut.decay.textContent = (Number(thm.decay.value)).toFixed(2);
         thOut.density.textContent = (Number(thm.density.value)).toFixed(2);
@@ -391,7 +397,7 @@ ensurePanel();
           thermal?.destroy();
           thermal = null;
         } else {
-          pushThermal();
+          thermal = initThermalAscii(document.getElementById('thermal-ascii'), thermalOptions());
         }
       });
       Object.values(thm).forEach(inp => {
