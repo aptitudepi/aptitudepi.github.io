@@ -46,6 +46,7 @@ const PANEL_HTML = `<div id="dev-panel" hidden>
     <div class="dev-row"><label>Topo speed</label><input type="range" id="dev-p-topo-speed" min="0.01" max="1" step="0.01" value="0.25"><output id="dev-p-topo-speed-v">0.25</output></div>
     <div class="dev-row"><label>Quality</label><input type="range" id="dev-p-quality" min="0" max="1" step="0.01" value="1" disabled><output id="dev-p-quality-v">auto</output></div>
     <div class="dev-row"><label>Override</label><input type="checkbox" id="dev-p-override"></div>
+    <div class="dev-row"><label>Quality tier</label><select id="dev-p-quality-tier"><option value="auto" selected>Auto</option><option value="ultra">Ultra</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select><output id="dev-p-quality-src">auto</output></div>
   </div>
 
   <h3>Velocity Network</h3>
@@ -84,8 +85,8 @@ const PANEL_HTML = `<div id="dev-panel" hidden>
     <b>Acrylic</b>: patches <code>backdrop-filter</code> and glass CSS vars on
     <code>#app</code>, <code>.hero-shell</code>, <code>.doc-nav</code>,
     <code>.spotlight-card</code>, <code>.footer</code>.<br>
-    <b>Particles</b>: "Override" lets you pin quality manually; uncheck to
-    resume auto-scaling.<br>
+    <b>Particles</b>: "Override" pins a raw quality value; "Quality tier"
+    pins a tier (Auto + 4, persisted). ?quality= URL wins over both.<br>
     <b>Velocity Network</b>: connects particles with similar velocity directions.<br>
     <b>Thermal ASCII</b>: full-color braille headshot (106×55) that SCRAMBLES and
     flares toward the site's live <code>--nav-cycle</code> color under the cursor
@@ -227,6 +228,7 @@ ensurePanel();
     topoSpeed:getEl('dev-p-topo-speed'),
     quality:  getEl('dev-p-quality'),
     override: getEl('dev-p-override'),
+    tier:     getEl('dev-p-quality-tier'),
   };
   const partOut = {
     count:    getEl('dev-p-count-v'),
@@ -239,13 +241,15 @@ ensurePanel();
     vignette: getEl('dev-p-vignette-v'),
     topoSpeed:getEl('dev-p-topo-speed-v'),
     quality:  getEl('dev-p-quality-v'),
+    qualitySrc: getEl('dev-p-quality-src'),
   };
 
   // Sliders the user actually dragged. pushParticles() only pushes touched
   // sliders: a blanket push of every slider would pin all manual flags (see
   // three-particles.js) and snap a stepped-down scene back to the slider
   // maxima on panel open. Untouched sliders stay on the auto ladder; the
-  // quality-override branch below is checkbox-state driven and always applies.
+  // quality tier select and override checkbox are touched-gated the same way
+  // (untouched = mirror live state into the select, push nothing).
   const touchedInputs = new Set();
 
   function pushParticles() {
@@ -264,12 +268,44 @@ ensurePanel();
     if (touchedInputs.has('dev-p-sync-topo')) PDev.setSyncTopo(part.syncTopo.checked);
     if (touchedInputs.has('dev-p-topo-speed')) PDev.setTopoSpeed(Number(part.topoSpeed.value));
 
-    if (part.override.checked) {
-      PDev.setQualityOverride(Number(part.quality.value));
+    // Quality pushes are touched-gated too (no-jump on open): the tier select
+    // and the override checkbox only push after explicit interaction. Opening
+    // the panel syncs the select from live state (below) without pushing, so
+    // a stepped-down scene or a stored pin is never snapped back.
+    const tierTouched = touchedInputs.has('dev-p-quality-tier');
+    const overrideTouched = touchedInputs.has('dev-p-override') || touchedInputs.has('dev-p-quality');
+    const tierPinned = tierTouched && part.tier.value !== 'auto';
+    if (tierPinned) {
+      PDev.setQualityTier(part.tier.value);
+      part.override.checked = false;
+      part.quality.disabled = true;
+    } else if (overrideTouched) {
+      if (tierTouched) PDev.setQualityTier('auto');
+      if (part.override.checked) {
+        PDev.setQualityOverride(Number(part.quality.value));
+      } else {
+        PDev.setQualityOverride(null);
+      }
+    } else if (typeof PDev.getQualityTier === 'function') {
+      // Untouched: mirror live state into the select (covers late particle
+      // boot and URL/stored pins) without pushing anything back.
+      const liveTier = PDev.getQualityTier();
+      part.tier.value = liveTier || 'auto';
+      part.quality.disabled = !part.override.checked || liveTier !== null;
+    }
+
+    // Readouts always reflect live state, pushed or not.
+    if (typeof PDev.getQualityTier === 'function' && PDev.getQualityTier()) {
+      partOut.quality.textContent = PDev.getQualityTier();
+    } else if (part.override.checked) {
       partOut.quality.textContent = (Number(part.quality.value)).toFixed(2);
     } else {
-      PDev.setQualityOverride(null);
       partOut.quality.textContent = 'auto';
+    }
+    if (typeof PDev.getOverrideSource === 'function') {
+      partOut.qualitySrc.textContent = PDev.getOverrideSource();
+    } else {
+      partOut.qualitySrc.textContent = 'auto';
     }
 
     partOut.count.textContent    = part.count.value;
@@ -284,8 +320,20 @@ ensurePanel();
   }
 
   part.override.addEventListener('change', () => {
+    // Mutual exclusion with the tier select: a raw override yields the tier
+    // pin (select back to Auto, released to the untouched pool).
+    if (part.override.checked && part.tier.value !== 'auto') {
+      part.tier.value = 'auto';
+      touchedInputs.delete('dev-p-quality-tier');
+    }
     part.quality.disabled = !part.override.checked;
     pushParticles();
+  });
+
+  // Tier select owns the manual pin while set: unchecks the raw override so
+  // the two never fight (the generic loop below marks touched + pushes).
+  part.tier.addEventListener('change', () => {
+    if (part.tier.value !== 'auto') part.override.checked = false;
   });
 
   Object.values(part).forEach(inp => {
@@ -466,6 +514,7 @@ ensurePanel();
         rainbow:  val('dev-p-rainbow'),
         syncTopo: val('dev-p-sync-topo'),
         topoSpeed:val('dev-p-topo-speed'),
+        qualityTier: val('dev-p-quality-tier'),
       },
       vnet: {
         enabled: val('dev-vn-enabled'),

@@ -154,6 +154,9 @@ function initParticles() {
   // Overlay visibility: skip the density feed while the topo host is
   // off-screen (IntersectionObserver flips this; defaults to visible).
   let topoOnScreen = true;
+  // Particle GL context state (phase 3): lost → frame() stops rescheduling;
+  // restored → onResize() rebuilds targets and the loop restarts.
+  let particleContextLost = false;
 
   window.addEventListener('scroll', () => { scrollOffset = window.scrollY; }, { passive: true });
 
@@ -166,6 +169,11 @@ function initParticles() {
   R.setPixelRatio(PR);
   R.setSize(W(), H());
   R.autoClear = false;
+  // Phase-3 telemetry owns the info counters: with autoReset the totals reset
+  // on every render() call (a frame does five), so the 1Hz sampler would only
+  // ever see the final blit pass. Manual reset once per frame() keeps true
+  // per-frame totals for the sampler below.
+  R.info.autoReset = false;
 
   // Map the shared quality scalar to this system's knobs (hybrid §7: the
   // discrete tier owns the structural knobs, the continuous scalar keeps
@@ -266,6 +274,13 @@ function initParticles() {
       applyTierCount(tierEntry);
       applyTierPost(tierEntry);
       applyTierDpr(qualityValue, tierEntry);
+    }
+    // Tier-change breadcrumb for the 1Hz sampler below: rare (tier moves at
+    // most once per quality bucket), never per-frame.
+    if (tierIndex !== currentTierIndex && currentTierIndex !== -1) {
+      const prevTierName = TIER_NAMES[currentTierIndex] || 'unknown';
+      const nextTierName = TIER_NAMES[tierIndex] || 'unknown';
+      console.debug(`[particles] tier ${prevTierName} → ${nextTierName} at quality ${qualityValue.toFixed(2)}`);
     }
     currentTierIndex = tierIndex;
 
@@ -641,8 +656,15 @@ void main(){
   let prevT = 0, ever = false;
 
   function frame(ts) {
+    // Context lost: stop rescheduling entirely; the restored handler below
+    // rebuilds targets and restarts the loop.
+    if (particleContextLost) return;
     if (ts - lastFrameTime < targetInterval - 1) { requestAnimationFrame(frame); return; }
     lastFrameTime = ts;
+    // Reset the render counters once per drawn frame (see autoReset note at
+    // renderer creation): skipped gate frames keep the last totals, which is
+    // exactly what the 1Hz sampler should report.
+    R.info.reset();
 
     const t = clock.getElapsedTime();
     currentT = t;
@@ -741,6 +763,75 @@ void main(){
     requestAnimationFrame(frame);
   }
 
+  // Phase-3 1Hz telemetry: snapshot renderer.info (calls/triangles/points/
+  // lines + memory geometries/textures) about once a second for downgrade
+  // diagnosis and the optional debug overlay. Telemetry-only by design (never
+  // into the control loop — feedback risk); no JSON/stringify in frame().
+  const samplerSnapshot = {
+    calls: 0, triangles: 0, points: 0, lines: 0,
+    geometries: 0, textures: 0, tier: 'unknown', quality: 1, updatedAt: 0,
+  };
+  // Optional on-screen HUD: created only for ?perfhud (any value) or
+  // localStorage perf.hud === '1'; otherwise sampling stays headless and the
+  // snapshot is readable via ParticleDev.getStats().
+  function ensurePerfHud() {
+    try {
+      let hudWanted = false;
+      if (typeof window !== 'undefined' && window.location) {
+        hudWanted = new URLSearchParams(window.location.search).has('perfhud');
+      }
+      if (!hudWanted && typeof window !== 'undefined' && window.localStorage) {
+        hudWanted = window.localStorage.getItem('perf.hud') === '1';
+      }
+      if (!hudWanted) return null;
+      const existingHud = document.getElementById('perf-hud');
+      if (existingHud) return existingHud;
+      const hudNode = document.createElement('div');
+      hudNode.id = 'perf-hud';
+      hudNode.setAttribute('style', 'position:fixed;left:8px;bottom:8px;z-index:9999;font:11px/1.5 monospace;color:#0f0;background:rgba(0,0,0,.6);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre;');
+      document.body.appendChild(hudNode);
+      return hudNode;
+    } catch {
+      return null;
+    }
+  }
+  const perfHudNode = ensurePerfHud();
+  function sampleRendererInfo() {
+    try {
+      const renderInfo = R.info;
+      if (!renderInfo || !renderInfo.render || !renderInfo.memory) return;
+      samplerSnapshot.calls = renderInfo.render.calls;
+      samplerSnapshot.triangles = renderInfo.render.triangles;
+      samplerSnapshot.points = renderInfo.render.points;
+      samplerSnapshot.lines = renderInfo.render.lines;
+      samplerSnapshot.geometries = renderInfo.memory.geometries;
+      samplerSnapshot.textures = renderInfo.memory.textures;
+      samplerSnapshot.tier = TIER_NAMES[currentTierIndex] || 'unknown';
+      samplerSnapshot.quality = perf.quality();
+      samplerSnapshot.updatedAt = Date.now();
+      if (perfHudNode) {
+        perfHudNode.textContent = `q ${samplerSnapshot.quality.toFixed(2)} ${samplerSnapshot.tier} calls ${samplerSnapshot.calls} tris ${samplerSnapshot.triangles} pts ${samplerSnapshot.points} geo ${samplerSnapshot.geometries} tex ${samplerSnapshot.textures}`;
+      }
+    } catch {
+      return;
+    }
+  }
+  window.setInterval(sampleRendererInfo, 1000);
+
+  // Particle-context lost/restored (phase 3): topo already handles its own
+  // context (topolines.global.js); these cover the particle context. Lost →
+  // cancel into the flag (frame() stops); restored → rebuild targets, re-warm.
+  canvas.addEventListener('webglcontextlost', function handleParticleContextLost(lostEvent) {
+    lostEvent.preventDefault();
+    particleContextLost = true;
+  });
+  canvas.addEventListener('webglcontextrestored', function handleParticleContextRestored() {
+    onResize();
+    particleContextLost = false;
+    lastFrameTime = 0;
+    requestAnimationFrame(frame);
+  });
+
   // Learn the display's refresh rate once, seed the quality-driven knobs, then
   // let perf.onChange keep them in step with the live quality scalar. The FPS
   // cap is min(displayHz, quality-cap), so a 240Hz panel on a weak GPU still
@@ -784,15 +875,45 @@ void main(){
       setRainbow(on) { uRainbow = on ? 1 : 0; },
       isRainbow() { return uRainbow > 0.5; },
       getQuality() { return perf.quality(); },
+      // Phase-3 tier override: perf pins the scalar and the live loop goes
+      // inert (manual = fixed tier, scaler disabled); the single onChange
+      // subscription stays put — no unsubscribe/resubscribe juggling, so the
+      // phase-0 leak fix holds by construction.
+      setQualityTier(tierToken) {
+        const appliedTier = perf.setTierOverride(tierToken, 'sidebar');
+        applyQuality(perf.quality());
+        return appliedTier;
+      },
+      getQualityTier() { return perf.getTier(); },
+      getOverrideSource() { return perf.getOverrideSource(); },
+      isManualQuality() { return perf.isManual(); },
+      // 1Hz telemetry snapshot (calls/triangles/points/lines + memory);
+      // returned copy keeps the sampler free of per-frame allocation.
+      getStats() {
+        return {
+          calls: samplerSnapshot.calls,
+          triangles: samplerSnapshot.triangles,
+          points: samplerSnapshot.points,
+          lines: samplerSnapshot.lines,
+          geometries: samplerSnapshot.geometries,
+          textures: samplerSnapshot.textures,
+          tier: samplerSnapshot.tier,
+          quality: samplerSnapshot.quality,
+          updatedAt: samplerSnapshot.updatedAt,
+        };
+      },
       setQualityOverride(overrideValue) {
         if (overrideValue === null) {
-          // Restore auto without stacking listeners: drop the current
-          // subscription first, then re-subscribe (fires immediately).
-          if (qualityUnsub) qualityUnsub();
-          qualityUnsub = perf.onChange(applyQuality);
+          // Resume: sidebar yields to URL/stored pins when present, else auto.
+          // The single subscription is retained (never dropped), so there is
+          // nothing to re-subscribe — the leak fix holds by construction.
+          perf.setTierOverride('auto', 'sidebar');
+          if (!qualityUnsub) qualityUnsub = perf.onChange(applyQuality);
         } else {
-          applyQuality(Math.max(0, Math.min(1, overrideValue)));
+          // Numeric slider pin: perf holds the scalar, scaler inert.
+          perf.pinQuality(overrideValue, 'sidebar');
         }
+        applyQuality(perf.quality());
       },
       /* Particle size — multiplier on the computed uPS (default ~1.0).
          Pins the size knob: the density ladder stops touching uPS until
