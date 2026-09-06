@@ -382,27 +382,43 @@ ensurePanel();
           ramp: rampMap[thm.ramp.value] || rampMap.default,
         };
       }
+      let activeRampKey = `default`;
       function pushThermal() {
-        if (!thermal) return;
-        // Re-init with new options
-        thermal.destroy();
-        thermal = initThermalAscii(document.getElementById('thermal-ascii'), thermalOptions());
+        // Labels first so sliders read live even when the instance is off.
         thOut.radius.textContent = thm.radius.value;
-        thOut.decay.textContent = (Number(thm.decay.value)).toFixed(2);
-        thOut.density.textContent = (Number(thm.density.value)).toFixed(2);
+        thOut.decay.textContent = Number(thm.decay.value).toFixed(2);
+        thOut.density.textContent = Number(thm.density.value).toFixed(2);
+        if (!thermal) return;
+        // Live setters: no destroy + re-init, heat is preserved per tick.
+        if (typeof thermal.setHeatRadius === `function`) thermal.setHeatRadius(Number(thm.radius.value));
+        if (typeof thermal.setHeatDecay === `function`) thermal.setHeatDecay(Number(thm.decay.value));
+        if (typeof thermal.setDensity === `function`) thermal.setDensity(Number(thm.density.value));
+        const nextRampKey = thm.ramp.value;
+        if (nextRampKey !== activeRampKey) {
+          activeRampKey = nextRampKey;
+          const nextRamp = rampMap[nextRampKey] || rampMap.default;
+          if (typeof thermal.setRamp === `function`) thermal.setRamp(nextRamp);
+          // Centre pulse so the new ramp reads without needing a hover first.
+          if (typeof thermal.pulseCenter === `function`) thermal.pulseCenter();
+        }
       }
 
       thm.enabled.addEventListener('change', () => {
         if (!thm.enabled.checked) {
-          thermal?.destroy();
-          thermal = null;
-        } else {
+          if (thermal) {
+            thermal.destroy();
+            thermal = null;
+          }
+        } else if (!thermal) {
           thermal = initThermalAscii(document.getElementById('thermal-ascii'), thermalOptions());
+          pushThermal();
         }
       });
-      Object.values(thm).forEach(inp => {
-        inp.addEventListener('input', pushThermal);
-        inp.addEventListener('change', pushThermal);
+      // Enabled has its dedicated toggle above; the generic loop covers only
+      // the live sliders + ramp select (single-init on re-enable, no double).
+      [thm.radius, thm.decay, thm.density, thm.ramp].forEach((sliderInput) => {
+        sliderInput.addEventListener('input', () => { pushThermal(); });
+        sliderInput.addEventListener('change', () => { pushThermal(); });
       });
 
       pushThermal();

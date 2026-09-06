@@ -165,7 +165,7 @@ export function parseAnsiArt(artLines) {
 }
 
 export function initThermalAscii(canvas, options = {}) {
-  const {
+  let {
     fontPx = 11,
     cellWidthRatio = 0.6,
     cellHeightRatio = 1.163,
@@ -179,7 +179,7 @@ export function initThermalAscii(canvas, options = {}) {
 
   // Grapheme steps for the active ramp (see RAMP_BENGALI note above): one
   // entry per rendered unit, so conjuncts stay whole when indexed below.
-  const rampGlyphs = segmentRamp(ramp);
+  let rampGlyphs = segmentRamp(ramp);
 
   const ctx = canvas.getContext("2d");
   if (!ctx) {
@@ -399,6 +399,70 @@ export function initThermalAscii(canvas, options = {}) {
   }
   function onResize() { layout(); ensureLoop(); }
 
+  // Live setters for the dev sidebar (devtools.js pushThermal): mutate the
+  // running instance WITHOUT destroy + re-init so heat is preserved and
+  // sliders read live. Guards clamp to the sidebar slider ranges.
+  function setHeatRadius(nextRadius) {
+    const parsedRadius = Number(nextRadius);
+    if (!Number.isFinite(parsedRadius)) return;
+    heatRadius = Math.min(8, Math.max(1, Math.round(parsedRadius)));
+  }
+
+  function setHeatDecay(nextDecay) {
+    const parsedDecay = Number(nextDecay);
+    if (!Number.isFinite(parsedDecay)) return;
+    heatDecay = Math.min(0.99, Math.max(0.5, parsedDecay));
+  }
+
+  function setHeatThreshold(nextThreshold) {
+    const parsedThreshold = Number(nextThreshold);
+    if (!Number.isFinite(parsedThreshold)) return;
+    heatThreshold = Math.min(0.2, Math.max(0.001, parsedThreshold));
+  }
+
+  // Base-density slider has no dedicated field concept in portrait mode (the
+  // sparse-noise density only seeds the fallback field at layout): map it
+  // inversely onto heatThreshold so higher density visibly spreads heat
+  // further (lower cutoff keeps fringe cells lit longer). Sidebar 0.3-0.7
+  // maps to 0.036-0.004, centred near the 0.02 default at 0.45.
+  function setDensity(nextDensity) {
+    const parsedDensity = Number(nextDensity);
+    if (!Number.isFinite(parsedDensity)) return;
+    const mappedThreshold = (0.75 - parsedDensity) * 0.08;
+    setHeatThreshold(mappedThreshold);
+  }
+
+  function setRamp(nextRamp) {
+    if (typeof nextRamp !== `string` || nextRamp.length === 0) return;
+    ramp = nextRamp;
+    rampGlyphs = segmentRamp(ramp);
+    staticLayer = createStaticLayer();
+    ensureLoop();
+  }
+
+  // Brief centre heat pulse so ramp/density changes read instantly on the
+  // idle portrait (the loop sleeps at rest, so a ramp select would otherwise
+  // look dead until the next hover). Subtle: peaks well below full flare.
+  function pulseCenter() {
+    if (!heat || heat.length === 0 || COLS <= 0 || ROWS <= 0) return;
+    const centerRow = (ROWS / 2) | 0;
+    const centerCol = (COLS / 2) | 0;
+    const pulseRadius = Math.max(1, heatRadius);
+    for (let rowOffset = -pulseRadius; rowOffset <= pulseRadius; rowOffset++) {
+      for (let colOffset = -pulseRadius; colOffset <= pulseRadius; colOffset++) {
+        const targetRow = centerRow + rowOffset;
+        const targetCol = centerCol + colOffset;
+        if (targetRow < 0 || targetRow >= ROWS || targetCol < 0 || targetCol >= COLS) continue;
+        const distSq = rowOffset * rowOffset + colOffset * colOffset;
+        if (distSq > pulseRadius * pulseRadius) continue;
+        const cellIdx = targetRow * COLS + targetCol;
+        const falloff = Math.exp(-distSq / 3);
+        heat[cellIdx] = Math.min(1, heat[cellIdx] + falloff * 0.6);
+      }
+    }
+    ensureLoop();
+  }
+
   layout();
   ensureLoop();
   canvas.addEventListener("mousemove", onMouse);
@@ -419,5 +483,11 @@ export function initThermalAscii(canvas, options = {}) {
       canvas.removeEventListener("touchmove", onTouch);
       window.removeEventListener("resize", onResize);
     },
+    setHeatRadius,
+    setHeatDecay,
+    setHeatThreshold,
+    setDensity,
+    setRamp,
+    pulseCenter,
   };
 }
