@@ -59,6 +59,10 @@ function parseColor(c) {
   return [d[0] / 255, d[1] / 255, d[2] / 255];
 }
 
+/* Reduced-motion query is declared up front: initTopolines consults it when
+   kicking the color-sync loop, so it must exist before first init runs. */
+const reduceMq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+
 function initTopolines() {
   log('initTopolines called, retry #', initTopolines._retries);
 
@@ -200,8 +204,6 @@ window.TopoDev = {
 };
 
 /* ── Reduced-motion ──────────────────────────── */
-
-const reduceMq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
 
 function onMotionChange() {
   if (reduceMq?.matches) {
