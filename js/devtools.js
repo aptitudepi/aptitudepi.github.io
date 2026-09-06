@@ -192,8 +192,8 @@ ensurePanel();
 
     GLASS_TARGETS.forEach(sel => {
       document.querySelectorAll(sel).forEach(el => {
-        el.style.backdropFilter = `blur(${blurPx}blurPx)`;
-        el.style.webkitBackdropFilter = `blur(${blurPx}blurPx)`;
+        el.style.backdropFilter = `blur(${blurPx}px)`;
+        el.style.webkitBackdropFilter = `blur(${blurPx}px)`;
       });
     });
 
@@ -202,7 +202,7 @@ ensurePanel();
     document.documentElement.style.setProperty('--color-glass-border',
       `oklch(0.2 0.02 260 / ${borderVal.toFixed(2)})`);
 
-    acrylicOut.blur.textContent       = `${blurPx}blurPx`;
+    acrylicOut.blur.textContent       = `${blurPx}px`;
     acrylicOut.glassAlpha.textContent  = glassVal.toFixed(2);
     acrylicOut.borderAlpha.textContent = borderVal.toFixed(2);
   }

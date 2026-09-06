@@ -14,8 +14,8 @@ function noop() { /* silence */ }
 const log = DEV ? console.log.bind(console, TAG) : noop;
 let topo = null;
 let lastColor = '';
-let syncEnabled = false;
-let syncSaturation = 0; // 0 = fixed glass, 1 = full colorcycle
+let syncEnabled = true;
+let syncSaturation = 0.25; // 0 = fixed glass, 1 = full colorcycle
 let rafId = 0;
 
 const DEFAULTS = {
@@ -23,8 +23,8 @@ const DEFAULTS = {
   speed: 0.05,
   scale: 3,
   levels: 30,
-  lineWidth: 1.2,
-  opacity: 0.11,
+  lineWidth: 0.5,
+  opacity: 0.10,
   color: '#C9B8E8',
   drift: [0.004, 0.002],
   warp: 0,
@@ -92,8 +92,16 @@ function initTopolines() {
     return;
   }
 
-  syncEnabled = false;
+  syncEnabled = true;
+  syncSaturation = 0.25;
   lastColor = '';
+  // Live boot matches the dev sidebar defaults (influence 1.00, sync on):
+  // influence is additive in the topo shader and a no-op until a particle
+  // canvas is wired, so pinning it here is safe even when particles boot late.
+  if (topo.setParticleInfluence) topo.setParticleInfluence(1);
+  const readyParticleCanvas = window.ParticleDev?.getParticleCanvas?.();
+  if (readyParticleCanvas && topo.setParticleTex) topo.setParticleTex(readyParticleCanvas);
+  if (!rafId && !reduceMq?.matches) tickColorSync();
 }
 initTopolines._retries = 0;
 

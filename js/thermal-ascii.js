@@ -171,7 +171,7 @@ export function initThermalAscii(canvas, options = {}) {
     cellHeightRatio = 1.163,
     heatRadius = 3,
     heatDecay = 0.93,
-    heatThreshold = 0.02,
+    heatThreshold = 0.024,
     ramp = RAMP,
     maxDpr = 2,
     art = null, // array of ANSI lines (shell.js ASCII_ART) — portrait mode
@@ -424,7 +424,7 @@ export function initThermalAscii(canvas, options = {}) {
   // sparse-noise density only seeds the fallback field at layout): map it
   // inversely onto heatThreshold so higher density visibly spreads heat
   // further (lower cutoff keeps fringe cells lit longer). Sidebar 0.3-0.7
-  // maps to 0.036-0.004, centred near the 0.02 default at 0.45.
+  // maps to 0.036-0.004, centred on the 0.024 default at density 0.45.
   function setDensity(nextDensity) {
     const parsedDensity = Number(nextDensity);
     if (!Number.isFinite(parsedDensity)) return;

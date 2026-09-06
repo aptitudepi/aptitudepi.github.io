@@ -3,7 +3,7 @@ import { store } from './state.js';
 import { initParticles, setKonami } from './three-particles.js';
 import { initAnimations } from './animations.js';
 import { initGitHubStats } from './github-stats.js';
-import { initThermalAscii, RAMP_BENGALI } from './thermal-ascii.js';
+import { initThermalAscii, RAMP_MIXED } from './thermal-ascii.js';
 import { initNav } from './nav.js';
 import { createTerminal, startBoot, getTerm } from './terminal.js';
 import { executeCommand, ASCII_ART } from './shell.js';
@@ -104,7 +104,7 @@ function init() {
   if (thermalCanvas && !document.getElementById('dev-panel')) {
     // Stashed for devtools: opening devmode destroys this loop so only one
     // driver paints the canvas (see toggleDevPanel thermal wiring).
-    window.__mainThermal = initThermalAscii(thermalCanvas, { art: ASCII_ART, ramp: RAMP_BENGALI });
+    window.__mainThermal = initThermalAscii(thermalCanvas, { art: ASCII_ART, ramp: RAMP_MIXED });
   }
 
   // Subscribe to universal reactive store

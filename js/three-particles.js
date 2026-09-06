@@ -108,19 +108,20 @@ function initParticles() {
   let targetInterval = 1000 / 60;    // frame budget, derived from quality + displayHz
   let lastFrameTime = 0;
   let scrollOffset = 0;
-  let syncTopo = false;              // when true, particle clock drives topo
+  let syncTopo = true;               // dev default: particle clock drives topo
   let currentT = 0;                  // latest particle elapsed time (for topo sync)
-  let topoSpeedMult = 0.15;         // topo evolves at this fraction of particle speed
+  let topoSpeedMult = 0.25;          // topo evolves at this fraction of particle speed
+  let topoPausedForSync = false;     // topo's own loop paused once sync takes over
 
   // How much of the 256×256 field actually draws, and the chromatic-aberration
-  // strength in the post pass — both continuous functions of perf.quality().
-  // These are recomputed whenever quality moves (see perf.onChange below).
+  // strength in the post pass — both pinned to the dev-sidebar maxima at live
+  // boot (see applyQuality); pixel ratio + frame budget still track quality.
   const N_MAX = 256 * 256;
   let activeCount = N_MAX;
   let caStrength = 1;
-  // Manual trail-decay override (dev sidebar). The frame loop owns uDecay by
-  // default (hover-responsive); setTrailDecay pins it until reload.
-  let decayOverride = null;
+  // Manual trail-decay override (dev sidebar). Pinned to the dev default
+  // 0.8 at live boot so hover no longer modulates it until the sidebar moves.
+  let decayOverride = 0.8;
 
   window.addEventListener('scroll', () => { scrollOffset = window.scrollY; }, { passive: true });
 
@@ -136,10 +137,10 @@ function initParticles() {
 
   // Map the shared quality scalar to this system's knobs, continuously:
   //   • pixel ratio   — fewer physical pixels when we're struggling
-  //   • active count  — how many of the 65k particles draw this frame
   //   • frame budget   — cap FPS between 30 (q=0) and native-but-≤90 (q=1)
-  //   • CA strength   — dial the chromatic-aberration post effect down, not off
   // Called once up front and again every time quality drifts meaningfully.
+  // Dev-live parity pins active count (65536) and CA strength (1.0) to the
+  // sidebar maxima; quality auto still owns pixel ratio + frame budget.
   let triGeo = null;
   function applyQuality(q) {
     const wantPR = 1 + q; // 1 … 2
@@ -149,13 +150,10 @@ function initParticles() {
       R.setPixelRatio(PR);
       onResize();
     }
-    // Keep a floor so the field never looks empty; active count scales
-    // linearly with quality between that floor and the full grid.
-    const frac = 0.35 + 0.65 * q;
-    activeCount = Math.max(1024, Math.round(N_MAX * frac));
+    activeCount = N_MAX;
     if (triGeo) triGeo.instanceCount = activeCount;
 
-    caStrength = 0.25 + 0.75 * q;
+    caStrength = 1;
 
     const fpsCap = Math.round(30 + 60 * q);              // 30 … 90
     const target = Math.min(displayHz, fpsCap);
@@ -542,11 +540,17 @@ void main(){
     canvas.style.transform = `translateY(${-scrollOffset * 0.025}px)`;
 
     // Drive the topo from the particle clock when sync is on.
-    // The topo's own rAF is paused; setClock() renders it internally.
-    // topoSpeedMult makes the landscape evolve slower than the particles.
+    // The topo's own rAF is paused on first drive; setClock() renders it
+    // internally afterwards. topoSpeedMult slows the landscape vs particles.
     if (syncTopo) {
       const topoInstance = window.TopoDev?.getTopo?.();
-      if (topoInstance?.ok) topoInstance.setClock(currentT * topoSpeedMult);
+      if (topoInstance?.ok) {
+        if (!topoPausedForSync && topoInstance.running) {
+          topoInstance.pause();
+          topoPausedForSync = true;
+        }
+        topoInstance.setClock(currentT * topoSpeedMult);
+      }
     }
 
     requestAnimationFrame(frame);
@@ -626,17 +630,25 @@ void main(){
         if (!topoInstance?.ok) return;
         if (on) {
           topoInstance.pause();          // kill topo's own loop
+          topoPausedForSync = true;
           topoInstance.setClock(currentT * topoSpeedMult); // seed from current particle time
         } else {
+          topoPausedForSync = false;
           topoInstance.play();           // resume topo's own loop
         }
       },
       isSyncTopo() { return syncTopo; },
       /** Topo speed multiplier — fraction of particle time fed to topo clock.
-       *  0.15 = topo evolves ~7× slower than particles. */
+       *  0.25 = topo evolves 4× slower than particles. */
       setTopoSpeed(v) { topoSpeedMult = Math.max(0.01, Math.min(1, v)); },
       getTopoSpeed() { return topoSpeedMult; },
     };
+
+    // Live boot matches the dev sidebar (particle influence 1.00): hand the
+    // topo our density canvas now when it is already up; otherwise dev.js
+    // pulls it once TopoDev finishes its own init. Idempotent either way.
+    const topoApi = window.TopoDev;
+    if (topoApi?.getTopo?.()?.ok) topoApi.setParticleTex(window.ParticleDev.getParticleCanvas());
 
     animFrameId = requestAnimationFrame(frame);
   });
