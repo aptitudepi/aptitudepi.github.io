@@ -102,8 +102,12 @@ function initParticles() {
   const canvas = document.getElementById('c');
   if (!canvas) return;
 
-  const PR_raw = window.devicePixelRatio;
-  let PR = Math.min(PR_raw, 2);
+  // Fresh device-pixel-ratio read, capped at 2. Always re-read live (never
+  // cached): browser zoom / monitor moves change it under us.
+  function readRawPR() {
+    return Math.min(window.devicePixelRatio || 1, 2);
+  }
+  let PR = readRawPR();
   let displayHz = 60;                // native refresh, learned once via detectHz
   let targetInterval = 1000 / 60;    // frame budget, derived from quality + displayHz
   let lastFrameTime = 0;
@@ -119,9 +123,27 @@ function initParticles() {
   const N_MAX = 256 * 256;
   let activeCount = N_MAX;
   let caStrength = 1;
-  // Manual trail-decay override (dev sidebar). Pinned to the dev default
-  // 0.8 at live boot so hover no longer modulates it until the sidebar moves.
-  let decayOverride = 0.8;
+  // Manual trail-decay override (dev sidebar). Null = auto: the frame loop
+  // modulates decay with hover (`decayOverride ?? (0.8 - hP * 0.04)`).
+  // setTrailDecay(number) pins; setTrailDecay(null) restores auto.
+  let decayOverride = null;
+  // Phase 2 owns the count/CA tier ladder; until then applyQuality keeps the
+  // N_MAX/1.0 pins but must not clobber a manual devtools set that landed
+  // earlier in the same tick (devtools pushes sliders, then re-subscribes,
+  // which re-fires applyQuality synchronously).
+  let manualCount = false;
+  let manualCA = false;
+  // Single perf.onChange subscription handle (phase-0 leak fix): override-off
+  // restores this instead of stacking another permanent listener.
+  let qualityUnsub = null;
+  // Phase-1 topo throttle: sample readPixels at most 1x per N frames, N from
+  // quality (high 2 / med 4 / low 8). Counted on particle frames — no second
+  // timer, and the overlay clock stays particle-elapsed-driven.
+  let topoEvery = 2;
+  let frameCount = 0;
+  // Overlay visibility: skip the density feed while the topo host is
+  // off-screen (IntersectionObserver flips this; defaults to visible).
+  let topoOnScreen = true;
 
   window.addEventListener('scroll', () => { scrollOffset = window.scrollY; }, { passive: true });
 
@@ -142,20 +164,45 @@ function initParticles() {
   // Dev-live parity pins active count (65536) and CA strength (1.0) to the
   // sidebar maxima; quality auto still owns pixel ratio + frame budget.
   let triGeo = null;
-  function applyQuality(q) {
-    const wantPR = 1 + q; // 1 … 2
-    const nextPR = Math.min(PR_raw, wantPR);
-    if (Math.abs(nextPR - PR) > 0.05) {
+  // Quantized DPR steps so applied DPR never churns resizes/FBOs per frame.
+  const PR_QUANTUM = 0.05;
+  // Max DPR travel per apply: big quality swings settle over a few notifies
+  // instead of reallocating the whole chain at once. Single setPixelRatio +
+  // onResize per apply; no per-frame slide.
+  const PR_STEP_MAX = 0.15;
+  function quantizePR(value) {
+    return Math.round(value / PR_QUANTUM) * PR_QUANTUM;
+  }
+  function applyQuality(qualityValue) {
+    const rawPR = readRawPR();
+    const wantPR = quantizePR(1 + qualityValue); // 1 … 2
+    const clampedStep = Math.max(-PR_STEP_MAX, Math.min(PR_STEP_MAX, wantPR - PR));
+    const nextPR = Math.min(rawPR, PR + clampedStep);
+    if (Math.abs(nextPR - PR) > PR_QUANTUM) {
       PR = nextPR;
       R.setPixelRatio(PR);
       onResize();
     }
-    activeCount = N_MAX;
-    if (triGeo) triGeo.instanceCount = activeCount;
+    // Pinned until the phase-2 count/CA ladder lands — but a manual devtools
+    // set wins over the pin within the same tick ordering.
+    if (!manualCount) {
+      activeCount = N_MAX;
+      if (triGeo) triGeo.instanceCount = activeCount;
+    }
+    if (!manualCA) {
+      caStrength = 1;
+    }
 
-    caStrength = 1;
+    // Topo cadence follows quality: high 2 / med 4 / low 8.
+    if (qualityValue >= 0.66) {
+      topoEvery = 2;
+    } else if (qualityValue >= 0.33) {
+      topoEvery = 4;
+    } else {
+      topoEvery = 8;
+    }
 
-    const fpsCap = Math.round(30 + 60 * q);              // 30 … 90
+    const fpsCap = Math.round(30 + 60 * qualityValue);              // 30 … 90
     const target = Math.min(displayHz, fpsCap);
     targetInterval = 1000 / target;
   }
@@ -388,6 +435,24 @@ void main(){
   const _topoCtx = _topoCanvas.getContext('2d', { willReadFrequently: true });
   let _pxBuf = null;
   let _fBuf = null;
+  // Reused across readbacks (no per-frame createImageData alloc); recreated
+  // only when the sample size changes.
+  let _imgBuf = null;
+  let _imgW = 0;
+  let _imgH = 0;
+
+  // Track whether the topo overlay is on-screen; off-screen → no feed.
+  if (typeof IntersectionObserver !== 'undefined') {
+    const topoHost = document.getElementById('topo-host');
+    if (topoHost) {
+      const screenObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          topoOnScreen = entry.isIntersecting;
+        }
+      });
+      screenObserver.observe(topoHost);
+    }
+  }
 
   const mouse = { x: 0, y: 0, active: false };
   let hP = 0;
@@ -404,6 +469,14 @@ void main(){
   const HOLD = 8.0, BLEND = 3.0;
 
   function onResize() {
+    // Re-read DPR here too (zoom / monitor move): shrink immediately when
+    // the OS lowers it so we never render above the physical pixels. Growth
+    // is left to applyQuality (quantized + step-limited, avoids zoom storms).
+    const freshPR = readRawPR();
+    if (freshPR < PR) {
+      PR = freshPR;
+      R.setPixelRatio(PR);
+    }
     R.setSize(W(), H());
     camMain.aspect = W() / H();
     camMain.updateProjectionMatrix();
@@ -447,14 +520,34 @@ void main(){
       const scaled = _fBuf[i] * 255;
       _pxBuf[i] = scaled < 0 ? 0 : (scaled > 255 ? 255 : scaled);
     }
-    const img = _topoCtx.createImageData(pw, ph);
-    const row = pw * 4;
-    for (let y = 0; y < ph; y++) {
-      const src = (ph - 1 - y) * row;
-      const dst = y * row;
-      img.data.set(_pxBuf.subarray(src, src + row), dst);
+    // Reuse the ImageData across calls (no per-frame alloc); only recreate
+    // when the sample size changes. Phase 2 may add a smaller proxy target;
+    // until then the ≤256px cap keeps the stall proportional to ≤65k pixels,
+    // and the topoEvery cadence (see frame) cuts how often we pay it at all.
+    if (!_imgBuf || _imgW !== pw || _imgH !== ph) {
+      _imgBuf = _topoCtx.createImageData(pw, ph);
+      _imgW = pw;
+      _imgH = ph;
     }
-    _topoCtx.putImageData(img, 0, 0);
+    const rowBytes = pw * 4;
+    for (let rowIndex = 0; rowIndex < ph; rowIndex++) {
+      const srcOffset = (ph - 1 - rowIndex) * rowBytes;
+      const dstOffset = rowIndex * rowBytes;
+      _imgBuf.data.set(_pxBuf.subarray(srcOffset, srcOffset + rowBytes), dstOffset);
+    }
+    _topoCtx.putImageData(_imgBuf, 0, 0);
+  }
+
+  /** True when a topo is bound and can actually consume a fresh density feed:
+      ok + particle canvas wired + influence above ~0 + overlay on-screen and
+      the tab visible. Otherwise the readPixels stall buys nothing. */
+  function shouldSampleTopo() {
+    if (document.hidden || !topoOnScreen) return false;
+    const topoInstance = window.TopoDev?.getTopo?.();
+    if (!topoInstance?.ok) return false;
+    if (!topoInstance.particleCanvas) return false;
+    const influence = Number(topoInstance.particleInfluence || 0);
+    return influence > 0.001;
   }
 
   const clock = new THREE.Clock();
@@ -530,8 +623,13 @@ void main(){
     R.clear();
     R.render(blitScene, flatCam);
 
-    /* Update the hidden 2D canvas so the topo can sample particle density */
-    if (window.ParticleDev) updateParticleCanvas();
+    /* Feed the hidden 2D canvas so the topo can sample particle density —
+       throttled to every topoEvery-th frame and skipped entirely when the
+       topo cannot consume it (unbound, influence ≈ 0, off-screen, hidden).
+       The overlay clock below still drives every frame: a single clock drive
+       (particle elapsed → topo), no second timer. */
+    frameCount += 1;
+    if (frameCount % topoEvery === 0 && shouldSampleTopo()) updateParticleCanvas();
 
     let tmp = rA; rA = rB; rB = tmp;
     tmp = trailA; trailA = trailB; trailB = tmp;
@@ -563,7 +661,7 @@ void main(){
   detectHz(hz => {
     const knownHz = [60, 90, 120, 144, 165, 240];
     displayHz = knownHz.reduce((a, b) => Math.abs(b - hz) < Math.abs(a - hz) ? b : a);
-    perf.onChange(applyQuality); // fires immediately with the current quality
+    qualityUnsub = perf.onChange(applyQuality); // fires immediately; single handle
 
     /* ── Dev API — exposed for dev sidebar (devmode) ──── */
     window.ParticleDev = {
@@ -575,24 +673,39 @@ void main(){
       getParticleCanvas() { return _topoCanvas; },
       updateParticleCanvas,
 
-      setCount(n) {
-        activeCount = Math.max(1024, Math.min(N_MAX, Math.round(n)));
+      setCount(countValue) {
+        manualCount = true;
+        activeCount = Math.max(1024, Math.min(N_MAX, Math.round(countValue)));
         if (triGeo) triGeo.instanceCount = activeCount;
       },
       getCount() { return activeCount; },
-      setCA(v) { caStrength = Math.max(0, Math.min(1, v)); },
+      setCA(caValue) {
+        manualCA = true;
+        caStrength = Math.max(0, Math.min(1, caValue));
+      },
       getCA() { return caStrength; },
-      setTrailDecay(v) {
-        decayOverride = Math.max(0.8, Math.min(0.99, v));
+      setTrailDecay(decayValue) {
+        // Null restores auto (hover-modulated decay); a number pins.
+        if (decayValue === null) {
+          decayOverride = null;
+          return;
+        }
+        decayOverride = Math.max(0.8, Math.min(0.99, decayValue));
         trailMat.uniforms.uDecay.value = decayOverride;
       },
       getTrailDecay() { return trailMat.uniforms.uDecay.value; },
       setRainbow(on) { uRainbow = on ? 1 : 0; },
       isRainbow() { return uRainbow > 0.5; },
       getQuality() { return perf.quality(); },
-      setQualityOverride(q) {
-        if (q === null) perf.onChange(applyQuality);
-        else applyQuality(Math.max(0, Math.min(1, q)));
+      setQualityOverride(overrideValue) {
+        if (overrideValue === null) {
+          // Restore auto without stacking listeners: drop the current
+          // subscription first, then re-subscribe (fires immediately).
+          if (qualityUnsub) qualityUnsub();
+          qualityUnsub = perf.onChange(applyQuality);
+        } else {
+          applyQuality(Math.max(0, Math.min(1, overrideValue)));
+        }
       },
       /* Particle size — multiplier on the computed uPS (default ~1.0) */
       setParticleSize(mult) {
