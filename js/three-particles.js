@@ -117,9 +117,10 @@ function initParticles() {
   let topoSpeedMult = 0.25;          // topo evolves at this fraction of particle speed
   let topoPausedForSync = false;     // topo's own loop paused once sync takes over
 
-  // How much of the 256×256 field actually draws, and the chromatic-aberration
-  // strength in the post pass — both pinned to the dev-sidebar maxima at live
-  // boot (see applyQuality); pixel ratio + frame budget still track quality.
+  // How much of the 256×256 field actually draws (phase-2 tier ladder owns
+  // this; see TIER_TABLE below) and the chromatic-aberration strength in the
+  // post pass. The 256² sim buffers stay fixed at boot size — the ladder
+  // moves triGeo.instanceCount only, never reallocs.
   const N_MAX = 256 * 256;
   let activeCount = N_MAX;
   let caStrength = 1;
@@ -127,18 +128,27 @@ function initParticles() {
   // modulates decay with hover (`decayOverride ?? (0.8 - hP * 0.04)`).
   // setTrailDecay(number) pins; setTrailDecay(null) restores auto.
   let decayOverride = null;
-  // Phase 2 owns the count/CA tier ladder; until then applyQuality keeps the
-  // N_MAX/1.0 pins but must not clobber a manual devtools set that landed
-  // earlier in the same tick (devtools pushes sliders, then re-subscribes,
-  // which re-fires applyQuality synchronously).
+  // Manual pins (dev sidebar): a setCount/setCA/setScanline/setVignette/
+  // setParticleSize call pins that knob and the auto ladder stops touching
+  // it; clearManualPins() releases every pin back to auto. The devtools panel
+  // only pushes sliders the user actually dragged (see devtools.js), so
+  // opening devmode never snaps the live scene back to the slider maxima.
   let manualCount = false;
   let manualCA = false;
+  let manualScanline = false;
+  let manualVignette = false;
+  let manualSize = false;
+  let manualSizeMult = 1;
+  // Auto density-compensation multiplier for uPS (tier size column); used by
+  // onResize while no manual size pin is held.
+  let autoSizeMult = 1;
   // Single perf.onChange subscription handle (phase-0 leak fix): override-off
   // restores this instead of stacking another permanent listener.
   let qualityUnsub = null;
-  // Phase-1 topo throttle: sample readPixels at most 1x per N frames, N from
-  // quality (high 2 / med 4 / low 8). Counted on particle frames — no second
-  // timer, and the overlay clock stays particle-elapsed-driven.
+  // Topo throttle: sample readPixels at most 1x per N frames, N from the
+  // tier table (ultra 2 / high 3 / med 5 / low 8). Counted on particle
+  // frames — no second timer, and the overlay clock stays
+  // particle-elapsed-driven.
   let topoEvery = 2;
   let frameCount = 0;
   // Overlay visibility: skip the density feed while the topo host is
@@ -157,12 +167,13 @@ function initParticles() {
   R.setSize(W(), H());
   R.autoClear = false;
 
-  // Map the shared quality scalar to this system's knobs, continuously:
-  //   • pixel ratio   — fewer physical pixels when we're struggling
-  //   • frame budget   — cap FPS between 30 (q=0) and native-but-≤90 (q=1)
+  // Map the shared quality scalar to this system's knobs (hybrid §7: the
+  // discrete tier owns the structural knobs, the continuous scalar keeps
+  // trimming DPR + frame budget within the tier):
+  //   • pixel ratio  — continuous 1…2 trim, additionally capped per tier
+  //   • frame budget — continuous cap 30 (q=0) … native-but-≤90 (q=1)
+  //   • count / post / topo cadence — discrete per-tier steps (TIER_TABLE)
   // Called once up front and again every time quality drifts meaningfully.
-  // Dev-live parity pins active count (65536) and CA strength (1.0) to the
-  // sidebar maxima; quality auto still owns pixel ratio + frame budget.
   let triGeo = null;
   // Quantized DPR steps so applied DPR never churns resizes/FBOs per frame.
   const PR_QUANTUM = 0.05;
@@ -173,9 +184,51 @@ function initParticles() {
   function quantizePR(value) {
     return Math.round(value / PR_QUANTUM) * PR_QUANTUM;
   }
-  function applyQuality(qualityValue) {
+  // Phase-2 count ladder + post kills. Four tiers from the quality scalar
+  // (boundaries 0.75 / 0.5 / 0.25):
+  //
+  //   tier  (min q) | count | chroma | scanline | vignette | size | alpha | topoEvery | dprCap
+  //   ultra (0.75)  | 65536 | 1      | 0.02     | 1.5      | 1    | 1     | 2         | 2
+  //   high  (0.50)  | 32768 | 0      | 0.02     | 1.5      | 1.15 | 1.12  | 3         | 1.5
+  //   med   (0.25)  | 16384 | 0      | 0        | 0.75     | 1.3  | 1.25  | 5         | 1.25
+  //   low   (—)     | 8192  | 0      | 0        | 0        | 1.5  | 1.35  | 8         | 1
+  //
+  // Post dies progressively chroma → scanline → vignette via uniform values
+  // only — the post shader stays compiled, no add/removePass recompiles.
+  // Count steps via triGeo.instanceCount, the instanced-geometry equivalent
+  // of setDrawRange (drawRange clips vertices, not instances, so
+  // instanceCount is the correct no-realloc lever): seed buffers are never
+  // re-uploaded and the 256² sim FBOs fixed at boot are never resized at
+  // runtime. A full GPGPU re-init happens only on explicit quality-toggle
+  // paths, never from this ladder.
+  // Density compensation (size 1.0→1.5, alpha 1.0→1.35) holds perceived
+  // density roughly constant as instances halve: area-exact would be
+  // sqrt(2) per halving, but additive blending over-boosts overlaps, so the
+  // ramp is gentler to avoid blowout.
+  // Step-down order per bucket: DPR trim → post kills → count down →
+  // topoEvery widen → DPR cap down → fps floor; step-up restores in
+  // reverse. Tier boundaries (0.25) are far wider than any single quality
+  // notify (≤ ~0.045 per frame, NOTIFY_EPS 0.02), so a bucket moves at most
+  // one tier — one hitch per bucket max.
+  const TIER_NAMES = ['ultra', 'high', 'medium', 'low'];
+  const TIER_TABLE = [
+    { count: 65536, chroma: 1, scanline: 0.02, vignette: 1.5, size: 1, alpha: 1, topoEvery: 2, dprCap: 2 },
+    { count: 32768, chroma: 0, scanline: 0.02, vignette: 1.5, size: 1.15, alpha: 1.12, topoEvery: 3, dprCap: 1.5 },
+    { count: 16384, chroma: 0, scanline: 0, vignette: 0.75, size: 1.3, alpha: 1.25, topoEvery: 5, dprCap: 1.25 },
+    { count: 8192, chroma: 0, scanline: 0, vignette: 0, size: 1.5, alpha: 1.35, topoEvery: 8, dprCap: 1 },
+  ];
+  function tierForQuality(qualityValue) {
+    if (qualityValue >= 0.75) return 0;
+    if (qualityValue >= 0.5) return 1;
+    if (qualityValue >= 0.25) return 2;
+    return 3;
+  }
+  let currentTierIndex = -1;
+  // Continuous DPR trim (phase 1) with the tier cap as the base: min() keeps
+  // the in-tier slide while the cap steps the base down per tier.
+  function applyTierDpr(qualityValue, tierEntry) {
     const rawPR = readRawPR();
-    const wantPR = quantizePR(1 + qualityValue); // 1 … 2
+    const wantPR = Math.min(quantizePR(1 + qualityValue), tierEntry.dprCap);
     const clampedStep = Math.max(-PR_STEP_MAX, Math.min(PR_STEP_MAX, wantPR - PR));
     const nextPR = Math.min(rawPR, PR + clampedStep);
     if (Math.abs(nextPR - PR) > PR_QUANTUM) {
@@ -183,24 +236,47 @@ function initParticles() {
       R.setPixelRatio(PR);
       onResize();
     }
-    // Pinned until the phase-2 count/CA ladder lands — but a manual devtools
-    // set wins over the pin within the same tick ordering.
-    if (!manualCount) {
-      activeCount = N_MAX;
-      if (triGeo) triGeo.instanceCount = activeCount;
+  }
+  function applyTierPost(tierEntry) {
+    if (!manualCA) caStrength = tierEntry.chroma;
+    if (!manualScanline) postMat.uniforms.uScanline.value = tierEntry.scanline;
+    if (!manualVignette) postMat.uniforms.uVignette.value = tierEntry.vignette;
+  }
+  function applyTierCount(tierEntry) {
+    if (manualCount) return;
+    activeCount = tierEntry.count;
+    if (triGeo) triGeo.instanceCount = activeCount;
+  }
+  function applyTierDensity(tierEntry) {
+    pMat.uniforms.uAlpha.value = tierEntry.alpha;
+    autoSizeMult = tierEntry.size;
+    if (!manualSize) {
+      const baseSize = W() / (PR * 2000) * 0.65;
+      pMat.uniforms.uPS.value = baseSize * autoSizeMult;
     }
-    if (!manualCA) {
-      caStrength = 1;
-    }
-
-    // Topo cadence follows quality: high 2 / med 4 / low 8.
-    if (qualityValue >= 0.66) {
-      topoEvery = 2;
-    } else if (qualityValue >= 0.33) {
-      topoEvery = 4;
+  }
+  function applyQuality(qualityValue) {
+    const tierIndex = tierForQuality(qualityValue);
+    const tierEntry = TIER_TABLE[tierIndex];
+    // Step-down sheds cheap pixels first and structural count later; step-up
+    // restores in reverse so the visible field returns before costs ramp.
+    // Everything still lands before the next frame — the order documents the
+    // shed/restore priority, and the single-tier-per-bucket bound above keeps
+    // it to one hitch.
+    if (tierIndex >= currentTierIndex) {
+      applyTierDpr(qualityValue, tierEntry);
+      applyTierPost(tierEntry);
+      applyTierCount(tierEntry);
+      applyTierDensity(tierEntry);
+      topoEvery = tierEntry.topoEvery;
     } else {
-      topoEvery = 8;
+      topoEvery = tierEntry.topoEvery;
+      applyTierDensity(tierEntry);
+      applyTierCount(tierEntry);
+      applyTierPost(tierEntry);
+      applyTierDpr(qualityValue, tierEntry);
     }
+    currentTierIndex = tierIndex;
 
     const fpsCap = Math.round(30 + 60 * qualityValue);              // 30 … 90
     const target = Math.min(displayHz, fpsCap);
@@ -317,7 +393,7 @@ void main(){
       uRez: { value: new THREE.Vector2(W(), H()) },
       uPS: { value: W() / (PR * 2000) * 0.65 }, uPR: { value: PR },
       uModeW: { value: new THREE.Vector4(1, 0, 0, 0) },
-      uRainbow: { value: 0 }
+      uRainbow: { value: 0 }, uAlpha: { value: 1 }
     },
     vertexShader: `precision highp float;
 attribute vec2 iUV;
@@ -345,7 +421,7 @@ void main(){
     fragmentShader: `precision highp float;
 varying float vAge,vScale,vSeed,vBS;
 uniform vec4 uModeW;
-uniform float uTime,uRainbow;
+uniform float uTime,uRainbow,uAlpha;
 vec3 designPal(float t){
   vec3 a=vec3(.44,.10,.57);
   vec3 b=vec3(.41,.06,.38);
@@ -368,7 +444,7 @@ void main(){
   col+=vec3(bsLum*.4, bsLum*.15, bsLum*.05);
   col*=.85+vBS*.3;
   col*=1.8; // boost luminosity — visible through frosted glass
-  gl_FragColor=vec4(clamp(col,0.,1.),a*(.6+vBS*.4));
+  gl_FragColor=vec4(clamp(col,0.,1.),a*(.6+vBS*.4)*uAlpha);
 }`,
     transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide
@@ -481,7 +557,9 @@ void main(){
     camMain.aspect = W() / H();
     camMain.updateProjectionMatrix();
     pMat.uniforms.uRez.value.set(W(), H());
-    pMat.uniforms.uPS.value = W() / (PR * 2000) * 0.65;
+    // Keep the effective size multiplier across resizes: manual pin wins,
+    // otherwise the tier density compensation (autoSizeMult).
+    pMat.uniforms.uPS.value = W() / (PR * 2000) * 0.65 * (manualSize ? manualSizeMult : autoSizeMult);
     iW = W() * PR | 0;
     iH = H() * PR | 0;
     [trailA, trailB, outRT, postOut].forEach(r => r.dispose());
@@ -521,9 +599,10 @@ void main(){
       _pxBuf[i] = scaled < 0 ? 0 : (scaled > 255 ? 255 : scaled);
     }
     // Reuse the ImageData across calls (no per-frame alloc); only recreate
-    // when the sample size changes. Phase 2 may add a smaller proxy target;
-    // until then the ≤256px cap keeps the stall proportional to ≤65k pixels,
-    // and the topoEvery cadence (see frame) cuts how often we pay it at all.
+    // when the sample size changes. Phase 2 keeps the ≤256px cap (stall
+    // proportional to ≤65k pixels, never to the screen — a smaller proxy
+    // target stays a later option), and the per-tier topoEvery cadence (see
+    // frame) cuts how often we pay it at all.
     if (!_imgBuf || _imgW !== pw || _imgH !== ph) {
       _imgBuf = _topoCtx.createImageData(pw, ph);
       _imgW = pw;
@@ -707,10 +786,14 @@ void main(){
           applyQuality(Math.max(0, Math.min(1, overrideValue)));
         }
       },
-      /* Particle size — multiplier on the computed uPS (default ~1.0) */
+      /* Particle size — multiplier on the computed uPS (default ~1.0).
+         Pins the size knob: the density ladder stops touching uPS until
+         clearManualPins() releases it. */
       setParticleSize(mult) {
+        manualSize = true;
+        manualSizeMult = Math.max(0.1, Math.min(5, mult));
         const base = W() / (PR * 2000) * 0.65;
-        pMat.uniforms.uPS.value = base * Math.max(0.1, Math.min(5, mult));
+        pMat.uniforms.uPS.value = base * manualSizeMult;
       },
       getParticleSize() {
         const base = W() / (PR * 2000) * 0.65;
@@ -727,14 +810,34 @@ void main(){
         postMat.uniforms.uBrightness.value = Math.max(0.5, Math.min(3, v));
       },
       getBrightness() { return postMat.uniforms.uBrightness.value; },
-      setScanline(v) {
-        postMat.uniforms.uScanline.value = Math.max(0, Math.min(0.05, v));
+      setScanline(scanValue) {
+        manualScanline = true;
+        postMat.uniforms.uScanline.value = Math.max(0, Math.min(0.05, scanValue));
       },
       getScanline() { return postMat.uniforms.uScanline.value; },
-      setVignette(v) {
-        postMat.uniforms.uVignette.value = Math.max(0, Math.min(3, v));
+      setVignette(vignetteValue) {
+        manualVignette = true;
+        postMat.uniforms.uVignette.value = Math.max(0, Math.min(3, vignetteValue));
       },
       getVignette() { return postMat.uniforms.uVignette.value; },
+      /* Active quality tier ({ index 0…3, name ultra/high/medium/low }),
+         topo cadence, and density alpha — probes for the ladder. */
+      getTier() {
+        return { index: currentTierIndex, name: TIER_NAMES[currentTierIndex] || 'unknown' };
+      },
+      getTopoEvery() { return topoEvery; },
+      getAlpha() { return pMat.uniforms.uAlpha.value; },
+      /* Release every manual pin (count/CA/scanline/vignette/size) back to
+         the auto ladder and re-apply the live quality immediately. */
+      clearManualPins() {
+        manualCount = false;
+        manualCA = false;
+        manualScanline = false;
+        manualVignette = false;
+        manualSize = false;
+        manualSizeMult = 1;
+        applyQuality(perf.quality());
+      },
       /* Sync topo — particle clock drives topo's setClock(). Topo's own rAF
          is paused; the particle loop renders it via setClock(t) each frame. */
       setSyncTopo(on) {

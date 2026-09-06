@@ -241,21 +241,28 @@ ensurePanel();
     quality:  getEl('dev-p-quality-v'),
   };
 
+  // Sliders the user actually dragged. pushParticles() only pushes touched
+  // sliders: a blanket push of every slider would pin all manual flags (see
+  // three-particles.js) and snap a stepped-down scene back to the slider
+  // maxima on panel open. Untouched sliders stay on the auto ladder; the
+  // quality-override branch below is checkbox-state driven and always applies.
+  const touchedInputs = new Set();
+
   function pushParticles() {
     const PDev = window.ParticleDev;
     if (!PDev) return;
 
-    PDev.setCount(Number(part.count.value));
-    PDev.setParticleSize(Number(part.size.value));
-    PDev.setFOV(Number(part.fov.value));
-    PDev.setCA(Number(part.ca.value));
-    PDev.setTrailDecay(Number(part.decay.value));
-    PDev.setBrightness(Number(part.bright.value));
-    PDev.setScanline(Number(part.scanline.value));
-    PDev.setVignette(Number(part.vignette.value));
-    PDev.setRainbow(part.rainbow.checked);
-    PDev.setSyncTopo(part.syncTopo.checked);
-    PDev.setTopoSpeed(Number(part.topoSpeed.value));
+    if (touchedInputs.has('dev-p-count')) PDev.setCount(Number(part.count.value));
+    if (touchedInputs.has('dev-p-size')) PDev.setParticleSize(Number(part.size.value));
+    if (touchedInputs.has('dev-p-fov')) PDev.setFOV(Number(part.fov.value));
+    if (touchedInputs.has('dev-p-ca')) PDev.setCA(Number(part.ca.value));
+    if (touchedInputs.has('dev-p-decay')) PDev.setTrailDecay(Number(part.decay.value));
+    if (touchedInputs.has('dev-p-bright')) PDev.setBrightness(Number(part.bright.value));
+    if (touchedInputs.has('dev-p-scanline')) PDev.setScanline(Number(part.scanline.value));
+    if (touchedInputs.has('dev-p-vignette')) PDev.setVignette(Number(part.vignette.value));
+    if (touchedInputs.has('dev-p-rainbow')) PDev.setRainbow(part.rainbow.checked);
+    if (touchedInputs.has('dev-p-sync-topo')) PDev.setSyncTopo(part.syncTopo.checked);
+    if (touchedInputs.has('dev-p-topo-speed')) PDev.setTopoSpeed(Number(part.topoSpeed.value));
 
     if (part.override.checked) {
       PDev.setQualityOverride(Number(part.quality.value));
@@ -282,8 +289,8 @@ ensurePanel();
   });
 
   Object.values(part).forEach(inp => {
-    inp.addEventListener('input', pushParticles);
-    inp.addEventListener('change', pushParticles);
+    inp.addEventListener('input', () => { touchedInputs.add(inp.id); pushParticles(); });
+    inp.addEventListener('change', () => { touchedInputs.add(inp.id); pushParticles(); });
   });
 
   /* ── Init outputs ─────────────────────────── */
