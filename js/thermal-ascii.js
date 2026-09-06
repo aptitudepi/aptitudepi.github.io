@@ -433,7 +433,7 @@ export function initThermalAscii(canvas, options = {}) {
   }
 
   function setRamp(nextRamp) {
-    if (typeof nextRamp !== `string` || nextRamp.length === 0) return;
+    if (typeof nextRamp !== 'string' || nextRamp.length === 0) return;
     ramp = nextRamp;
     rampGlyphs = segmentRamp(ramp);
     staticLayer = createStaticLayer();

@@ -382,7 +382,7 @@ ensurePanel();
           ramp: rampMap[thm.ramp.value] || rampMap.default,
         };
       }
-      let activeRampKey = `default`;
+      let activeRampKey = 'default';
       function pushThermal() {
         // Labels first so sliders read live even when the instance is off.
         thOut.radius.textContent = thm.radius.value;
@@ -390,16 +390,16 @@ ensurePanel();
         thOut.density.textContent = Number(thm.density.value).toFixed(2);
         if (!thermal) return;
         // Live setters: no destroy + re-init, heat is preserved per tick.
-        if (typeof thermal.setHeatRadius === `function`) thermal.setHeatRadius(Number(thm.radius.value));
-        if (typeof thermal.setHeatDecay === `function`) thermal.setHeatDecay(Number(thm.decay.value));
-        if (typeof thermal.setDensity === `function`) thermal.setDensity(Number(thm.density.value));
+        if (typeof thermal.setHeatRadius === 'function') thermal.setHeatRadius(Number(thm.radius.value));
+        if (typeof thermal.setHeatDecay === 'function') thermal.setHeatDecay(Number(thm.decay.value));
+        if (typeof thermal.setDensity === 'function') thermal.setDensity(Number(thm.density.value));
         const nextRampKey = thm.ramp.value;
         if (nextRampKey !== activeRampKey) {
           activeRampKey = nextRampKey;
           const nextRamp = rampMap[nextRampKey] || rampMap.default;
-          if (typeof thermal.setRamp === `function`) thermal.setRamp(nextRamp);
+          if (typeof thermal.setRamp === 'function') thermal.setRamp(nextRamp);
           // Centre pulse so the new ramp reads without needing a hover first.
-          if (typeof thermal.pulseCenter === `function`) thermal.pulseCenter();
+          if (typeof thermal.pulseCenter === 'function') thermal.pulseCenter();
         }
       }
 
