@@ -503,7 +503,7 @@ const perf = {
 
   /** Resume: sidebar yields to URL/stored pins, else full auto. */
   clearTierOverride() {
-    setTierOverride(SOURCE_AUTO, SOURCE_SIDEBAR);
+    perf.setTierOverride(SOURCE_AUTO, SOURCE_SIDEBAR);
   },
 
   /** Clamp the auto scaler into [floor, ceiling]; manual pins ignore clamps. */
