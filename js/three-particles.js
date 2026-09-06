@@ -237,24 +237,15 @@ function initParticles() {
       onResize();
     }
   }
-  function applyTierPost(tierEntry) {
-    if (!manualCA) caStrength = tierEntry.chroma;
-    if (!manualScanline) postMat.uniforms.uScanline.value = tierEntry.scanline;
-    if (!manualVignette) postMat.uniforms.uVignette.value = tierEntry.vignette;
-  }
   function applyTierCount(tierEntry) {
     if (manualCount) return;
     activeCount = tierEntry.count;
     if (triGeo) triGeo.instanceCount = activeCount;
   }
-  function applyTierDensity(tierEntry) {
-    pMat.uniforms.uAlpha.value = tierEntry.alpha;
-    autoSizeMult = tierEntry.size;
-    if (!manualSize) {
-      const baseSize = W() / (PR * 2000) * 0.65;
-      pMat.uniforms.uPS.value = baseSize * autoSizeMult;
-    }
-  }
+  // applyTierPost + applyTierDensity live below the material definitions:
+  // they write postMat/pMat uniforms, and declare-before-use (JS-0129)
+  // requires the const materials to be defined first textually. Hoisted
+  // function declarations keep the applyQuality calls above valid.
   function applyQuality(qualityValue) {
     const tierIndex = tierForQuality(qualityValue);
     const tierEntry = TIER_TABLE[tierIndex];
@@ -504,6 +495,23 @@ void main(){
   });
   const blitScene = new THREE.Scene();
   blitScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blitMat));
+
+  // Tier appliers that write material uniforms (defined here, after the
+  // const materials above, for declare-before-use; called from the hoisted
+  // applyQuality earlier in this scope).
+  function applyTierPost(tierEntry) {
+    if (!manualCA) caStrength = tierEntry.chroma;
+    if (!manualScanline) postMat.uniforms.uScanline.value = tierEntry.scanline;
+    if (!manualVignette) postMat.uniforms.uVignette.value = tierEntry.vignette;
+  }
+  function applyTierDensity(tierEntry) {
+    pMat.uniforms.uAlpha.value = tierEntry.alpha;
+    autoSizeMult = tierEntry.size;
+    if (!manualSize) {
+      const baseSize = W() / (PR * 2000) * 0.65;
+      pMat.uniforms.uPS.value = baseSize * autoSizeMult;
+    }
+  }
 
   /* ── Hidden 2D canvas for topo texture ──────────────── */
   const _topoCanvas = document.createElement('canvas');
