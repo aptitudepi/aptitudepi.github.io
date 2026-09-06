@@ -169,45 +169,76 @@ function initRevealObserver() {
 }
 
 function initCardTracking() {
-  const tilt = (nx, ny) => ({ rx: ny * -6, ry: nx * 6 });
-
-  document.querySelectorAll('.spotlight-card, .bento-card, .cert-badge').forEach(card => {
-    let gx = 0, gy = 0, tx = 0, ty = 0;
-    let rx = 0, ry = 0, trx = 0, trY = 0;
-    let raf = null;
-    const noTilt = card.classList.contains('bento-card') || card.classList.contains('cert-badge');
-
-    const tick = () => {
-      gx += (tx - gx) * 0.18;
-      gy += (ty - gy) * 0.18;
-      rx += (trx - rx) * 0.18;
-      ry += (trY - ry) * 0.18;
-      card.style.setProperty('--gx', gx.toFixed(1));
-      card.style.setProperty('--gy', gy.toFixed(1));
-      if (!noTilt) {
-        card.style.transform = `perspective(900px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateY(-2px)`;
+  const pointerFineQuery = window.matchMedia(`(pointer:fine)`);
+  const tiltEnabled = pointerFineQuery.matches;
+  const cardList = document.querySelectorAll(`.spotlight-card, .bento-card, .cert-badge`);
+  const computeTilt = (normXPos, normYPos) => {
+    const tiltXVal = normYPos * -6;
+    const tiltYVal = normXPos * 6;
+    return { tiltXVal, tiltYVal };
+  };
+  cardList.forEach((cardElement) => {
+    const supportsTilt = tiltEnabled && cardElement.classList.contains(`spotlight-card`);
+    let animFrame = null;
+    let currentTiltX = 0;
+    let currentTiltY = 0;
+    let targetTiltX = 0;
+    let targetTiltY = 0;
+    const renderTilt = () => {
+      currentTiltX += (targetTiltX - currentTiltX) * 0.18;
+      currentTiltY += (targetTiltY - currentTiltY) * 0.18;
+      cardElement.style.transform = `perspective(900px) rotateX(${currentTiltX.toFixed(2)}deg) rotateY(${currentTiltY.toFixed(2)}deg) translateY(-2px)`;
+      const tiltSettled = Math.abs(currentTiltX - targetTiltX) < 0.05 && Math.abs(currentTiltY - targetTiltY) < 0.05;
+      const atRest = targetTiltX === 0 && targetTiltY === 0 && tiltSettled;
+      if (atRest) {
+        cardElement.style.transform = ``;
+        animFrame = null;
+        return;
       }
-      const done = Math.abs(gx - tx) < 0.3 && Math.abs(gy - ty) < 0.3 && (noTilt || (Math.abs(rx) < 0.05 && Math.abs(ry) < 0.05));
-      if (done) { raf = null; return; }
-      raf = requestAnimationFrame(tick);
+      if (tiltSettled) {
+        animFrame = null;
+        return;
+      }
+      animFrame = requestAnimationFrame(renderTilt);
     };
-
-    card.addEventListener('mousemove', e => {
-      const rect = card.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      card.style.setProperty('--mx', `${mx}px`);
-      card.style.setProperty('--my', `${my}px`);
-      tx = mx; ty = my;
-      const { rx: rxv, ry: ryv } = tilt((mx / rect.width) * 2 - 1, (my / rect.height) * 2 - 1);
-      trx = rxv; trY = ryv;
-      if (!raf) raf = requestAnimationFrame(tick);
+    const queueTilt = () => {
+      if (animFrame === null) {
+        animFrame = requestAnimationFrame(renderTilt);
+      }
+    };
+    const updateSpotlight = (pointerEvent) => {
+      const boundingRect = cardElement.getBoundingClientRect();
+      const offsetXPos = pointerEvent.clientX - boundingRect.left;
+      const offsetYPos = pointerEvent.clientY - boundingRect.top;
+      cardElement.style.setProperty(`--mx`, `${offsetXPos}px`);
+      cardElement.style.setProperty(`--my`, `${offsetYPos}px`);
+    };
+    cardElement.addEventListener(`pointermove`, (pointerEvent) => {
+      updateSpotlight(pointerEvent);
+      if (supportsTilt === false) {
+        return;
+      }
+      const boundingRect = cardElement.getBoundingClientRect();
+      const offsetXPos = pointerEvent.clientX - boundingRect.left;
+      const offsetYPos = pointerEvent.clientY - boundingRect.top;
+      const normXPos = (offsetXPos / boundingRect.width) * 2 - 1;
+      const normYPos = (offsetYPos / boundingRect.height) * 2 - 1;
+      const tiltResult = computeTilt(normXPos, normYPos);
+      targetTiltX = tiltResult.tiltXVal;
+      targetTiltY = tiltResult.tiltYVal;
+      queueTilt();
     });
-
-    card.addEventListener('mouseleave', () => {
-      tx = -250; ty = -250;
-      trx = 0; trY = 0;
-      if (!raf) raf = requestAnimationFrame(tick);
+    cardElement.addEventListener(`pointerleave`, () => {
+      targetTiltX = 0;
+      targetTiltY = 0;
+      queueTilt();
+    });
+    cardElement.addEventListener(`focusin`, () => {
+      const focusRect = cardElement.getBoundingClientRect();
+      const centerXPos = focusRect.width / 2;
+      const centerYPos = focusRect.height / 2;
+      cardElement.style.setProperty(`--mx`, `${centerXPos}px`);
+      cardElement.style.setProperty(`--my`, `${centerYPos}px`);
     });
   });
 }

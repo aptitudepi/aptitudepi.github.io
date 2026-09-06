@@ -32,9 +32,13 @@
   .reveal { opacity: 1; transform: none; transition: none; }
   .bento-card { opacity: 1; }
   .social-link { opacity: 1; }
-  .spotlight-card::before, .spotlight-card:hover::before,
   .spotlight-card::after, .spotlight-card:hover::after,
-  .bento-card::after, .bento-card:hover::after { opacity: 0; transition: none; }
+  .spotlight-card:focus-within::after,
+  .bento-card::after, .bento-card:hover::after,
+  .bento-card:focus-within::after { opacity: 0; transition: none; }
+  .spotlight-grid > .spotlight-card:first-child::before { animation: none; }
+  .shimmer-text,
+  .spotlight-card h3.shimmer-text { animation: none; background: none; color: var(--color-text); }
   .cert-badge:hover, .spotlight-card:hover, .bento-card:hover { transform: none; }
   .about-image .frame { animation: none; }
   .section-header h2 { animation: none; background-size: 100% 100%; }

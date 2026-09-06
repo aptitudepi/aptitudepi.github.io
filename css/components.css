@@ -157,45 +157,75 @@
   overflow: hidden;
   transition: border-color 300ms var(--ease-out-expo), transform 300ms var(--ease-out-expo);
   animation: blueRedColor 6s ease-in-out infinite;
+  --mx: 50%;
+  --my: 50%;
 }
-.spotlight-card::before {
+/* Single-var spotlight: 300px radial overlay positioned by --mx/--my (px, default 50%).
+   Collapses the old dual-var glow systems into one; no calc() so no unitless-var bug. */
+.spotlight-card::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--color-primary-dim) 0%, transparent 70%);
-  transform: translate(calc(var(--mx, 0) - 150px), calc(var(--my, 0) - 150px));
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(300px circle at var(--mx, 50%) var(--my, 50%), var(--color-primary-dim) 0%, transparent 70%);
   pointer-events: none;
   opacity: 0;
   transition: opacity 300ms;
 }
-.spotlight-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  width: 500px;
-  height: 500px;
-  border-radius: 50%;
-  background: radial-gradient(circle, currentColor 0%, transparent 70%);
-  filter: blur(40px);
-  translate: calc(var(--gx, 0) * 1px - 250px) calc(var(--gy, 0) * 1px - 250px);
-  opacity: 0;
-  transition: opacity 400ms;
-  will-change: translate;
-}
 .spotlight-card:hover {
   border-color: currentColor;
 }
-.spotlight-card:hover::before {
+.spotlight-card:focus-within {
+  border-color: currentColor;
+}
+.spotlight-card:hover::after,
+.spotlight-card:focus-within::after {
   opacity: 1;
 }
-.spotlight-card:hover::after {
-  opacity: 0.25;
+/* Border-beam: first hero card only. Rotating conic border via ::before + inset mask.
+   --angle is registered via @property in layout.css. */
+.spotlight-grid > .spotlight-card:first-child::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--angle, 0deg), var(--color-primary), var(--color-accent), var(--color-blue), var(--color-primary));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: beamSpin 4s linear infinite;
+}
+@keyframes beamSpin {
+  to { --angle: 360deg; }
+}
+/* Shimmer-text: single accent sweep. Qualified selector keeps `color: transparent`
+   winning over `.spotlight-card h3` (0,1,1). */
+.shimmer-text,
+.spotlight-card h3.shimmer-text {
+  background: linear-gradient(110deg, var(--color-text) 35%, var(--color-accent) 50%, var(--color-text) 65%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmerSweep 3s linear infinite;
+}
+@keyframes shimmerSweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spotlight-grid > .spotlight-card:first-child::before {
+    animation: none;
+  }
+  .shimmer-text,
+  .spotlight-card h3.shimmer-text {
+    animation: none;
+    background: none;
+    color: var(--color-text);
+  }
 }
 .spotlight-card .tags {
   display: flex;
@@ -258,28 +288,29 @@
   opacity: 0;
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite;
+  --mx: 50%;
+  --my: 50%;
 }
 .bento-card::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
-  width: 400px;
-  height: 400px;
-  border-radius: 50%;
-  background: radial-gradient(circle, currentColor 0%, transparent 70%);
+  background: radial-gradient(300px circle at var(--mx, 50%) var(--my, 50%), currentColor 0%, transparent 70%);
   filter: blur(30px);
-  translate: calc(var(--gx, 0) * 1px - 200px) calc(var(--gy, 0) * 1px - 200px);
   opacity: 0;
   transition: opacity 400ms;
-  will-change: translate;
 }
 .bento-card:hover {
   border-color: currentColor;
   box-shadow: 0 0 0 1px currentColor, 0 4px 24px currentColor;
 }
-.bento-card:hover::after { opacity: 0.2; }
+.bento-card:focus-within {
+  border-color: currentColor;
+}
+.bento-card:hover::after,
+.bento-card:focus-within::after { opacity: 0.2; }
 .mono-tag {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
@@ -358,25 +389,26 @@
   overflow: hidden;
   opacity: 0;
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
+  position: relative;
+  --mx: 50%;
+  --my: 50%;
 }
 .cert-badge::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: radial-gradient(circle, currentColor 0%, transparent 70%);
+  background: radial-gradient(200px circle at var(--mx, 50%) var(--my, 50%), currentColor 0%, transparent 70%);
   filter: blur(20px);
-  translate: calc(var(--gx, 0) * 1px - 100px) calc(var(--gy, 0) * 1px - 100px);
   opacity: 0;
   transition: opacity 400ms;
-  will-change: translate;
 }
 .cert-badge:hover { transform: translateY(-3px); border-color: currentColor; }
-.cert-badge:hover::after { opacity: 0.2; }
+.cert-badge:focus-within { border-color: currentColor; }
+.cert-badge:hover::after,
+.cert-badge:focus-visible::after,
+.cert-badge:focus-within::after { opacity: 0.2; }
 .cert-badge img { width: 72px; height: 72px; border-radius: var(--radius-sm); transition: transform 250ms var(--ease-out-expo); }
 .cert-badge:hover img { transform: scale(1.08); }
 .cert-badge.hubspot img { width: 84px; height: auto; }
