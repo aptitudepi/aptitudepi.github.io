@@ -6,7 +6,7 @@ export function getStoredMemory() {
   try {
     const raw = localStorage.getItem(MEMORY_KEY);
     return raw ? JSON.parse(raw) : { facts: [], preferences: {} };
-  } catch (e) {
+  } catch (_) {
     return { facts: [], preferences: {} };
   }
 }
@@ -19,7 +19,7 @@ export function saveUserFact(fact) {
     if (mem.facts.length > 20) mem.facts.shift(); // Keep top 20 facts
     try {
       localStorage.setItem(MEMORY_KEY, JSON.stringify(mem));
-    } catch (e) {}
+    } catch (_) {}
   }
 }
 
@@ -27,7 +27,7 @@ export function getStoredHistory() {
   try {
     const raw = localStorage.getItem(HISTORY_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch (e) {
+  } catch (_) {
     return [];
   }
 }
@@ -38,14 +38,14 @@ export function appendHistoryTurn(role, content) {
   if (history.length > 10) history.shift(); // Retain last 10 turns
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-  } catch (e) {}
+  } catch (_) {}
 }
 
 export function clearMemory() {
   try {
     localStorage.removeItem(MEMORY_KEY);
     localStorage.removeItem(HISTORY_KEY);
-  } catch (e) {}
+  } catch (_) {}
 }
 
 export function buildMemoryPromptContext() {

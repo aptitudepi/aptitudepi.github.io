@@ -53,10 +53,10 @@ function runTectonic(job) {
     });
     if (res.status === 0) return;
     if (attempt < MAX_ATTEMPTS) {
-      console.error(`tectonic failed for ${job.tex} (attempt ${attempt}/${MAX_ATTEMPTS}); retrying transient bundle fetch`);
+      process.stderr.write(`tectonic failed for ${job.tex} (attempt ${attempt}/${MAX_ATTEMPTS}); retrying transient bundle fetch\n`);
     }
   }
-  console.error(`tectonic failed for ${job.tex} after ${MAX_ATTEMPTS} attempts`);
+  process.stderr.write(`tectonic failed for ${job.tex} after ${MAX_ATTEMPTS} attempts\n`);
   process.exit(1);
 }
 
@@ -73,7 +73,7 @@ for (const job of JOBS) {
 
   const built = join(BUILD_DIR, job.pdf);
   writeFileSync(join(OUT_DIR, job.pdf), readFileSync(built));
-  console.log(`wrote assets/${job.pdf}`);
+  process.stdout.write(`wrote assets/${job.pdf}\n`);
 }
 
 rmSync(BUILD_DIR, { recursive: true, force: true });

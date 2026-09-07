@@ -1,5 +1,4 @@
 import { generateOutput, showModelSelector, switchModel } from './ai.js';
-import { store } from './state.js';
 
 const pageLoadTime = Date.now();
 
@@ -468,8 +467,10 @@ function suggestCommand(input) {
   return best;
 }
 
+const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+
 function visibleLen(s) {
-  return s.replace(/\u001b\[[0-9;]*m/g, '').length;
+  return s.replace(ANSI_PATTERN, '').length;
 }
 
 function getBlueRedPhase() {
@@ -601,8 +602,8 @@ function helpText(term) {
 async function getLocation() {
   try {
     const pos = await new Promise((res, rej) => {
-      if (!navigator.geolocation) { rej('no geo'); return; }
-      navigator.geolocation.getCurrentPosition(p => res(p), () => rej('denied'), { timeout: 8000, enableHighAccuracy: false });
+      if (!navigator.geolocation) { rej(new Error('no geo')); return; }
+      navigator.geolocation.getCurrentPosition(p => res(p), () => rej(new Error('denied')), { timeout: 8000, enableHighAccuracy: false });
     });
     const geoResp = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`,
@@ -1241,4 +1242,4 @@ function executeCommand(input, term) {
 
 window.executeTerminalCommand = executeCommand;
 
-export { ASCII_ART, vfs, RESUME, CMD_HISTORY, BOOT_MSGS, SHOW_TERMINAL_ART, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, stripAnsi, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS };
+export { ASCII_ART, vfs, RESUME, CMD_HISTORY, SHOW_TERMINAL_ART, executeCommand, bootSequence, neofetch, resfetch, writePrompt, uptimeStr, ansiRGB, stripAnsi, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS };

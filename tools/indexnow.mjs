@@ -11,7 +11,7 @@ const ENDPOINT = 'https://api.indexnow.org/indexnow';
 const KEY = process.env.INDEXNOW_KEY?.trim();
 
 if (!KEY) {
-  console.error('INDEXNOW_KEY is not set; skipping IndexNow submit');
+  process.stderr.write('INDEXNOW_KEY is not set; skipping IndexNow submit\n');
   process.exit(0);
 }
 
@@ -23,14 +23,14 @@ async function waitForKey(attempts = 30, delayMs = 10_000) {
       const res = await fetch(keyUrl, { redirect: 'follow' });
       const body = (await res.text()).trim();
       if (res.ok && body === KEY) {
-        console.log(`key file ready at ${keyUrl} (attempt ${i})`);
+        process.stdout.write(`key file ready at ${keyUrl} (attempt ${i})\n`);
         return;
       }
-      console.log(`key not ready yet: HTTP ${res.status}, body=${JSON.stringify(body.slice(0, 64))} (attempt ${i}/${attempts})`);
+      process.stdout.write(`key not ready yet: HTTP ${res.status}, body=${JSON.stringify(body.slice(0, 64))} (attempt ${i}/${attempts})\n`);
     } catch (e) {
-      console.log(`key fetch error: ${e.message} (attempt ${i}/${attempts})`);
+      process.stdout.write(`key fetch error: ${e.message} (attempt ${i}/${attempts})\n`);
     }
-    await Bun.sleep(delayMs);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
   throw new Error(`IndexNow key file not reachable at ${keyUrl}`);
 }
@@ -51,12 +51,12 @@ const res = await fetch(ENDPOINT, {
 });
 
 const text = await res.text();
-console.log(`IndexNow → HTTP ${res.status}`);
-if (text) console.log(text);
+process.stdout.write(`IndexNow → HTTP ${res.status}\n`);
+if (text) process.stdout.write(`${text}\n`);
 
 // 200 = accepted; 202 = accepted, key verification pending (first submit).
 if (res.status !== 200 && res.status !== 202) {
   process.exit(1);
 }
 
-console.log(`submitted ${URL_LIST.length} URLs`);
+process.stdout.write(`submitted ${URL_LIST.length} URLs\n`);

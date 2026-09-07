@@ -116,5 +116,5 @@ for (const page of pages) {
     BODY: page.body,
   });
   writeFileSync(join(SITE, page.out), html);
-  console.log(`wrote ${page.out} (${html.length} bytes)`);
+  process.stdout.write(`wrote ${page.out} (${html.length} bytes)\n`);
 }

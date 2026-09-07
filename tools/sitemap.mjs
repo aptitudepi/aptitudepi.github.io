@@ -25,4 +25,4 @@ ${body}
 `;
 
 writeFileSync(out, xml);
-console.log(`wrote ${out} (${SITE_URLS.length} URLs, lastmod=${lastmod})`);
+process.stdout.write(`wrote ${out} (${SITE_URLS.length} URLs, lastmod=${lastmod})\n`);

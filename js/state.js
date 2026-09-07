@@ -16,7 +16,7 @@ function loadInitialState() {
   try {
     const raw = localStorage.getItem(STATE_STORAGE_KEY);
     return raw ? { ...defaultState, ...JSON.parse(raw) } : { ...defaultState };
-  } catch (e) {
+  } catch (_) {
     return { ...defaultState };
   }
 }
@@ -86,7 +86,7 @@ class UniversalStateStore {
   persist() {
     try {
       localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(this.state));
-    } catch (e) {}
+    } catch (_) {}
   }
 }
 

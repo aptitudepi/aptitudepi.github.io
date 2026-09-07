@@ -64,7 +64,6 @@ export function roffToHtml(src) {
     footer = lines[last].trim();
   }
 
-  let out = header ? renderHeaderLine(header) : '';
   let current = null; // { name, kind: 'para' | 'file', paras: [] }
   let para = null;    // { text: [] }
 

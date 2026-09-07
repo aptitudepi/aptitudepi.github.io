@@ -64,10 +64,10 @@ export async function mountComponent(selectorOrEl, name, props = {}) {
     props,
     state: {},
     futures: {},
-    update: () => instance.render()
   };
 
   const instance = factory(ctx);
+  ctx.update = () => instance.render();
   activeInstances.set(container, instance);
 
   if (instance.init) {

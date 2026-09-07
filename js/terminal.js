@@ -1,5 +1,4 @@
-import { executeCommand, bootSequence, writePrompt, COMMANDS, vfs, SITE_FAINT, ANSI_RESET } from './shell.js';
-import { CMD_HISTORY } from './shell.js';
+import { executeCommand, bootSequence, writePrompt, COMMANDS, vfs, SITE_FAINT, ANSI_RESET, CMD_HISTORY } from './shell.js';
 
 let term = null;
 let fitAddon = null;

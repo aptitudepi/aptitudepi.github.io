@@ -5,21 +5,6 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SITE = resolve(__dirname, '..');
 
-// Helper to strip HTML tags cleanly
-function stripHtml(html) {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 // Parse certifications CSV properly handling quotes
 function parseCertifications() {
   const csvPath = resolve(SITE, 'assets', 'certifications.csv');
@@ -179,19 +164,19 @@ function buildChunks() {
 }
 
 async function generateEmbeddings() {
-  console.log('Loading @huggingface/transformers...');
+  process.stdout.write('Loading @huggingface/transformers...\n');
   const { pipeline } = await import('@huggingface/transformers');
   
-  console.log('Loading embedder model (Xenova/bge-small-en-v1.5)...');
+  process.stdout.write('Loading embedder model (Xenova/bge-small-en-v1.5)...\n');
   const embedder = await pipeline('feature-extraction', 'Xenova/bge-small-en-v1.5', { dtype: 'fp32' });
 
   const chunks = buildChunks();
-  console.log(`Generating embeddings for ${chunks.length} chunks...`);
+  process.stdout.write(`Generating embeddings for ${chunks.length} chunks...\n`);
 
   const output = [];
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    console.log(`[${i + 1}/${chunks.length}] Embedding: "${chunk.title}"`);
+    process.stdout.write(`[${i + 1}/${chunks.length}] Embedding: "${chunk.title}"\n`);
     const input = `${chunk.title}: ${chunk.text}`;
     const res = await embedder(input, { pooling: 'mean', normalize: true });
     const vector = Array.from(res.data);
@@ -205,10 +190,10 @@ async function generateEmbeddings() {
 
   const outPath = resolve(SITE, 'assets', 'context-embeddings.json');
   writeFileSync(outPath, JSON.stringify(output, null, 2));
-  console.log(`Successfully written ${output.length} chunks to ${outPath}`);
+  process.stdout.write(`Successfully written ${output.length} chunks to ${outPath}\n`);
 }
 
 generateEmbeddings().catch(err => {
-  console.error('Embedding generation failed:', err);
+  process.stderr.write(`Embedding generation failed: ${(err && err.stack) || err}\n`);
   process.exit(1);
 });

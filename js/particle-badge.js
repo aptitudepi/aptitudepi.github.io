@@ -279,13 +279,12 @@ class SharedParticleField {
       if (p.life <= 0) return false;
       // Clip to the emitting card's rect + bleed — the visual equivalent of
       // the old per-card overflow:hidden container.
-      const r = p.em.rect;
-      if (!r || !p.em.visible) return false;
-      if (
-        p.x < r.left - BLEED || p.x > r.right + BLEED ||
-        p.y < r.top - BLEED || p.y > r.bottom + BLEED
-      ) return false;
-      return true;
+      const rect = p.em.rect;
+      if (!rect || !p.em.visible) return false;
+      return (
+        p.x >= rect.left - BLEED && p.x <= rect.right + BLEED &&
+        p.y >= rect.top - BLEED && p.y <= rect.bottom + BLEED
+      );
     });
 
     if (this.particles.length > 0) {
