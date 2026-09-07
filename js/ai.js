@@ -266,7 +266,7 @@ async function streamGroq(prompt, context, term, runSignal) {
 }
 
 async function streamLocal(p, prompt, context, term, runSignal) {
-  if (runSignal && runSignal.aborted) return;
+  if (runSignal?.aborted) return;
   const { TextStreamer } = await import('@huggingface/transformers');
   
   term.write(`\x1b[1mAI:\x1b[0m `);

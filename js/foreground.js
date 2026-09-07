@@ -35,7 +35,7 @@ function requestForegroundCancel() {
 }
 
 function isAbortError(workError) {
-  return Boolean(workError) && workError.name === 'AbortError';
+  return workError?.name === 'AbortError';
 }
 
 function ensureForegroundStatusNode() {
