@@ -1,0 +1,39 @@
+help
+[1m[38;2;220;220;230mAvailable commands[0m
+[38;2;140;140;155m────────────────────[0m
+  [38;2;60;200;120mwhoami        [0m[38;2;220;220;230mDisplay current user[0m
+  [38;2;60;200;120mhostname      [0m[38;2;220;220;230mShow system hostname[0m
+  [38;2;60;200;120mdate          [0m[38;2;220;220;230mShow current date/time[0m
+  [38;2;60;200;120muptime        [0m[38;2;220;220;230mLive session uptime[0m
+  [38;2;60;200;120muname [-a]    [0m[38;2;220;220;230mPrint system information[0m
+  [38;2;60;200;120mpwd           [0m[38;2;220;220;230mPrint working directory[0m
+  [38;2;60;200;120mcat <file>    [0m[38;2;220;220;230mDisplay file contents[0m
+  [38;2;60;200;120mls [path]     [0m[38;2;220;220;230mList directory contents[0m
+  [38;2;60;200;120mecho <text>   [0m[38;2;220;220;230mPrint text[0m
+  [38;2;60;200;120mclear         [0m[38;2;220;220;230mClear terminal[0m
+  [38;2;60;200;120mneofetch      [0m[38;2;220;220;230mDisplay system & resume info[0m
+  [38;2;60;200;120mabout         [0m[38;2;220;220;230mShow a longer bio about me[0m
+  [38;2;60;200;120mcv            [0m[38;2;220;220;230mAlias for neofetch[0m
+  [38;2;60;200;120mresfetch      [0m[38;2;220;220;230mAlias for neofetch[0m
+  [38;2;60;200;120mfortune       [0m[38;2;220;220;230mRandom programming quote[0m
+  [38;2;60;200;120mcowsay <msg>  [0m[38;2;220;220;230mCow says your message[0m
+  [38;2;60;200;120mmatrix        [0m[38;2;220;220;230mToggle matrix rain overlay[0m
+  [38;2;60;200;120mvm            [0m[38;2;220;220;230mBoot Buildroot Linux VM[0m
+  [38;2;60;200;120mcrt           [0m[38;2;220;220;230mToggle CRT scanline overlay[0m
+  [38;2;60;200;120mnoise         [0m[38;2;220;220;230mToggle noise texture overlay[0m
+  [38;2;60;200;120mhistory       [0m[38;2;220;220;230mShow command history[0m
+  [38;2;60;200;120mweather [-f] [city][0m[38;2;220;220;230mLive weather via Worker proxy (-f °F)[0m
+  [38;2;60;200;120mhn            [0m[38;2;220;220;230mShow Hacker News top stories[0m
+  [38;2;60;200;120mmd <url>      [0m[38;2;220;220;230mRender markdown from URL[0m
+  [38;2;60;200;120mwall [msg]    [0m[38;2;220;220;230mView/post on global guestbook wall[0m
+  [38;2;60;200;120mai <prompt>   [0m[38;2;220;220;230mPortfolio AI assistant (Groq/Local)[0m
+  [38;2;60;200;120mai web <q>    [0m[38;2;220;220;230mLive Web-augmented AI search[0m
+  [38;2;60;200;120msearch <q>    [0m[38;2;220;220;230mLive web search via Worker[0m
+  [38;2;60;200;120mmyip          [0m[38;2;220;220;230mShow public IP, geo location & latency[0m
+  [38;2;60;200;120mai-models     [0m[38;2;220;220;230mList AI models[0m
+  [38;2;60;200;120mai-model <id> [0m[38;2;220;220;230mSwitch AI model (0-5)[0m
+  [38;2;60;200;120mai-memory     [0m[38;2;220;220;230mShow AI assistant conversation memory[0m
+  [38;2;60;200;120mhelp          [0m[38;2;220;220;230mShow this help[0m
+  [38;2;60;200;120mdevmode       [0m[38;2;220;220;230mToggle developer sidebar[0m
+
+[38;2;60;200;120mdb[0m[38;2;220;220;230m@[0m[38;2;60;190;220mdvxb.io[0m[38;2;140;140;155m [0m[38;2;80;140;250m~[0m[38;2;140;140;155m❯ [0m

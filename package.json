@@ -1,0 +1,11 @@
+{
+  "name": "aptitudepi.github.io",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "snapshot": "node tools/snapshot-terminal.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.63.0"
+  }
+}

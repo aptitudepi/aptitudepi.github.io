@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "tool": "tools/snapshot-terminal.mjs",
+  "commit": "86503b42514fee48862dca983070a3e0f093e779",
+  "origin": "http://127.0.0.1:8901/",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "masked": [
+    "System clock: <MASKED-CLOCK>",
+    "uptime durations: <MASKED-DURATION>",
+    "Date().toString(): <MASKED-DATE>",
+    "search network errors: <MASKED-NETWORK>"
+  ],
+  "sessions": [
+    {
+      "command": "(boot)",
+      "file": "boot.ans",
+      "sha256": "702a20e6dd910ee846655fe6cf124011eb0ba0a97ac9961d2c1eec2e73cc40de",
+      "bytes": 2953,
+      "prompts": 1
+    },
+    {
+      "command": "help",
+      "file": "help.ans",
+      "sha256": "a15ec7dfd57795bceeec9a35aafa2c1d2c78de7a8ed5c961eea09c77b34f2391",
+      "bytes": 3254,
+      "prompts": 1
+    },
+    {
+      "command": "unknown-cmd",
+      "file": "unknown-cmd.ans",
+      "sha256": "e7c887b1d3da4c035bc602e0e72ea0ef846d7f75222e36410d3f1b51c254d3b8",
+      "bytes": 220,
+      "prompts": 1
+    },
+    {
+      "command": "whoami",
+      "file": "whoami.ans",
+      "sha256": "10e69085eadf99fec967d272aba7c01714ccad3caf6b0912d3658fb754c352b7",
+      "bytes": 188,
+      "prompts": 1
+    },
+    {
+      "command": "date",
+      "file": "date.ans",
+      "sha256": "9525e2305e4ce06bc55333f133187f24c737f825486a183c4feb521ea02e6dfa",
+      "bytes": 197,
+      "prompts": 1
+    },
+    {
+      "command": "neofetch",
+      "file": "neofetch.ans",
+      "sha256": "fa59113241e7a6c229f2a70024b26db02abc151561795427b497af12c346fb36",
+      "bytes": 2023,
+      "prompts": 1
+    },
+    {
+      "command": "about",
+      "file": "about.ans",
+      "sha256": "450a340ad986f4c257ba36d3f5be59faea153ad4e374f9653ba90477df7e6590",
+      "bytes": 821,
+      "prompts": 1
+    },
+    {
+      "command": "ls",
+      "file": "ls.ans",
+      "sha256": "d18558f28ab891246279158c1c6c8d4a63d6c471078e6efe9d53d2b15c1ab446",
+      "bytes": 221,
+      "prompts": 1
+    },
+    {
+      "command": "cat",
+      "file": "cat.ans",
+      "sha256": "2b2592c9329a8ba94a3796695aedc1aaac5789b6fd2b6d320f31084b5aeec73a",
+      "bytes": 202,
+      "prompts": 1
+    },
+    {
+      "command": "history",
+      "file": "history.ans",
+      "sha256": "79573a94d738bcb52b2b4a449726a52e766faec0f705219a66b43026f5d5d2da",
+      "bytes": 689,
+      "prompts": 1
+    },
+    {
+      "command": "ai-models",
+      "file": "ai-models.ans",
+      "sha256": "bdcde2c91826b2beb99742cd1704fac3dd7e5d7c1403f5ee3381bb915159c6da",
+      "bytes": 933,
+      "prompts": 1
+    },
+    {
+      "command": "weather --help",
+      "file": "weather-help.ans",
+      "sha256": "f2ee4a9ff974d2c2ea5d77ba0deaab972875506f0d365b11c9a3eaaca5ec79b9",
+      "bytes": 479,
+      "prompts": 1
+    },
+    {
+      "command": "search --help",
+      "file": "search-help.ans",
+      "sha256": "c0371aecebda18854023c6605c5496d4708c68a785490cee3494b6b2a8c79eb5",
+      "bytes": 280,
+      "prompts": 1
+    },
+    {
+      "command": "hn --help",
+      "file": "hn-help.ans",
+      "sha256": "dbe4e5b5696e2979af9574be7f0dac9e7fac491fde1435465c96fd22cf3a1ad9",
+      "bytes": 205,
+      "prompts": 1
+    },
+    {
+      "command": "md --help",
+      "file": "md-help.ans",
+      "sha256": "076a5844e4e8ae1f7bab8be6c209e49175f1e0b06aa16f5521ccbb96660e88e7",
+      "bytes": 300,
+      "prompts": 1
+    }
+  ],
+  "totalPrompts": 15
+}
