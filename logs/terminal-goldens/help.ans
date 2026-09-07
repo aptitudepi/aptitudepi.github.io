@@ -1,5 +1,5 @@
 help
-[1m[38;2;220;220;230mAvailable commands[0m
+[1m[38;2;220;220;230mAvailable commands (36)[0m
 [38;2;140;140;155m────────────────────[0m
   [38;2;60;200;120mwhoami        [0m[38;2;220;220;230mDisplay current user[0m
   [38;2;60;200;120mhostname      [0m[38;2;220;220;230mShow system hostname[0m
@@ -22,11 +22,11 @@ help
   [38;2;60;200;120mcrt           [0m[38;2;220;220;230mToggle CRT scanline overlay[0m
   [38;2;60;200;120mnoise         [0m[38;2;220;220;230mToggle noise texture overlay[0m
   [38;2;60;200;120mhistory       [0m[38;2;220;220;230mShow command history[0m
-  [38;2;60;200;120mweather [-f] [city][0m[38;2;220;220;230mLive weather via Worker proxy (-f °F)[0m
+  [38;2;60;200;120mweather [-f] [city][0m[38;2;220;220;230mGeolocation-nominatim (ipapi fallback)-open-meteo (-f °F)[0m
   [38;2;60;200;120mhn            [0m[38;2;220;220;230mShow Hacker News top stories[0m
   [38;2;60;200;120mmd <url>      [0m[38;2;220;220;230mRender markdown from URL[0m
   [38;2;60;200;120mwall [msg]    [0m[38;2;220;220;230mView/post on global guestbook wall[0m
-  [38;2;60;200;120mai <prompt>   [0m[38;2;220;220;230mPortfolio AI assistant (Groq/Local)[0m
+  [38;2;60;200;120mai <prompt>   [0m[38;2;220;220;230mPortfolio AI assistant (Groq/Local); ai status for backend[0m
   [38;2;60;200;120mai web <q>    [0m[38;2;220;220;230mLive Web-augmented AI search[0m
   [38;2;60;200;120msearch <q>    [0m[38;2;220;220;230mLive web search via Worker[0m
   [38;2;60;200;120mmyip          [0m[38;2;220;220;230mShow public IP, geo location & latency[0m

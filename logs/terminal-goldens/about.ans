@@ -4,8 +4,8 @@ about
 [38;2;220;220;230mCS Honors @ Texas A&M University[0m
 Builder of terminal-themed portfolios with [38;2;60;190;220mxterm.js[0m
 frosted glass UI, [38;2;60;190;220mThree.js[0m particle effects, and a
-local AI assistant running [38;2;60;190;220mTransformers.js[0m in-browser
-(WASM/WebGPU). Systems tinkerer, researcher, and open-source
+networked AI assistant ([38;2;60;190;220mGroq[0m cloud default, local option)
+Systems tinkerer, researcher, and open-source
 contributor. Interested in ML infrastructure, developer tooling,
 and building things that feel alive.
 cv: [38;2;80;140;250mhttps://dvxb.io[0m

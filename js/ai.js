@@ -305,12 +305,27 @@ export async function fetchWebSearch(query) {
   }
 }
 
+function showAiStatus(term) {
+  const current = MODELS[activeModel];
+  const backend = activeModel === 0 ? 'Groq cloud via Worker proxy' : 'local ONNX (Transformers.js, WASM/WebGPU)';
+  term.writeln(`\x1b[1mAI backend status\x1b[0m`);
+  term.writeln(`\x1b[2mactive: ${current.name} — ${backend}\x1b[0m`);
+  term.writeln(`\x1b[2mdefault: Groq cloud model; switch with ai-model <id>\x1b[0m`);
+  term.writeln(`\x1b[2mnetwork required (cloud inference or model download)\x1b[0m`);
+}
+
 async function generateOutput(prompt, term) {
   if (!prompt) {
     term.writeln(`\x1b[2mUsage: ai <prompt>\x1b[0m`);
+    term.writeln(`\x1b[2m       ai status        (show Groq-cloud vs local backend)\x1b[0m`);
     term.writeln(`\x1b[2m       ai web <query>   (live web search + LLM generation)\x1b[0m`);
     term.writeln(`\x1b[2m       ai-models        (list models)\x1b[0m`);
     term.writeln(`\x1b[2m       ai-model <id>    (switch model, 0-5)\x1b[0m`);
+    return;
+  }
+
+  if (prompt === 'status') {
+    showAiStatus(term);
     return;
   }
 

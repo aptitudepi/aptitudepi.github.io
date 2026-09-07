@@ -1,13 +1,13 @@
 # [dvxb.io](https://dvxb.io) — Devkumar Banerjee
 
-Personal portfolio featuring a browser-based x86 virtual machine, retro terminal UI, and interactive shell with 25+ commands.
+Personal portfolio featuring a browser-based x86 virtual machine, retro terminal UI, and interactive shell with 36 commands.
 
 ## Features
 
-- **Interactive terminal** — Built with [xterm.js](https://xtermjs.org/). Supports 25+ commands (whoami, neofetch, cat, ls, vm, echo, clear, history, crt, noise, weather, hn, md, about, fortune, cowsay, matrix, ai, etc.) with ANSI truecolor output, tab completion, command auto-correction, and a virtual filesystem.
+- **Interactive terminal** — Built with [xterm.js](https://xtermjs.org/). Supports 36 commands (whoami, neofetch, cat, ls, vm, echo, clear, history, crt, noise, weather, hn, md, about, fortune, cowsay, matrix, ai, etc.) with ANSI truecolor output, tab completion, command auto-correction, and a virtual filesystem.
 - **x86 VM in browser** — Uses the [v86](https://github.com/copy/v86) WebAssembly emulator to boot a Buildroot Linux image. Runs in the terminal with full serial console. Type `vm` to start.
 - **Neofetch-style dashboard** — Displays ASCII art (pixel portrait), system info, resume highlights (education, research, work, skills, certs), and a 16-color block palette on boot and via `neofetch` / `cv`.
-- **Local AI assistant** — Type `ai <prompt>` to run Transformers.js (WASM/WebGPU) models directly in-browser. No server round-trip. `ai-models` lists available models.
+- **Portfolio AI assistant** — Type `ai <prompt>` to query the assistant via a Cloudflare Worker proxy to a Groq-hosted cloud model (default), with optional local ONNX models switchable through `ai-model`. Network access is required in both modes. `ai-models` lists available models.
 - **Thought orbs** — Dotted 3D marks on a plain 2D canvas, ported from [thinking-orbs](https://github.com/Jakubantalik/thinking-orbs) (MIT). A scan-sweeping globe shows while an `ai` model downloads, then an undulating ribbon tumbles while it generates; the mark in front of `dvxb.io` in the nav bar is a lattice sphere that scrambles and clicks back to solved. Both pause offscreen and fall back to a static frame under `prefers-reduced-motion`.
 - **Hacker News reader** — `hn` fetches and displays the top 30 HN stories with scores and comment counts in a formatted ANSI table.
 - **Weather forecast** — `weather` fetches your location (browser geolocation or IP fallback) and displays current conditions from Open-Meteo. `-f` for Fahrenheit.
@@ -89,8 +89,8 @@ inside the Pages artifact.
 
 ### Terminal Shell (`js/shell.js`)
 
-- **Virtual filesystem** — A `Map` of paths to content strings (e.g., `/home/devkumar/about.txt`). Supports `cat` and `ls`.
-- **Commands (25+)**: whoami, hostname, date, uptime, pwd, uname, cat, ls, echo, clear, neofetch, resfetch, about, fortune, cowsay, help, history, crt, noise, weather, hn, md, cv, matrix, vm, ai, ai-models
+- **Virtual filesystem** — A `Map` of paths to content strings (e.g., `/home/db/about.txt`). Supports `cat` and `ls`.
+- **Commands (36)**: whoami, hostname, date, uptime, pwd, uname, cat, ls, echo, clear, neofetch, resfetch, about, fortune, cowsay, help, history, crt, noise, weather, hn, md, cv, matrix, vm, ai, ai-models
 - **Neofetch** — Renders ASCII art alongside system and resume info lines. The art is a 52-row pixel portrait with per-pixel ANSI true color.
 - **Boot sequence** — On page load, prints simulated kernel messages, then runs neofetch and shows the prompt.
 - **Auto-correction** — Mistyped commands are caught with Levenshtein distance ≤ 2 and suggest the closest match.

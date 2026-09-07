@@ -458,6 +458,41 @@ function levenshtein(a, b) {
 
 const COMMANDS = ['whoami', 'hostname', 'date', 'uptime', 'uname', 'pwd', 'cat', 'ls', 'echo', 'clear', 'neofetch', 'resfetch', 'about', 'fortune', 'cowsay', 'help', 'matrix', 'vm', 'ai', 'ai-models', 'ai-model', 'ai-memory', 'history', 'crt', 'noise', 'weather', 'hn', 'md', 'wall', 'cv', 'search', 'google', 'ddg', 'myip', 'ping', 'devmode'];
 
+// Single source for the displayed command count: helpText derives its
+// header from COMMANDS so the count can never drift from the registry.
+function commandCount() {
+  return COMMANDS.length;
+}
+
+// Normalize a user-supplied VFS path: resolve relative paths against the
+// home directory, collapse duplicate slashes, resolve ./ and ../ segments.
+// A trailing slash is insignificant for lookup.
+function normalizeVfsPath(rawPath) {
+  const homeDir = '/home/db';
+  const text = String(rawPath ?? '').trim();
+  const rooted = text.startsWith('/') ? text : `${homeDir}/${text}`;
+  const segments = rooted.split('/');
+  const resolved = [];
+  for (const segment of segments) {
+    if (segment === '' || segment === '.') continue;
+    if (segment === '..') {
+      resolved.pop();
+      continue;
+    }
+    resolved.push(segment);
+  }
+  return `/${resolved.join('/')}`;
+}
+
+// VFS lookup tolerates a trailing slash either way: the links entry is
+// stored with one, every other entry without.
+function lookupVfsPath(rawPath) {
+  const normalized = normalizeVfsPath(rawPath);
+  const direct = vfs.get(normalized);
+  if (direct !== undefined) return direct;
+  return vfs.get(`${normalized}/`);
+}
+
 function suggestCommand(input) {
   let best = null, bestDist = Infinity;
   for (const c of COMMANDS) {
@@ -578,11 +613,11 @@ function helpText(term) {
     ['crt', 'Toggle CRT scanline overlay'],
     ['noise', 'Toggle noise texture overlay'],
     ['history', 'Show command history'],
-    ['weather [-f] [city]', 'Live weather via Worker proxy (-f °F)'],
+    ['weather [-f] [city]', 'Geolocation-nominatim (ipapi fallback)-open-meteo (-f °F)'],
     ['hn', 'Show Hacker News top stories'],
     ['md <url>', 'Render markdown from URL'],
     ['wall [msg]', 'View/post on global guestbook wall'],
-    ['ai <prompt>', 'Portfolio AI assistant (Groq/Local)'],
+    ['ai <prompt>', 'Portfolio AI assistant (Groq/Local); ai status for backend'],
     ['ai web <q>', 'Live Web-augmented AI search'],
     ['search <q>', 'Live web search via Worker'],
     ['myip', 'Show public IP, geo location & latency'],
@@ -592,7 +627,7 @@ function helpText(term) {
     ['help', 'Show this help'],
     ['devmode', 'Toggle developer sidebar'],
   ];
-  term.writeln(`${ANSI_BOLD}${SITE_WHITE}Available commands${ANSI_RESET}`);
+  term.writeln(`${ANSI_BOLD}${SITE_WHITE}Available commands (${commandCount()})${ANSI_RESET}`);
   term.writeln(`${SITE_MUTED}────────────────────${ANSI_RESET}`);
   cmds.forEach(([cmd, desc]) => {
     term.writeln(`  ${SITE_GREEN}${cmd.padEnd(14)}${ANSI_RESET}${SITE_WHITE}${desc}${ANSI_RESET}`);
@@ -944,8 +979,7 @@ function executeCommand(input, term) {
       break;
     case 'cat':
       if (!args.length) { term.writeln(`${SITE_ERR}cat: missing operand${ANSI_RESET}`); break; }
-      const catPath = args[0].startsWith('/') ? args[0] : `/home/db/${args[0]}`;
-      const catContent = vfs.get(catPath);
+      const catContent = lookupVfsPath(args[0]);
       if (catContent === undefined) {
         term.writeln(`${SITE_ERR}cat: ${args[0]}: No such file or directory${ANSI_RESET}`);
       } else {
@@ -954,8 +988,7 @@ function executeCommand(input, term) {
       break;
     case 'ls':
       const lsPath = args[0] || '/home/db/';
-      const fullPath = lsPath.startsWith('/') ? lsPath : `/home/db/${lsPath}`;
-      const lsEntry = vfs.get(fullPath);
+      const lsEntry = lookupVfsPath(lsPath);
       if (lsEntry === undefined) {
         term.writeln(`${SITE_ERR}ls: ${lsPath}: No such file or directory${ANSI_RESET}`);
       } else {
@@ -983,8 +1016,8 @@ function executeCommand(input, term) {
       term.writeln(`${SITE_WHITE}CS Honors @ Texas A&M University${ANSI_RESET}`);
       term.writeln(`Builder of terminal-themed portfolios with ${SITE_CYAN}xterm.js${ANSI_RESET}`);
       term.writeln(`frosted glass UI, ${SITE_CYAN}Three.js${ANSI_RESET} particle effects, and a`);
-      term.writeln(`local AI assistant running ${SITE_CYAN}Transformers.js${ANSI_RESET} in-browser`);
-      term.writeln(`(WASM/WebGPU). Systems tinkerer, researcher, and open-source`);
+      term.writeln(`networked AI assistant (${SITE_CYAN}Groq${ANSI_RESET} cloud default, local option)`);
+      term.writeln(`Systems tinkerer, researcher, and open-source`);
       term.writeln(`contributor. Interested in ML infrastructure, developer tooling,`);
       term.writeln(`and building things that feel alive.`);
       term.writeln(`cv: ${SITE_BLUE}https://dvxb.io${ANSI_RESET}`);

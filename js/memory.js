@@ -1,4 +1,4 @@
-// Persistent Assistant Memory Engine (localStorage + IndexedDB backup)
+// Persistent Assistant Memory Engine (localStorage)
 const MEMORY_KEY = 'dvxb_ai_memory_v1';
 const HISTORY_KEY = 'dvxb_ai_history_v1';
 
