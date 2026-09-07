@@ -194,6 +194,6 @@ async function generateEmbeddings() {
 }
 
 generateEmbeddings().catch(err => {
-  process.stderr.write(`Embedding generation failed: ${(err && err.stack) || err}\n`);
+  process.stderr.write(`Embedding generation failed: ${err?.stack || err}\n`);
   process.exit(1);
 });
