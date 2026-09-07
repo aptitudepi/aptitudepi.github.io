@@ -106,29 +106,42 @@
 .nav-toggle.open span:nth-child(2) { opacity: 0; }
 .nav-toggle.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
 
-.nav-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
+/* Native modal dialog for mobile nav. The top layer replaces the old
+   overlay z-index/display/opacity hacks: a closed dialog renders nothing,
+   an open one blocks the page and traps Esc natively. No open/close
+   animation by design, so reduced-motion is honored without a query. */
+#nav-dialog {
+  border: none;
+  padding: 0;
+  margin: auto;
   background: color-mix(in oklch, var(--color-bg) 96%, transparent);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  color: var(--color-text-muted);
+}
+#nav-dialog[open] {
+  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--space-8);
-  z-index: 55;
-  opacity: 0;
+  width: 100dvw;
+  max-width: 100dvw;
+  height: 100dvh;
+  max-height: 100dvh;
 }
-.nav-overlay a {
+#nav-dialog::backdrop {
+  background: color-mix(in oklch, var(--color-bg) 70%, transparent);
+}
+#nav-dialog a {
   font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--color-text-muted);
   transition: color var(--transition-interactive);
 }
-.nav-overlay a:hover,
-.nav-overlay a.active {
+#nav-dialog a:hover,
+#nav-dialog a.active {
   animation: blueRedColor 6s ease-in-out infinite;
 }
 

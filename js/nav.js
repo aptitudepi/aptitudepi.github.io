@@ -12,37 +12,47 @@ function initNav() {
 
 function initMobileToggle() {
   const toggle = document.getElementById('navToggle');
-  const overlay = document.getElementById('navOverlay');
-  if (!toggle || !overlay) return;
+  const dialog = document.getElementById('nav-dialog');
+  if (!toggle || !dialog) return;
 
-  toggle.addEventListener('click', () => {
-    const open = toggle.classList.toggle('open');
-    overlay.classList.toggle('open', open);
-    if (open) {
-      overlay.style.display = 'flex';
-      if (!noAnim()) anime.animate(overlay, { opacity: [0, 1], duration: 300, ease: 'out(3)' });
-      else overlay.style.opacity = '1';
-    } else {
-      if (!noAnim()) {
-        anime.animate(overlay, { opacity: 0, duration: 200, ease: 'in(2)' });
-        setTimeout(() => { overlay.style.display = 'none'; }, 250);
-      } else {
-        overlay.style.display = 'none';
-      }
-    }
+  toggle.setAttribute('aria-controls', 'nav-dialog');
+  toggle.setAttribute('aria-expanded', 'false');
+
+  // Native <dialog> is modal: Esc closes it (cancel -> close), the backdrop
+  // blocks the page, and no overlay z-index or body scroll-lock is needed.
+  // Open/close is instant by design so prefers-reduced-motion needs no
+  // special case here.
+  const syncToggle = (isOpen) => {
+    toggle.classList.toggle('open', isOpen);
+    toggle.setAttribute('aria-expanded', String(isOpen));
+  };
+
+  const openDialog = () => {
+    if (dialog.open) return;
+    dialog.showModal();
+    syncToggle(true);
+    const firstLink = dialog.querySelector('a');
+    if (firstLink) firstLink.focus();
+  };
+
+  const closeDialog = () => {
+    if (dialog.open === false) return;
+    dialog.close();
+  };
+
+  toggle.addEventListener('click', openDialog);
+
+  dialog.addEventListener('close', () => {
+    syncToggle(false);
+    toggle.focus();
   });
 
-  overlay.querySelectorAll('a').forEach(a => {
-    a.addEventListener('click', () => {
-      toggle.classList.remove('open');
-      overlay.classList.remove('open');
-      if (!noAnim()) {
-        anime.animate(overlay, { opacity: 0, duration: 200, ease: 'in(2)' });
-        setTimeout(() => { overlay.style.display = 'none'; }, 250);
-      } else {
-        overlay.style.display = 'none';
-      }
-    });
+  dialog.addEventListener('click', (clickEvent) => {
+    if (clickEvent.target === dialog) closeDialog();
+  });
+
+  dialog.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', closeDialog);
   });
 }
 

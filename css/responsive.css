@@ -7,7 +7,6 @@
   .nav-dots { display: none; }
 
   .nav-toggle { display: flex; }
-  .nav-overlay { display: flex; }
   .about-grid { grid-template-columns: 1fr; text-align: center; max-width: 100%; }
   .about-image { margin: 0 auto; }
   .terminal-body { font-size: 12px; }
@@ -31,6 +30,7 @@
   html { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .bento-card { opacity: 1; }
+  .cert-badge { opacity: 1; transform: none; transition: none; }
   .social-link { opacity: 1; }
   .spotlight-card::before, .spotlight-card:hover::before,
   .spotlight-card::after, .spotlight-card:hover::after,

@@ -92,6 +92,9 @@
 <link rel="stylesheet" href="css/terminal.css">
 <link rel="stylesheet" href="css/nav.css">
 <link rel="stylesheet" href="css/responsive.css">
+<noscript><style>
+.cert-badge { opacity: 1; transform: none; }
+</style></noscript>
 
 <!-- Topolines UMD — must load before modules that use window.Topolines -->
 <script src="js/topolines.global.js"></script>
@@ -121,18 +124,18 @@
 <div id="crt-overlay" aria-hidden="true"></div>
 <div id="noise-overlay" aria-hidden="true"></div>
 
-<button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" type="button">
+<button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="nav-dialog" type="button">
   <span></span><span></span><span></span>
 </button>
 
-<nav class="nav-overlay" id="navOverlay" role="navigation" aria-label="Mobile navigation">
+<dialog id="nav-dialog" aria-label="Mobile navigation">
   <a href="#hero-target" data-section>Home</a>
   <a href="#about" data-section>About</a>
   <a href="#projects" data-section>Projects</a>
   <a href="#certifications" data-section>Certifications</a>
   <a href="#resume" data-section>Resume</a>
   <a href="#contact" data-section>Contact</a>
-</nav>
+</dialog>
 
 <nav class="nav-dots" id="navDots" role="navigation" aria-label="Section navigation">
   <button class="nav-dot active" data-section="hero-target" aria-label="Home"><span class="nav-dot-label">Home</span></button>
