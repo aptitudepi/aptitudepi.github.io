@@ -1,4 +1,5 @@
 import { generateOutput, showModelSelector, switchModel } from './ai.js';
+import { runForeground, setPromptRenderer, isForegroundBusy, isAbortError } from './foreground.js';
 
 const pageLoadTime = Date.now();
 
@@ -388,6 +389,10 @@ function writePrompt(term) {
   term.write(`\r\n${SITE_GREEN}db${ANSI_RESET}${SITE_WHITE}@${ANSI_RESET}${SITE_CYAN}dvxb.io${ANSI_RESET}${SITE_MUTED} ${ANSI_RESET}${SITE_BLUE}~${ANSI_RESET}${SITE_MUTED}❯ ${ANSI_RESET}`);
 }
 
+// The foreground runner owns every post-completion prompt: shell registers
+// its renderer once, then no command path calls writePrompt directly.
+setPromptRenderer(writePrompt);
+
 function bootSequence(term, onDone) {
   if (!BOOT_MSGS) {
     const cpu = asyncCPU || getCPU();
@@ -634,7 +639,7 @@ function helpText(term) {
   });
 }
 
-async function getLocation() {
+async function getLocation(runSignal) {
   try {
     const pos = await new Promise((res, rej) => {
       if (!navigator.geolocation) { rej(new Error('no geo')); return; }
@@ -642,7 +647,7 @@ async function getLocation() {
     });
     const geoResp = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`,
-      { headers: { 'User-Agent': navigator.userAgent } }
+      { headers: { 'User-Agent': navigator.userAgent }, signal: runSignal }
     );
     const geoData = await geoResp.json();
     const a = geoData.address || {};
@@ -653,8 +658,9 @@ async function getLocation() {
       region: a.state || null,
       country: a.country_code || null,
     };
-  } catch {
-    const ipResp = await fetch('https://ipapi.co/json/');
+  } catch (locationError) {
+    if (isAbortError(locationError)) throw locationError;
+    const ipResp = await fetch('https://ipapi.co/json/', { signal: runSignal });
     const ipData = await ipResp.json();
     return {
       lat: ipData.latitude,
@@ -667,22 +673,23 @@ async function getLocation() {
   }
 }
 
-async function weatherCommand(term, args) {
+async function weatherCommand(term, args, runSignal) {
   const isF = args.includes('-f');
   term.writeln(`${SITE_MUTED}Fetching location...${ANSI_RESET}`);
   let loc;
   if (_prefetchedLocation) {
     loc = _prefetchedLocation;
   } else {
-    try { loc = await getLocation(); }
-    catch {
+    try { loc = await getLocation(runSignal); }
+    catch (locationError) {
+      if (isAbortError(locationError)) throw locationError;
       term.writeln(`${SITE_ERR}Could not determine location.${ANSI_RESET}`);
       term.writeln(`${SITE_FAINT}  .       .       .${ANSI_RESET}`);
       term.writeln(`${SITE_FAINT}    .   .   .   .${ANSI_RESET}`);
       term.writeln(`${SITE_FAINT}  .  +  .  +  .${ANSI_RESET}`);
       term.writeln(`${SITE_FAINT}    .   .   .   .${ANSI_RESET}`);
       term.writeln(`${SITE_FAINT}  .       .       .${ANSI_RESET}`);
-      writePrompt(term); return;
+      return;
     }
   }
   const lat = loc.lat.toFixed(4);
@@ -698,21 +705,21 @@ async function weatherCommand(term, args) {
     term.writeln(`${SITE_LABEL}prefetched:${ANSI_RESET} ${SITE_WHITE}${_prefetchedLocation !== null}${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}Fetching raw ipapi response...${ANSI_RESET}`);
     try {
-      const r = await fetch('https://ipapi.co/json/');
-      const d = await r.json();
-      for (const k of ['city','region','region_code','country','country_code','latitude','longitude']) {
-        term.writeln(`  ${SITE_FAINT}${k}:${ANSI_RESET} ${SITE_GREEN}${JSON.stringify(d[k])}${ANSI_RESET}`);
+      const debugResp = await fetch('https://ipapi.co/json/', { signal: runSignal });
+      const debugData = await debugResp.json();
+      for (const fieldName of ['city','region','region_code','country','country_code','latitude','longitude']) {
+        term.writeln(`  ${SITE_FAINT}${fieldName}:${ANSI_RESET} ${SITE_GREEN}${JSON.stringify(debugData[fieldName])}${ANSI_RESET}`);
       }
-    } catch (e) {
-      term.writeln(`${SITE_ERR}ipapi.co error: ${e.message}${ANSI_RESET}`);
+    } catch (debugError) {
+      if (isAbortError(debugError)) throw debugError;
+      term.writeln(`${SITE_ERR}ipapi.co error: ${debugError.message}${ANSI_RESET}`);
     }
-    writePrompt(term);
     return;
   }
 
   term.writeln(`${SITE_MUTED}Fetching weather for ${locStr}...${ANSI_RESET}`);
   try {
-    const wResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
+    const wResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto`, { signal: runSignal });
     const wData = await wResp.json();
     const cw = wData.current_weather;
     const tempUnit = isF ? '°F' : '°C';
@@ -736,10 +743,10 @@ async function weatherCommand(term, args) {
     term.writeln(`${SITE_MUTED}  H: ${hi}${tempUnit}  L: ${lo}${tempUnit}${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}  Wind: ${windKmh} km/h${ANSI_RESET}`);
     term.writeln(`${SITE_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━${ANSI_RESET}`);
-  } catch {
+  } catch (weatherError) {
+    if (isAbortError(weatherError)) throw weatherError;
     term.writeln(`${SITE_ERR}Failed to fetch weather data${ANSI_RESET}`);
   }
-  writePrompt(term);
 }
 
 
@@ -798,23 +805,21 @@ function renderComment(term, item, depth) {
   }
 }
 
-async function hnCommand(term, args) {
+async function hnCommand(term, args, runSignal) {
   if (args.length > 0) {
     const idx = parseInt(args[0], 10);
     if (isNaN(idx) || idx < 1 || idx > _hnItems.length) {
       term.writeln(`${SITE_ERR}hn: invalid index${ANSI_RESET}`);
-      writePrompt(term);
       return;
     }
     const item = _hnItems[idx - 1];
     if (!item) {
       term.writeln(`${SITE_ERR}hn: item not found${ANSI_RESET}`);
-      writePrompt(term);
       return;
     }
     term.writeln(`${SITE_MUTED}Fetching story #${item.id}...${ANSI_RESET}`);
     try {
-      const storyResp = await fetch(`https://hacker-news.firebaseio.com/v0/item/${item.id}.json`);
+      const storyResp = await fetch(`https://hacker-news.firebaseio.com/v0/item/${item.id}.json`, { signal: runSignal });
       const story = await storyResp.json();
       if (!story) throw new Error('empty');
 
@@ -836,16 +841,16 @@ async function hnCommand(term, args) {
         term.writeln('');
         const commentIds = story.kids.slice(0, 10);
         const comments = await Promise.all(
-          commentIds.map(id =>
-            fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())
+          commentIds.map((commentId) =>
+            fetch(`https://hacker-news.firebaseio.com/v0/item/${commentId}.json`, { signal: runSignal }).then((commentResp) => commentResp.json())
           )
         );
         for (const comment of comments) {
           if (comment && comment.kids && comment.kids.length > 0) {
             const replyIds = comment.kids.slice(0, 3);
             comment._replies = (await Promise.all(
-              replyIds.map(id =>
-                fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())
+              replyIds.map((replyId) =>
+                fetch(`https://hacker-news.firebaseio.com/v0/item/${replyId}.json`, { signal: runSignal }).then((replyResp) => replyResp.json())
               )
             )).filter(Boolean);
           }
@@ -857,43 +862,44 @@ async function hnCommand(term, args) {
       } else {
         term.writeln(`${SITE_MUTED}No comments yet${ANSI_RESET}`);
       }
-    } catch {
+    } catch (storyError) {
+      if (isAbortError(storyError)) throw storyError;
       term.writeln(`${SITE_ERR}Failed to fetch story #${item.id}${ANSI_RESET}`);
     }
-    writePrompt(term);
     return;
   }
 
   term.writeln(`${SITE_MUTED}Fetching top stories...${ANSI_RESET}`);
   try {
-    const idsResp = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+    const idsResp = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json', { signal: runSignal });
     const ids = await idsResp.json();
     const topIds = ids.slice(0, 30);
-    const items = await Promise.all(topIds.map(id =>
-      fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())
+    const items = await Promise.all(topIds.map((topId) =>
+      fetch(`https://hacker-news.firebaseio.com/v0/item/${topId}.json`, { signal: runSignal }).then((itemResp) => itemResp.json())
     ));
     _hnItems = items;
     term.writeln(`${SITE_CYAN}┌────┬──────────────────────────────────────────────────┬───────┬────────┐${ANSI_RESET}`);
     term.writeln(`${SITE_CYAN}│${SITE_FAINT} #  ${SITE_CYAN}│${SITE_FAINT} Title                                            ${SITE_CYAN}│${SITE_FAINT} Score ${SITE_CYAN}│${SITE_FAINT} Comments${SITE_CYAN}│${ANSI_RESET}`);
     term.writeln(`${SITE_CYAN}├────┼──────────────────────────────────────────────────┼───────┼────────┤${ANSI_RESET}`);
-    items.forEach((item, i) => {
-      if (!item) return;
-      const num = String(i + 1).padStart(2);
-      const title = (item.title || 'Untitled').slice(0, 48).padEnd(48);
-      const score = String(item.score || 0).padStart(5);
-      const comments = String(item.descendants || 0).padStart(6);
+    for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+      const listItem = items[itemIndex];
+      if (!listItem) continue;
+      const num = String(itemIndex + 1).padStart(2);
+      const title = (listItem.title || 'Untitled').slice(0, 48).padEnd(48);
+      const score = String(listItem.score || 0).padStart(5);
+      const comments = String(listItem.descendants || 0).padStart(6);
       term.writeln(`${SITE_CYAN}│${SITE_GREEN}${num} ${SITE_CYAN}│${SITE_WHITE} ${title} ${SITE_CYAN}│${SITE_MUTED} ${score}${SITE_CYAN}│${SITE_MUTED} ${comments}${SITE_CYAN}│${ANSI_RESET}`);
-    });
+    }
     term.writeln(`${SITE_CYAN}└────┴──────────────────────────────────────────────────┴───────┴────────┘${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}Type ${SITE_WHITE}hn <number>${SITE_MUTED} to view a story${ANSI_RESET}`);
-  } catch {
+  } catch (listError) {
+    if (isAbortError(listError)) throw listError;
     term.writeln(`${SITE_ERR}Failed to fetch Hacker News${ANSI_RESET}`);
   }
-  writePrompt(term);
 }
 
 function mdCommand(term, args) {
-  if (!args.length) { term.writeln(`${SITE_ERR}md: missing URL${ANSI_RESET}`); writePrompt(term); return; }
+  if (!args.length) { term.writeln(`${SITE_ERR}md: missing URL${ANSI_RESET}`); return; }
   let url = args[0];
   if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
   term.writeln(`${SITE_MUTED}Opening ${url} in markdown viewer...${ANSI_RESET}`);
@@ -924,32 +930,48 @@ function mdCommand(term, args) {
     document.body.appendChild(closeBtn);
     term.writeln(`${SITE_GREEN}md viewer opened. Press ✕ or Esc to close${ANSI_RESET}`);
     document.addEventListener('keydown', onEsc);
-  } catch {
+  } catch (viewerError) {
     term.writeln(`${SITE_ERR}Failed to open markdown viewer${ANSI_RESET}`);
   }
-  writePrompt(term);
 }
 
+// Every command body runs inside the foreground runner, which renders the
+// single post-completion prompt: no path below may call writePrompt.
 function executeCommand(input, term) {
   const trimmed = input.trim();
-  if (!trimmed) { writePrompt(term); return; }
+  if (!trimmed) {
+    if (isForegroundBusy()) return Promise.resolve(false);
+    writePrompt(term);
+    return Promise.resolve(true);
+  }
 
+  const headToken = (trimmed.split(/\s+/, 1)[0] || 'unknown').toLowerCase();
+  return runForeground(headToken, term, (runSignal) => executeCommandBody(trimmed, term, runSignal));
+}
+
+async function executeCommandBody(trimmed, term, runSignal) {
   // Pipe support: cmd1 | cmd2
   if (trimmed.includes('|')) {
-    const segments = trimmed.split('|').map(s => s.trim());
+    const segments = trimmed.split('|').map((segment) => segment.trim());
     let captured = '';
-    const capTerm = { write: s => { captured += s; }, writeln: s => { captured += s + '\n'; } };
-    for (let i = 0; i < segments.length; i++) {
-      if (i < segments.length - 1) {
-        executeCommand(segments[i], capTerm);
+    const capTerm = {
+      write(chunk) { captured = `${captured}${chunk}`; },
+      writeln(line) { captured = `${captured}${line}\n`; },
+    };
+    for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
+      if (segmentIndex < segments.length - 1) {
+        await executeSingleCommand(segments[segmentIndex], capTerm, runSignal);
       } else {
-        executeCommand(segments[i] + ' "' + captured.trimEnd() + '"', term);
+        await executeSingleCommand(`${segments[segmentIndex]} "${captured.trimEnd()}"`, term, runSignal);
       }
     }
-    writePrompt(term);
     return;
   }
 
+  return executeSingleCommand(trimmed, term, runSignal);
+}
+
+async function executeSingleCommand(trimmed, term, runSignal) {
   const parts = trimmed.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
   const cmd = parts[0].toLowerCase();
   const args = parts.slice(1).map(a => a.replace(/^"(.*)"$/, '$1'));
@@ -1073,25 +1095,22 @@ function executeCommand(input, term) {
     case 'vm':
       term.writeln(`${SITE_MUTED}Loading Buildroot Linux VM...${ANSI_RESET}`);
       if (typeof window.bootVM === 'function') {
-        window.bootVM(term);
-      } else {
-        term.writeln(`${SITE_ERR}VM module not loaded${ANSI_RESET}`);
+        return window.bootVM(term, runSignal);
       }
+      term.writeln(`${SITE_ERR}VM module not loaded${ANSI_RESET}`);
       break;
     case 'ai':
     case 'llm':
-      generateOutput(args.join(' '), term).then(() => writePrompt(term));
-      return;
+      return generateOutput(args.join(' '), term, runSignal);
     case 'devmode':
       term.writeln(`${SITE_MUTED}Loading dev panel…${ANSI_RESET}`);
-      import('./devtools.js').then((devtools) => {
+      try {
+        const devtools = await import('./devtools.js');
         devtools.toggleDevPanel();
-        writePrompt(term);
-      }).catch((err) => {
-        term.writeln(`${SITE_ERR}Failed to load dev panel: ${err.message}${ANSI_RESET}`);
-        writePrompt(term);
-      });
-      return;
+      } catch (devError) {
+        term.writeln(`${SITE_ERR}Failed to load dev panel: ${devError.message}${ANSI_RESET}`);
+      }
+      break;
     case 'ai-models':
       showModelSelector(term);
       break;
@@ -1105,54 +1124,51 @@ function executeCommand(input, term) {
     case 'search':
     case 'google':
     case 'ddg': {
-      const q = args.join(' ');
-      if (!q) {
+      const query = args.join(' ');
+      if (!query) {
         term.writeln(`${SITE_MUTED}Usage: search <query>${ANSI_RESET}`);
         break;
       }
       term.writeln(`${SITE_FAINT}Searching web via Cloudflare Worker...${ANSI_RESET}`);
-      fetch(`https://0.supernovadkb.workers.dev/search?q=${encodeURIComponent(q)}`)
-        .then(res => res.json())
-        .then(data => {
-          if (!data.results || !data.results.length) {
-            term.writeln(`${SITE_MUTED}No search results found.${ANSI_RESET}`);
-          } else {
-            term.writeln(`${SITE_GREEN}\x1b[1mSearch Results for "${stripAnsi(q)}":\x1b[0m${ANSI_RESET}`);
-            data.results.forEach((r, i) => {
-              term.writeln(`  ${SITE_GREEN}[${i + 1}] ${stripAnsi(r.title)}${ANSI_RESET}`);
-              term.writeln(`      ${SITE_FAINT}${stripAnsi(r.snippet)}${ANSI_RESET}`);
-              term.writeln(`      \x1b[34m\x1b[4m${stripAnsi(r.url)}\x1b[0m\n`);
-            });
+      try {
+        const searchResp = await fetch(`https://0.supernovadkb.workers.dev/search?q=${encodeURIComponent(query)}`, { signal: runSignal });
+        const searchData = await searchResp.json();
+        if (!searchData.results || !searchData.results.length) {
+          term.writeln(`${SITE_MUTED}No search results found.${ANSI_RESET}`);
+        } else {
+          term.writeln(`${SITE_GREEN}\x1b[1mSearch Results for "${stripAnsi(query)}":\x1b[0m${ANSI_RESET}`);
+          for (let resultIndex = 0; resultIndex < searchData.results.length; resultIndex++) {
+            const result = searchData.results[resultIndex];
+            term.writeln(`  ${SITE_GREEN}[${resultIndex + 1}] ${stripAnsi(result.title)}${ANSI_RESET}`);
+            term.writeln(`      ${SITE_FAINT}${stripAnsi(result.snippet)}${ANSI_RESET}`);
+            term.writeln(`      \x1b[34m\x1b[4m${stripAnsi(result.url)}\x1b[0m\n`);
           }
-          writePrompt(term);
-        })
-        .catch(err => {
-          term.writeln(`${SITE_ERR}Search error: ${err.message}${ANSI_RESET}`);
-          writePrompt(term);
-        });
-      return;
+        }
+      } catch (searchError) {
+        if (isAbortError(searchError)) throw searchError;
+        term.writeln(`${SITE_ERR}Search error: ${searchError.message}${ANSI_RESET}`);
+      }
+      break;
     }
     case 'myip':
     case 'ping': {
       term.writeln(`${SITE_FAINT}Pinging Cloudflare Worker gateway...${ANSI_RESET}`);
-      const t0 = performance.now();
-      fetch('https://0.supernovadkb.workers.dev/ip')
-        .then(res => res.json())
-        .then(info => {
-          const latency = Math.round(performance.now() - t0);
-          term.writeln(`${SITE_GREEN}\x1b[1mNetwork Diagnostics & IP Location:\x1b[0m${ANSI_RESET}`);
-          term.writeln(`  \x1b[36mPublic IP:\x1b[0m ${stripAnsi(info.ip)}`);
-          term.writeln(`  \x1b[36mLocation:\x1b[0m ${stripAnsi(info.city)}, ${stripAnsi(info.country)} (${stripAnsi(info.continent)})`);
-          term.writeln(`  \x1b[36mISP / ASN:\x1b[0m ${stripAnsi(info.asOrganization)} (AS${stripAnsi(info.asn)})`);
-          term.writeln(`  \x1b[36mLatency:\x1b[0m ${latency}ms`);
-          term.writeln(`  \x1b[36mRay ID:\x1b[0m ${stripAnsi(info.ray)}`);
-          writePrompt(term);
-        })
-        .catch(err => {
-          term.writeln(`${SITE_ERR}Ping error: ${err.message}${ANSI_RESET}`);
-          writePrompt(term);
-        });
-      return;
+      const startMillis = performance.now();
+      try {
+        const pingResp = await fetch('https://0.supernovadkb.workers.dev/ip', { signal: runSignal });
+        const pingInfo = await pingResp.json();
+        const latency = Math.round(performance.now() - startMillis);
+        term.writeln(`${SITE_GREEN}\x1b[1mNetwork Diagnostics & IP Location:\x1b[0m${ANSI_RESET}`);
+        term.writeln(`  \x1b[36mPublic IP:\x1b[0m ${stripAnsi(pingInfo.ip)}`);
+        term.writeln(`  \x1b[36mLocation:\x1b[0m ${stripAnsi(pingInfo.city)}, ${stripAnsi(pingInfo.country)} (${stripAnsi(pingInfo.continent)})`);
+        term.writeln(`  \x1b[36mISP / ASN:\x1b[0m ${stripAnsi(pingInfo.asOrganization)} (AS${stripAnsi(pingInfo.asn)})`);
+        term.writeln(`  \x1b[36mLatency:\x1b[0m ${latency}ms`);
+        term.writeln(`  \x1b[36mRay ID:\x1b[0m ${stripAnsi(pingInfo.ray)}`);
+      } catch (pingError) {
+        if (isAbortError(pingError)) throw pingError;
+        term.writeln(`${SITE_ERR}Ping error: ${pingError.message}${ANSI_RESET}`);
+      }
+      break;
     }
     case 'history':
       if (CMD_HISTORY.length === 0) {
@@ -1184,80 +1200,74 @@ function executeCommand(input, term) {
       break;
     }
     case 'weather':
-      weatherCommand(term, args);
-      return;
+      return weatherCommand(term, args, runSignal);
     case 'hn':
-      hnCommand(term, args);
-      return;
+      return hnCommand(term, args, runSignal);
     case 'md':
       mdCommand(term, args);
-      return;
+      break;
     case 'wall':
     case 'guestbook': {
       const msg = args.join(' ');
       if (!msg) {
         term.writeln(`${SITE_FAINT}Fetching global visitor wall...${ANSI_RESET}`);
-        fetch('https://0.supernovadkb.workers.dev/wall')
-          .then(res => res.json())
-          .then(data => {
-            const posts = data.posts || [];
-            term.writeln(`${SITE_GREEN}\x1b[1mdvxb.io Global Visitor Guestbook & AI Wall:\x1b[0m${ANSI_RESET}`);
-            if (!posts.length) {
-              term.writeln(`${SITE_MUTED}No entries yet. Be the first to leave a message using: wall <your message>${ANSI_RESET}`);
-            } else {
-              posts.forEach(p => {
-                term.writeln(`  ${SITE_CYAN}[${stripAnsi(p.timestamp)}] ${stripAnsi(p.name)}:${ANSI_RESET} "${stripAnsi(p.message)}"`);
-                if (p.aiReply) {
-                  term.writeln(`      ${SITE_GREEN}AI Signature Reply:${ANSI_RESET} ${SITE_FAINT}${stripAnsi(p.aiReply)}${ANSI_RESET}`);
-                }
-              });
+        try {
+          const wallResp = await fetch('https://0.supernovadkb.workers.dev/wall', { signal: runSignal });
+          const wallData = await wallResp.json();
+          const posts = wallData.posts || [];
+          term.writeln(`${SITE_GREEN}\x1b[1mdvxb.io Global Visitor Guestbook & AI Wall:\x1b[0m${ANSI_RESET}`);
+          if (!posts.length) {
+            term.writeln(`${SITE_MUTED}No entries yet. Be the first to leave a message using: wall <your message>${ANSI_RESET}`);
+          } else {
+            for (const post of posts) {
+              term.writeln(`  ${SITE_CYAN}[${stripAnsi(post.timestamp)}] ${stripAnsi(post.name)}:${ANSI_RESET} "${stripAnsi(post.message)}"`);
+              if (post.aiReply) {
+                term.writeln(`      ${SITE_GREEN}AI Signature Reply:${ANSI_RESET} ${SITE_FAINT}${stripAnsi(post.aiReply)}${ANSI_RESET}`);
+              }
             }
-            term.writeln(`\n${SITE_MUTED}Tip: Leave your own message using: wall <message>${ANSI_RESET}`);
-            writePrompt(term);
-          })
-          .catch(err => {
-            term.writeln(`${SITE_ERR}Failed to load wall: ${err.message}${ANSI_RESET}`);
-            writePrompt(term);
-          });
-        return;
+          }
+          term.writeln(`\n${SITE_MUTED}Tip: Leave your own message using: wall <message>${ANSI_RESET}`);
+        } catch (wallError) {
+          if (isAbortError(wallError)) throw wallError;
+          term.writeln(`${SITE_ERR}Failed to load wall: ${wallError.message}${ANSI_RESET}`);
+        }
+        break;
       }
       term.writeln(`${SITE_FAINT}Posting message to global wall & generating AI reply...${ANSI_RESET}`);
-      fetch('https://0.supernovadkb.workers.dev/wall', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Terminal Visitor', message: msg })
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.post) {
-            term.writeln(`${SITE_GREEN}\x1b[1mMessage posted to global wall!${ANSI_RESET}`);
-            term.writeln(`  ${SITE_CYAN}${stripAnsi(data.post.name)}:${ANSI_RESET} "${stripAnsi(data.post.message)}"`);
-            term.writeln(`  ${SITE_GREEN}AI Reply:${ANSI_RESET} ${stripAnsi(data.post.aiReply)}`);
-          } else {
-            term.writeln(`${SITE_ERR}Failed to post: ${data.error || 'Unknown error'}${ANSI_RESET}`);
-          }
-          writePrompt(term);
-        })
-        .catch(err => {
-          term.writeln(`${SITE_ERR}Wall post error: ${err.message}${ANSI_RESET}`);
-          writePrompt(term);
+      try {
+        const postResp = await fetch('https://0.supernovadkb.workers.dev/wall', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'Terminal Visitor', message: msg }),
+          signal: runSignal,
         });
-      return;
+        const postData = await postResp.json();
+        if (postData.post) {
+          term.writeln(`${SITE_GREEN}\x1b[1mMessage posted to global wall!${ANSI_RESET}`);
+          term.writeln(`  ${SITE_CYAN}${stripAnsi(postData.post.name)}:${ANSI_RESET} "${stripAnsi(postData.post.message)}"`);
+          term.writeln(`  ${SITE_GREEN}AI Reply:${ANSI_RESET} ${stripAnsi(postData.post.aiReply)}`);
+        } else {
+          term.writeln(`${SITE_ERR}Failed to post: ${postData.error || 'Unknown error'}${ANSI_RESET}`);
+        }
+      } catch (postError) {
+        if (isAbortError(postError)) throw postError;
+        term.writeln(`${SITE_ERR}Wall post error: ${postError.message}${ANSI_RESET}`);
+      }
+      break;
     }
     case 'ai-memory': {
-      import('./memory.js').then(mem => {
-        const history = mem.getStoredHistory();
-        term.writeln(`${SITE_GREEN}\x1b[1mPortfolio AI Assistant Memory & Conversation Turns:\x1b[0m${ANSI_RESET}`);
-        if (!history.length) {
-          term.writeln(`${SITE_MUTED}No conversation history stored.${ANSI_RESET}`);
-        } else {
-          history.forEach((h, i) => {
-            term.writeln(`  ${SITE_FAINT}[${i + 1}] ${h.role.toUpperCase()}:${ANSI_RESET} ${h.content}`);
-          });
+      const memoryModule = await import('./memory.js');
+      const storedHistory = memoryModule.getStoredHistory();
+      term.writeln(`${SITE_GREEN}\x1b[1mPortfolio AI Assistant Memory & Conversation Turns:\x1b[0m${ANSI_RESET}`);
+      if (!storedHistory.length) {
+        term.writeln(`${SITE_MUTED}No conversation history stored.${ANSI_RESET}`);
+      } else {
+        for (let turnIndex = 0; turnIndex < storedHistory.length; turnIndex++) {
+          const turn = storedHistory[turnIndex];
+          term.writeln(`  ${SITE_FAINT}[${turnIndex + 1}] ${turn.role.toUpperCase()}:${ANSI_RESET} ${turn.content}`);
         }
-        writePrompt(term);
-      });
-      return;
+      }
+      break;
     }
     default: {
       const suggestion = suggestCommand(cmd);
@@ -1270,7 +1280,6 @@ function executeCommand(input, term) {
       break;
     }
   }
-  writePrompt(term);
 }
 
 window.executeTerminalCommand = executeCommand;

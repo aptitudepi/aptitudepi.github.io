@@ -1,5 +1,6 @@
 import { startThinkingOrb, setThinkingOrbState, stopThinkingOrb } from './orb.js';
 import { retrieveContext } from './rag.js';
+import { isAbortError } from './foreground.js';
 
 const MODELS = [
   { id: 'qwen/qwen3.8-27b', name: 'qwen3.8-27b', size: '0MB (Cloud)', dtype: 'api', desc: 'qwen3.8-27b + bge-small-en (default)' },
@@ -141,7 +142,7 @@ function stripAnsi(s) {
   return out;
 }
 
-async function streamGroq(prompt, context, term) {
+async function streamGroq(prompt, context, term, runSignal) {
   const workerUrl = 'https://0.supernovadkb.workers.dev/ai';
   
   term.write(`\x1b[1mAI:\x1b[0m `);
@@ -216,7 +217,8 @@ async function streamGroq(prompt, context, term) {
         stream: true,
         max_tokens: 1024,
         temperature: 0.3
-      })
+      }),
+      signal: runSignal,
     });
 
     if (!response.ok || !response.body) {
@@ -256,13 +258,15 @@ async function streamGroq(prompt, context, term) {
     appendHistoryTurn('user', prompt);
     appendHistoryTurn('assistant', fullResponse);
     processToolCalls(fullResponse, term);
-  } catch (e) {
-    term.writeln(`\r\x1b[91mGroq cloud stream error: ${e.message}\x1b[0m`);
+  } catch (streamError) {
+    if (isAbortError(streamError)) throw streamError;
+    term.writeln(`\r\x1b[91mGroq cloud stream error: ${streamError.message}\x1b[0m`);
     term.writeln(`\x1b[2mTip: Switch to local in-browser model using \`ai-model 1\`\x1b[0m`);
   }
 }
 
-async function streamLocal(p, prompt, context, term) {
+async function streamLocal(p, prompt, context, term, runSignal) {
+  if (runSignal && runSignal.aborted) return;
   const { TextStreamer } = await import('@huggingface/transformers');
   
   term.write(`\x1b[1mAI:\x1b[0m `);
@@ -293,14 +297,15 @@ async function streamLocal(p, prompt, context, term) {
   processToolCalls(fullResponse, term);
 }
 
-export async function fetchWebSearch(query) {
+export async function fetchWebSearch(query, runSignal) {
   try {
-    const res = await fetch(`https://0.supernovadkb.workers.dev/search?q=${encodeURIComponent(query)}`);
+    const res = await fetch(`https://0.supernovadkb.workers.dev/search?q=${encodeURIComponent(query)}`, { signal: runSignal });
     if (!res.ok) return [];
     const data = await res.json();
     return data.results || [];
-  } catch (e) {
-    console.warn('Web search request error:', e);
+  } catch (searchError) {
+    if (isAbortError(searchError)) throw searchError;
+    console.warn('Web search request error:', searchError);
     return [];
   }
 }
@@ -314,7 +319,7 @@ function showAiStatus(term) {
   term.writeln(`\x1b[2mnetwork required (cloud inference or model download)\x1b[0m`);
 }
 
-async function generateOutput(prompt, term) {
+async function generateOutput(prompt, term, runSignal) {
   if (!prompt) {
     term.writeln(`\x1b[2mUsage: ai <prompt>\x1b[0m`);
     term.writeln(`\x1b[2m       ai status        (show Groq-cloud vs local backend)\x1b[0m`);
@@ -338,7 +343,7 @@ async function generateOutput(prompt, term) {
 
     if (isWebSearch) {
       if (term) term.writeln(`\x1b[2mFetching live web results via Cloudflare Worker...\x1b[0m`);
-      const webResults = await fetchWebSearch(cleanQuery);
+      const webResults = await fetchWebSearch(cleanQuery, runSignal);
       if (webResults.length) {
         const webStr = webResults.map((r, i) => `[Web Result ${i + 1}: ${r.title}]\nURL: ${r.url}\n${r.snippet}`).join('\n\n');
         context = `[Live Web Search Context]\n${webStr}\n\n${context}`;
@@ -355,12 +360,13 @@ async function generateOutput(prompt, term) {
     term.writeln(`\x1b[2m\xf0\x9f\x94\x84 Generating (real-time stream)...\x1b[0m`);
 
     if (activeModel === 0 || p === 'groq') {
-      await streamGroq(cleanQuery, context, term);
+      await streamGroq(cleanQuery, context, term, runSignal);
     } else {
-      await streamLocal(p, cleanQuery, context, term);
+      await streamLocal(p, cleanQuery, context, term, runSignal);
     }
-  } catch (e) {
-    term.writeln(`\x1b[91mGeneration failed: ${e.message}\x1b[0m`);
+  } catch (generateError) {
+    if (isAbortError(generateError)) throw generateError;
+    term.writeln(`\x1b[91mGeneration failed: ${generateError.message}\x1b[0m`);
   } finally {
     stopThinkingOrb();
   }

@@ -1,4 +1,5 @@
 import { executeCommand, bootSequence, writePrompt, COMMANDS, vfs, SITE_FAINT, ANSI_RESET, CMD_HISTORY } from './shell.js';
+import { isForegroundBusy, requestForegroundCancel } from './foreground.js';
 
 let term = null;
 let fitAddon = null;
@@ -71,7 +72,7 @@ function applyCompletionList(activeTerm, candidates, completeBase) {
 }
 
 function handleTabCompletion(activeTerm) {
-  if (!bootDone || !inputBuffer.trim()) return;
+  if (!bootDone || !inputBuffer.trim() || isForegroundBusy()) return;
   const partial = inputBuffer.trim().toLowerCase();
   const isPath = partial.startsWith('./') || partial.startsWith('/') || partial.startsWith('~');
   const { candidates, completeBase } = collectTabCandidates(partial, isPath);
@@ -97,7 +98,7 @@ function handleInput(data) {
   }
 
   if (data === '\x1b[A') {
-    if (!bootDone) return;
+    if (!bootDone || isForegroundBusy()) return;
     if (CMD_HISTORY.idx < CMD_HISTORY.length - 1) {
       CMD_HISTORY.idx++;
       const entry = CMD_HISTORY[CMD_HISTORY.length - 1 - CMD_HISTORY.idx];
@@ -110,7 +111,7 @@ function handleInput(data) {
   }
 
   if (data === '\x1b[B') {
-    if (!bootDone) return;
+    if (!bootDone || isForegroundBusy()) return;
     if (CMD_HISTORY.idx >= 0) {
       CMD_HISTORY.idx--;
       if (CMD_HISTORY.idx >= 0) {
@@ -145,9 +146,14 @@ function handleInput(data) {
         term.write('\b \b');
       }
     } else if (char === '\x03') {
-      inputBuffer = '';
-      term.write('^C\r\n');
-      writePrompt(term);
+      if (isForegroundBusy()) {
+        inputBuffer = '';
+        requestForegroundCancel();
+      } else {
+        inputBuffer = '';
+        term.write('^C\r\n');
+        writePrompt(term);
+      }
     } else if (char >= ' ') {
       inputBuffer += char;
       term.write(char);

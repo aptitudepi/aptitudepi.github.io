@@ -1,5 +1,5 @@
 import { setMode, setV86InputHandler, getTerm } from './terminal.js';
-import { writePrompt } from './shell.js';
+import { runForeground, isAbortError } from './foreground.js';
 
 let v86Emulator = null;
 let v86Ready = false;
@@ -7,22 +7,25 @@ let v86Loading = false;
 
 function loadScript(url) {
   return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = url;
-    s.onload = resolve;
-    s.onerror = reject;
-    document.head.appendChild(s);
+    const scriptNode = document.createElement('script');
+    scriptNode.src = url;
+    scriptNode.onload = resolve;
+    scriptNode.onerror = reject;
+    document.head.appendChild(scriptNode);
   });
 }
 
-async function bootVM(term) {
+// Boots the VM inside the foreground runner: resolves false when the VM takes
+// over the terminal (runner skips its prompt), true when the shell prompt
+// should render (already loading/running, or a failed boot).
+async function bootVM(term, runSignal) {
   if (v86Loading) {
     term.writeln('\x1b[38;2;180;180;100mVM is already loading...\x1b[0m');
-    return;
+    return true;
   }
   if (v86Ready && v86Emulator) {
     term.writeln('\x1b[38;2;100;200;100mVM already running.\x1b[0m');
-    return;
+    return true;
   }
 
   v86Loading = true;
@@ -30,6 +33,7 @@ async function bootVM(term) {
 
   try {
     await loadScript('assets/v86/v86_all.js');
+    if (runSignal) runSignal.throwIfAborted();
     term.writeln('\x1b[38;2;100;200;100mv86 loaded.\x1b[0m');
     term.writeln('\x1b[38;2;100;140;200mBooting Buildroot Linux...\x1b[0m');
     term.writeln('\x1b[38;2;80;80;90m(This may take 5-15 seconds)\x1b[0m');
@@ -61,8 +65,8 @@ async function bootVM(term) {
 
     setV86InputHandler(function(data) {
       if (!v86Emulator) return;
-      for (const ch of data) {
-        v86Emulator.s.send('serial0-input', ch.charCodeAt(0));
+      for (const inputChar of data) {
+        v86Emulator.s.send('serial0-input', inputChar.charCodeAt(0));
       }
     });
 
@@ -70,23 +74,26 @@ async function bootVM(term) {
     v86Ready = true;
     v86Loading = false;
     term.writeln('\r');
-  } catch (err) {
-    term.writeln(`\x1b[38;2;220;80;80mError: ${err.message}\x1b[0m`);
+    return false;
+  } catch (bootError) {
     v86Loading = false;
+    if (isAbortError(bootError)) throw bootError;
+    term.writeln(`\x1b[38;2;220;80;80mError: ${bootError.message}\x1b[0m`);
+    return true;
   }
 }
 
 function exitVM() {
-  if (!v86Emulator) return;
+  if (!v86Emulator) return Promise.resolve(false);
   const term = getTerm();
-  if (!term) return;
-  v86Emulator.stop().then(() => {
+  if (!term) return Promise.resolve(false);
+  return runForeground('exit', term, async () => {
+    await v86Emulator.stop();
     term.writeln('\r\n\x1b[38;2;100;200;100mVM stopped.\x1b[0m');
     v86Ready = false;
     v86Emulator = null;
     setV86InputHandler(null);
     setMode('local');
-    writePrompt(term);
   });
 }
 
