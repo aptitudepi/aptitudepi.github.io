@@ -1,7 +1,7 @@
 {
   "version": 1,
   "tool": "tools/snapshot-terminal.mjs",
-  "commit": "59c1a635709775ff644062a4b577d415e31c8510",
+  "commit": "436b79da73accb2dffb71cca96380a923511224c",
   "origin": "http://127.0.0.1:8901/",
   "viewport": {
     "width": 1280,
@@ -176,6 +176,34 @@
       "prompts": 1
     },
     {
+      "command": "ai details",
+      "file": "ai-details.ans",
+      "sha256": "98dc07cc77db39cc9510922f0db5af5040164289d768c4573ad5330cd6180c87",
+      "bytes": 1346,
+      "prompts": 1
+    },
+    {
+      "command": "ai-memory",
+      "file": "ai-memory.ans",
+      "sha256": "ee2ee6a8e064a034b89ebbb54054799c437fa55265daab64f15b5fd24cf1706b",
+      "bytes": 622,
+      "prompts": 1
+    },
+    {
+      "command": "ai-memory --json",
+      "file": "ai-memory-json.ans",
+      "sha256": "bc433456e63f4949cb2a8a9ac853ad83b493938e2fe5abce6210689e1ba9f2cf",
+      "bytes": 213,
+      "prompts": 1
+    },
+    {
+      "command": "ai sources pcpg analyzer",
+      "file": "ai-sources.ans",
+      "sha256": "7ec66a5d7757d8c1efaba7950f4fa8847e959f09605cadfbd109f915b6e53632",
+      "bytes": 665,
+      "prompts": 1
+    },
+    {
       "command": "md --help",
       "file": "md-help.ans",
       "sha256": "076a5844e4e8ae1f7bab8be6c209e49175f1e0b06aa16f5521ccbb96660e88e7",
@@ -183,5 +211,5 @@
       "prompts": 1
     }
   ],
-  "totalPrompts": 24
+  "totalPrompts": 28
 }

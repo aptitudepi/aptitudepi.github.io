@@ -1,0 +1,9 @@
+ai sources pcpg analyzer
+[1mSources for "pcpg analyzer"[0m
+[2mkeyword rank (deterministic; live runs add bge-small-en cosine, threshold 0.3)[0m
+  [32m[1][0m Project — Hospital Plunge & PCPG Analyzer [2m(keyword 4.20)[0m
+  [32m[2][0m UT MD Anderson Cancer Center — Data Research Intern [2m(keyword 2.40)[0m
+[2mVerdict: MATCH — 2 chunk(s) feed the prompt as [1], [2][0m
+[2mCloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download[0m
+
+[38;2;60;200;120mdb[0m[38;2;220;220;230m@[0m[38;2;60;190;220mdvxb.io[0m[38;2;140;140;155m [0m[38;2;80;140;250m~[0m[38;2;140;140;155m❯ [0m

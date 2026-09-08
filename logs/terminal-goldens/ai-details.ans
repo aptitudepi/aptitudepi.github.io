@@ -1,0 +1,16 @@
+ai details
+[1mAI details[0m
+[2mmode: not chosen yet (the picker holds your next prompt)[0m
+[2mmodel: qwen3.8-27b (qwen/qwen3.8-27b) — 0MB (Cloud)[0m
+[2mbackend: Groq cloud via Worker proxy[0m
+[2msends: prompt + RAG portfolio context + memory (ON) to the Worker → Groq[0m
+[2mmemory: ON — 0 facts, 0 turns feed the prompt (`ai-memory off` stops injection)[0m
+[2mRAG cosine threshold: 0.3 (default 0.3; tune with `ai threshold <0-1>`)[0m
+[1mTerminal controls — what the assistant may run[0m
+[2mThe assistant may emit [[TOOL: exec("…")]] for read-only/display commands only:[0m
+  [32mwhoami, hostname, date, uptime, uname, pwd, cat, ls, echo, neofetch, resfetch, about, fortune, cowsay, help, matrix, ai-models, ai-memory, history, crt, noise, weather, hn, cv, search, google, ddg, myip, ping[0m
+[2m`wall` bare only (reads the guestbook, never posts). Anything else prints [Tool blocked]: ai/llm, ai-model, md, clear, vm, devmode, guestbook, man.[0m
+[2mSwitch mode any time: `ai 1` quick · `ai 2` this device · `ai 3` controls[0m
+[2mCloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download[0m
+
+[38;2;60;200;120mdb[0m[38;2;220;220;230m@[0m[38;2;60;190;220mdvxb.io[0m[38;2;140;140;155m [0m[38;2;80;140;250m~[0m[38;2;140;140;155m❯ [0m

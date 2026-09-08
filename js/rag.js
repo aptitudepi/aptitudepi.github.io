@@ -2,6 +2,59 @@ let embedderPipeline = null;
 let embedderLoading = false;
 let contextCache = null;
 
+// WAVE 10 trustworthy RAG: retrieve-wide, rerank, then gate on relevance.
+// RAG_COSINE_THRESHOLD is the minimum bge-small-en-v1.5 cosine similarity a
+// vector-scored chunk must reach to feed the prompt. Tune the floor at
+// runtime with `ai threshold <0-1>` (persisted override, shown in
+// `ai details`); the constant below stays the documented default.
+const RAG_COSINE_THRESHOLD = 0.30;
+// Embedder-off fallback (and the deterministic `ai sources` debug path) has
+// no cosine to compare, so it gates on the keyword score instead: one text
+// hit scores 0.20, one title hit 0.40 (see computeKeywordScore).
+const RAG_KEYWORD_FLOOR = 0.20;
+const RAG_THRESHOLD_KEY = `dvxb_rag_threshold_v1`;
+// Retrieve-wide (8) then rerank down to at most 4 — never top-4-regardless:
+// below-threshold queries return NO_MATCH with an empty context.
+const RAG_WIDE_COUNT = 8;
+const RAG_TOP_COUNT = 4;
+
+function readThresholdOverride() {
+  try {
+    const storedValue = localStorage.getItem(RAG_THRESHOLD_KEY);
+    if (storedValue === null) return null;
+    const parsedValue = Number(storedValue);
+    if (!Number.isFinite(parsedValue) || parsedValue < 0 || parsedValue > 1) return null;
+    return parsedValue;
+  } catch (storageError) {
+    console.warn(`rag threshold read skipped: ${storageError.message}`);
+    return null;
+  }
+}
+
+function effectiveCosineThreshold() {
+  const overrideValue = readThresholdOverride();
+  return overrideValue === null ? RAG_COSINE_THRESHOLD : overrideValue;
+}
+
+function setThresholdOverride(thresholdValue) {
+  if (!Number.isFinite(thresholdValue) || thresholdValue < 0 || thresholdValue > 1) return false;
+  try {
+    localStorage.setItem(RAG_THRESHOLD_KEY, String(thresholdValue));
+    return true;
+  } catch (storageError) {
+    console.warn(`rag threshold write skipped: ${storageError.message}`);
+    return false;
+  }
+}
+
+function clearThresholdOverride() {
+  try {
+    localStorage.removeItem(RAG_THRESHOLD_KEY);
+  } catch (storageError) {
+    console.warn(`rag threshold reset skipped: ${storageError.message}`);
+  }
+}
+
 async function loadContextData() {
   if (contextCache) return contextCache;
   try {
@@ -95,42 +148,72 @@ function rerankChunks(userQuery, candidates) {
 }
 
 export async function retrieveContext(userQuery, term) {
+  const rankedResult = await retrieveRankedContext(userQuery, term);
+  return rankedResult.contextText;
+}
+
+// Ranked retrieval with a MATCH/NO_MATCH verdict. Vector path (embedder
+// available): wide-8 by cosine+keyword, rerank, keep cosine >= threshold.
+// Keyword path (embedder failed, or keywordOnly for the deterministic
+// `ai sources` debug command): wide-8 by keyword, rerank, keep
+// rerankScore >= RAG_KEYWORD_FLOOR. Survivors are numbered [1..N] in
+// reranked order so the model can cite them Perplexity-style.
+export async function retrieveRankedContext(userQuery, term, rankOptions) {
+  const keywordOnly = Boolean(rankOptions && rankOptions.keywordOnly);
   const contextData = await loadContextData();
-  if (!contextData.length) return '';
+  if (!contextData.length) return { verdict: `NO_MATCH`, contextText: ``, sourceList: [] };
 
-  try {
-    const embedder = await getEmbedder(term);
-    if (embedder) {
-      const bgeQuery = `Represent this sentence for searching relevant passages: ${userQuery}`;
-      const output = await embedder(bgeQuery, { pooling: 'mean', normalize: true });
-      const queryVector = Array.from(output.data);
+  if (!keywordOnly) {
+    try {
+      const embedder = await getEmbedder(term);
+      if (embedder) {
+        const bgeQuery = `Represent this sentence for searching relevant passages: ${userQuery}`;
+        const output = await embedder(bgeQuery, { pooling: 'mean', normalize: true });
+        const queryVector = Array.from(output.data);
 
-      const scored = contextData.map(chunk => {
-        const vecScore = cosineSimilarity(queryVector, chunk.vector);
-        const kwScore = computeKeywordScore(userQuery, chunk);
-        return {
-          text: chunk.text,
-          title: chunk.title,
-          score: vecScore + kwScore
-        };
-      });
+        const scored = contextData.map((chunk) => {
+          const vecScore = cosineSimilarity(queryVector, chunk.vector);
+          const kwScore = computeKeywordScore(userQuery, chunk);
+          return {
+            text: chunk.text,
+            title: chunk.title,
+            score: vecScore + kwScore,
+            cosine: vecScore,
+          };
+        });
 
-      scored.sort((a, b) => b.score - a.score);
-      const candidates = scored.slice(0, 8);
-      const reranked = rerankChunks(userQuery, candidates);
-      return reranked.slice(0, 4).map(c => `[${c.title}]\n${c.text}`).join('\n\n');
+        scored.sort((first, second) => second.score - first.score);
+        const reranked = rerankChunks(userQuery, scored.slice(0, RAG_WIDE_COUNT));
+        const thresholdValue = effectiveCosineThreshold();
+        const matched = reranked.filter((chunk) => chunk.cosine >= thresholdValue).slice(0, RAG_TOP_COUNT);
+        return formatRankedResult(matched, `cosine`);
+      }
+    } catch (embedError) {
+      console.warn(`Vector embedding search fallback to keyword: ${embedError.message}`);
     }
-  } catch (e) {
-    console.warn('Vector embedding search fallback to keyword:', e);
   }
 
   // Smart keyword fallback search with stopword filtering & title weighting
-  const scored = contextData.map(item => {
+  const scored = contextData.map((item) => {
     const score = computeKeywordScore(userQuery, item);
-    return { text: item.text, title: item.title, score };
+    return { text: item.text, title: item.title, score, cosine: null };
   });
 
-  scored.sort((a, b) => b.score - a.score);
-  const reranked = rerankChunks(userQuery, scored.slice(0, 8));
-  return reranked.slice(0, 4).map(c => `[${c.title}]\n${c.text}`).join('\n\n');
+  scored.sort((first, second) => second.score - first.score);
+  const reranked = rerankChunks(userQuery, scored.slice(0, RAG_WIDE_COUNT));
+  const matched = reranked.filter((chunk) => chunk.rerankScore >= RAG_KEYWORD_FLOOR).slice(0, RAG_TOP_COUNT);
+  return formatRankedResult(matched, `keyword`);
 }
+
+function formatRankedResult(matchedChunks, scoreKind) {
+  if (!matchedChunks.length) return { verdict: `NO_MATCH`, contextText: ``, sourceList: [] };
+  const sourceList = matchedChunks.map((chunk, chunkIndex) => {
+    const marker = `[${chunkIndex + 1}]`;
+    const displayScore = scoreKind === `cosine` ? chunk.cosine : chunk.rerankScore;
+    return { marker, title: chunk.title, text: chunk.text, score: displayScore, scoreKind };
+  });
+  const contextText = sourceList.map((source) => `${source.marker} ${source.title}\n${source.text}`).join(`\n\n`);
+  return { verdict: `MATCH`, contextText, sourceList };
+}
+
+export { RAG_COSINE_THRESHOLD, RAG_KEYWORD_FLOOR, effectiveCosineThreshold, readThresholdOverride, setThresholdOverride, clearThresholdOverride };

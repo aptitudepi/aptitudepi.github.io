@@ -62,6 +62,13 @@ const SESSION_LIST = [
   { commandText: `timeline`, goldenFile: `timeline.ans` },
   { commandText: `export about`, goldenFile: `export-about.ans` },
   { commandText: `md https://bad.invalid/post.md`, goldenFile: `md-fallback.ans` },
+  // WAVE 10 trustworthy-AI goldens: all local-only (no network), read-only
+  // (no mode/memory/threshold mutation), so the shared page state stays
+  // clean for the sessions after them.
+  { commandText: `ai details`, goldenFile: `ai-details.ans` },
+  { commandText: `ai-memory`, goldenFile: `ai-memory.ans` },
+  { commandText: `ai-memory --json`, goldenFile: `ai-memory-json.ans` },
+  { commandText: `ai sources pcpg analyzer`, goldenFile: `ai-sources.ans` },
   // `md --help` opens the fullscreen viewer iframe (legacy golden pin), so
   // it runs last: the iframe would intercept terminal clicks for any later
   // session.

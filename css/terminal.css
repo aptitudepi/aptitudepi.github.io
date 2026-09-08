@@ -155,6 +155,46 @@
   }
 }
 
+/* ── AI mode chip bar (first-run picker, pending-choice only) ──
+   Terminal-chrome, not palette cards: monospace, glass fill, terminal
+   border tokens. The node is created on demand by js/ai.js and removed on
+   choice, so shell purists never see chrome outside the picker state. */
+#ai-mode-chipbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 8px 12px;
+  padding: 8px 10px;
+  background: var(--color-glass);
+  border: 1px solid var(--color-terminal-border);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.ai-chip {
+  font: inherit;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid var(--color-glass-border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+.ai-chip:hover {
+  background: var(--color-glass-hover);
+  border-color: var(--color-terminal-border);
+}
+.ai-chip:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.ai-chip-note {
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
 /* Thought orb, shown while the local model loads and while it generates. It
    lives inside an xterm decoration (js/orb.js), which owns the positioning and
    stacking — the rows it sits on are part of the buffer, so it scrolls with

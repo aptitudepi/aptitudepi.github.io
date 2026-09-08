@@ -1129,16 +1129,75 @@ async function runAiModelCommand(term, args, runSignal) {
 }
 async function runAiMemoryCommand(term, args, runSignal) {
   const memoryModule = await import('./memory.js');
+  const leadToken = String(args[0] ?? ``).toLowerCase();
+  const tailFact = args.slice(1).join(` `).trim();
+  if (leadToken === `on`) {
+    memoryModule.setMemoryEnabled(true);
+    term.writeln(`${SITE_GREEN}\x1b[1mAI memory ON — saved facts and recent turns feed the next prompt.${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Cloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download${ANSI_RESET}`);
+    return;
+  }
+  if (leadToken === `off`) {
+    memoryModule.setMemoryEnabled(false);
+    term.writeln(`${SITE_GREEN}\x1b[1mAI memory OFF — stored facts and turns stay on this device and are NOT sent.${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Verify with \`ai details\`: memory shows OFF and the sends line drops memory.${ANSI_RESET}`);
+    return;
+  }
+  if (leadToken === `clear`) {
+    memoryModule.clearMemory();
+    term.writeln(`${SITE_GREEN}\x1b[1mAI memory cleared — facts and conversation turns wiped from this browser.${ANSI_RESET}`);
+    return;
+  }
+  if (leadToken === `save`) {
+    if (!tailFact) {
+      term.writeln(`${SITE_MUTED}Usage: ai-memory save <fact>${ANSI_RESET}`);
+      return;
+    }
+    memoryModule.saveUserFact(tailFact);
+    const factTotal = memoryModule.getStoredMemory().facts.length;
+    term.writeln(`${SITE_GREEN}\x1b[1mSaved fact (${factTotal} stored): ${sanitizeTerminalText(tailFact)}${ANSI_RESET}`);
+    return;
+  }
+  if (leadToken === `--json`) {
+    const exportPayload = {
+      enabled: memoryModule.isMemoryEnabled(),
+      facts: memoryModule.getStoredMemory().facts,
+      history: memoryModule.getStoredHistory(),
+    };
+    term.writeln(JSON.stringify(exportPayload));
+    return;
+  }
+  if (leadToken !== ``) {
+    term.writeln(`${SITE_ERR}ai-memory: unknown subcommand "${sanitizeTerminalText(args[0])}"${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Usage: ai-memory [on|off|clear|save <fact>|--json]${ANSI_RESET}`);
+    return;
+  }
+  const memoryOn = memoryModule.isMemoryEnabled();
+  const storedMemory = memoryModule.getStoredMemory();
   const storedHistory = memoryModule.getStoredHistory();
-  term.writeln(`${SITE_GREEN}\x1b[1mPortfolio AI Assistant Memory & Conversation Turns:\x1b[0m${ANSI_RESET}`);
+  term.writeln(`${SITE_GREEN}\x1b[1mPortfolio AI Assistant Memory & Conversation Turns:${ANSI_RESET}`);
+  if (memoryOn) {
+    term.writeln(`${SITE_MUTED}memory: ON — ${storedMemory.facts.length} facts, ${storedHistory.length} turns feed the next prompt (\`ai-memory off\` stops injection)${ANSI_RESET}`);
+  } else {
+    term.writeln(`${SITE_MUTED}memory: OFF — ${storedMemory.facts.length} facts, ${storedHistory.length} turns stored but NOT sent${ANSI_RESET}`);
+  }
+  if (!storedMemory.facts.length) {
+    term.writeln(`${SITE_MUTED}No saved facts. Save one with \`ai-memory save <fact>\`.${ANSI_RESET}`);
+  } else {
+    term.writeln(`${SITE_GREEN}Saved facts (${storedMemory.facts.length}):${ANSI_RESET}`);
+    for (let factIndex = 0; factIndex < storedMemory.facts.length; factIndex++) {
+      term.writeln(`  ${SITE_FAINT}[${factIndex + 1}]${ANSI_RESET} ${sanitizeTerminalText(storedMemory.facts[factIndex])}`);
+    }
+  }
   if (!storedHistory.length) {
     term.writeln(`${SITE_MUTED}No conversation history stored.${ANSI_RESET}`);
   } else {
     for (let turnIndex = 0; turnIndex < storedHistory.length; turnIndex++) {
       const turn = storedHistory[turnIndex];
-      term.writeln(`  ${SITE_FAINT}[${turnIndex + 1}] ${turn.role.toUpperCase()}:${ANSI_RESET} ${turn.content}`);
+      term.writeln(`  ${SITE_FAINT}[${turnIndex + 1}] ${turn.role.toUpperCase()}:${ANSI_RESET} ${sanitizeTerminalText(turn.content)}`);
     }
   }
+  term.writeln(`${SITE_MUTED}Cloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download${ANSI_RESET}`);
   return;
 }
 async function runHistoryCommand(term, args, runSignal) {
@@ -1848,7 +1907,7 @@ const COMMAND_REGISTRY = [
     plain: "Portfolio AI assistant (Groq cloud default, local option)",
     category: "CORE",
     argsSpec: "<prompt>",
-    examples: ["ai what did Devkumar research?", "ai status", "ai web latest kernel news"],
+    examples: ["ai what did Devkumar research?", "ai status", "ai details", "ai sources pcpg analyzer", "ai web latest kernel news"],
     helpDisplay: "ai <prompt>",
     helpDesc: "Portfolio AI assistant (Groq/Local); ai status for backend",
     helpPos: 26,
@@ -1899,10 +1958,10 @@ const COMMAND_REGISTRY = [
     name: "ai-memory",
     aliases: [],
     aliasOf: null,
-    plain: "Show AI assistant conversation memory",
+    plain: "Show and control AI assistant memory (on/off/clear/save/--json)",
     category: "ADDITIONAL",
-    argsSpec: "",
-    examples: ["ai-memory"],
+    argsSpec: "[on|off|clear|save <fact>|--json]",
+    examples: ["ai-memory", "ai-memory off", "ai-memory save prefers concise answers", "ai-memory --json"],
     helpDisplay: "ai-memory",
     helpDesc: "Show AI assistant conversation memory",
     helpPos: 31,
