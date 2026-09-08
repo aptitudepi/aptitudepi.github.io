@@ -5,9 +5,11 @@ import { initAnimations } from './animations.js';
 import { initGitHubStats } from './github-stats.js';
 import { initThermalAscii, RAMP_MIXED } from './thermal-ascii.js';
 import { initNav } from './nav.js';
-import { createTerminal, startBoot, getTerm } from './terminal.js';
+import { createTerminal, startBoot, getTerm, setMode, getMode } from './terminal.js';
 import { executeCommand, ASCII_ART } from './shell.js';
 import { bootVM } from './v86-launcher.js';
+import { initPalette, openPalette } from './palette.js';
+import { initGuided } from './guided.js';
 import { startMatrixRain, stopMatrixRain, isMatrixActive } from './matrix-rain.js';
 import { mountNavOrb } from './orb.js';
 import { initParticleBadges } from './particle-badge.js';
@@ -95,6 +97,15 @@ function init() {
   const container = document.getElementById('terminal-container');
   if (container && typeof Terminal !== 'undefined') {
     createTerminal(container);
+    initPalette();
+    initGuided();
+    const exitVmButton = document.getElementById('exit-vm-button');
+    if (exitVmButton) {
+      exitVmButton.addEventListener('click', () => {
+        if (typeof window.exitVM === 'function') window.exitVM();
+      });
+    }
+    window.__wave7 = { openPalette, setMode, getMode, getTerm };
     startBoot();
   }
 

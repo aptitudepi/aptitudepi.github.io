@@ -933,7 +933,7 @@ async function runMatrixCommand(term, args, runSignal) {
   return;
 }
 async function runVmCommand(term, args, runSignal) {
-  term.writeln(`${SITE_MUTED}Loading Buildroot Linux VM...${ANSI_RESET}`);
+  term.writeln(`${SITE_MUTED}Run Linux in your browser — booting Buildroot Linux (5–15s to boot)...${ANSI_RESET}`);
   if (typeof window.bootVM === 'function') {
     return window.bootVM(term, runSignal);
   }
@@ -1420,12 +1420,12 @@ const COMMAND_REGISTRY = [
     name: "vm",
     aliases: [],
     aliasOf: null,
-    plain: "Boot the Buildroot Linux VM",
+    plain: "Run Linux in your browser (5–15s to boot)",
     category: "ADDITIONAL",
     argsSpec: "",
     examples: ["vm"],
     helpDisplay: "vm",
-    helpDesc: "Boot Buildroot Linux VM",
+    helpDesc: "Run Linux in your browser (5–15s to boot)",
     helpPos: 18,
     extraHelpRows: [],
     listed: true,

@@ -90,6 +90,7 @@
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/terminal.css">
+<link rel="stylesheet" href="css/wave7.css">
 <link rel="stylesheet" href="css/nav.css">
 <link rel="stylesheet" href="css/responsive.css">
 <noscript><style>
@@ -169,6 +170,8 @@
         <a href="/cv">cv</a>
         <a href="/man/">man</a>
       </nav>
+      <span id="mode-pill" data-mode="shell" title="Terminal mode: shell or linux">shell</span>
+      <button class="explore-button" type="button" data-open-palette>Explore <kbd>⌘K</kbd></button>
       <span class="terminal-clock" id="headerClock"></span>
     </nav>
     <div class="terminal-body two-column">
@@ -176,10 +179,22 @@
         <canvas id="thermal-ascii" aria-label="thermal ascii field" aria-hidden="true"></canvas>
       </div>
       <div class="terminal-column">
+        <div id="terminal-toolbar">
+          <div id="terminal-mode-toggle" role="group" aria-label="Terminal input mode">
+            <button type="button" data-terminal-mode="guided" aria-pressed="true">Guided</button>
+            <button type="button" data-terminal-mode="shell" aria-pressed="false">Shell</button>
+          </div>
+          <button id="exit-vm-button" type="button" hidden>Exit Linux</button>
+        </div>
+        <div id="guided-panel" hidden></div>
         <div id="terminal-container"></div>
       </div>
     </div>
-      </div>
+    <div class="hero-explore-row">
+      <span>New here? Explore every command</span>
+      <button class="explore-button" type="button" data-open-palette>Explore <kbd>⌘K</kbd></button>
+    </div>
+  </div>
 </section>
 
 <div id="app">
@@ -378,6 +393,15 @@
 </footer>
 
 </div>
+
+<dialog id="command-palette" aria-label="Command palette">
+  <div class="palette-input-wrap">
+    <input id="palette-input" type="text" placeholder="Type a command or search…" aria-label="Command palette input" autocomplete="off" spellcheck="false">
+  </div>
+  <div id="palette-list" role="listbox" aria-label="Matching commands"></div>
+  <div id="palette-examples" aria-live="polite"></div>
+  <p id="palette-hint" hidden></p>
+</dialog>
 
 <!-- ── Libraries ───────────────────────── -->
 <script src="https://cdn.jsdelivr.net/npm/animejs@4.5.0/dist/bundles/anime.umd.min.js"></script>

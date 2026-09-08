@@ -1,4 +1,4 @@
-import { executeCommand, bootSequence, writePrompt, vfs, SITE_FAINT, ANSI_RESET, CMD_HISTORY } from './shell.js';
+import { executeCommand, bootSequence, writePrompt, vfs, CMD_HISTORY, stripAnsi } from './shell.js';
 import { COMMAND_COMPLETION_NAMES } from './commands.js';
 import { isForegroundBusy, requestForegroundCancel } from './foreground.js';
 
@@ -9,6 +9,22 @@ let inputBuffer = '';
 let bootDone = false;
 let v86InputHandler = null;
 let v86ExitBuffer = '';
+
+// WAVE 7 inline suggestions: a DOM dropdown plus fish-style ghost text.
+// Both are pure DOM overlays so the deterministic xterm golden snapshots
+// stay byte-exact. Sources are the command registry, VFS paths and history.
+let suggestionBox = null;
+let suggestionBoxOpen = false;
+let suggestionItems = [];
+let suggestionIndex = -1;
+let suggestionMode = 'complete';
+let suppressAutoBox = false;
+let ghostNode = null;
+let ghostRemainder = '';
+let ghostKind = 'token';
+let ghostFullLine = '';
+let lastCompleteBase = '';
+let cachedCellSize = null;
 
 function collectTabCandidates(partial, isPath) {
   const candidates = [];
@@ -51,44 +67,368 @@ function applySingleCompletion(activeTerm, completion, completeBase) {
   const rest = completion.slice(completeBase.length);
   const addTrailing = !completion.endsWith('/') && !completion.endsWith('.txt') && !completion.endsWith('.md');
   const suffix = addTrailing ? ' ' : '';
-  for (const ch of `${rest}${suffix}`) { inputBuffer += ch; activeTerm.write(ch); }
+  for (const completionChar of `${rest}${suffix}`) { inputBuffer = `${inputBuffer}${completionChar}`; activeTerm.write(completionChar); }
 }
 
-function applyCompletionList(activeTerm, candidates, completeBase) {
-  const prefixLen = candidates.reduce((len, c) => {
-    let i = 0;
-    while (i < len && i < c.length && c[i] === candidates[0][i]) i++;
-    return i;
-  }, Infinity);
-  if (prefixLen > completeBase.length) {
-    const common = candidates[0].slice(completeBase.length, prefixLen);
-    for (const ch of common) { inputBuffer += ch; activeTerm.write(ch); }
-  } else {
-    term.write('\r\n');
-    candidates.forEach(c => activeTerm.writeln(`${SITE_FAINT}${c}${ANSI_RESET}`));
-    writePrompt(activeTerm);
-    term.write(inputBuffer);
+// Recent-first full-line history entries that extend the current buffer.
+function collectHistoryCandidates(partialLine) {
+  const historyMatches = [];
+  const seenHistoryLines = new Set();
+  for (let historyCursor = CMD_HISTORY.length - 1; historyCursor >= 0; historyCursor--) {
+    const historyEntry = stripAnsi(String(CMD_HISTORY[historyCursor] ?? ''));
+    if (historyEntry.length === 0 || seenHistoryLines.has(historyEntry)) continue;
+    seenHistoryLines.add(historyEntry);
+    const matchesQuery = partialLine === null || (historyEntry.toLowerCase().startsWith(partialLine) && historyEntry !== inputBuffer);
+    if (matchesQuery) {
+      historyMatches.push({ label: historyEntry, kind: 'history' });
+    }
+    if (historyMatches.length >= 8) break;
   }
+  return historyMatches;
+}
+
+// Merged candidate list: history full lines first, then the registry/VFS
+// token completions from the Tab engine. In history-search mode only the
+// history source is shown.
+function collectAllCandidates() {
+  const partialLine = inputBuffer.trim().toLowerCase();
+  if (!partialLine) {
+    if (suggestionMode === 'history') return collectHistoryCandidates(null);
+    return [];
+  }
+  const mergedCandidates = [...collectHistoryCandidates(partialLine)];
+  if (suggestionMode === 'history') return mergedCandidates;
+  const pathFlag = partialLine.startsWith('./') || partialLine.startsWith('/') || partialLine.startsWith('~');
+  const tabResult = collectTabCandidates(partialLine, pathFlag);
+  lastCompleteBase = tabResult.completeBase;
+  const seenLabels = new Set(mergedCandidates.map((candidate) => candidate.label));
+  for (const tokenCandidate of tabResult.candidates) {
+    if (!seenLabels.has(tokenCandidate)) {
+      seenLabels.add(tokenCandidate);
+      mergedCandidates.push({ label: tokenCandidate, kind: 'token' });
+    }
+  }
+  return mergedCandidates.slice(0, 12);
+}
+
+function candidateSourceTag(candidate) {
+  if (candidate.kind === 'history') return 'history';
+  if (COMMAND_COMPLETION_NAMES.includes(candidate.label.trim())) return 'cmd';
+  return 'file';
+}
+
+function ensureSuggestionBox() {
+  if (suggestionBox) return suggestionBox;
+  const hostNode = document.getElementById('terminal-container');
+  if (!hostNode) return null;
+  suggestionBox = document.createElement('div');
+  suggestionBox.id = 'terminal-suggestions';
+  suggestionBox.setAttribute('role', 'listbox');
+  suggestionBox.setAttribute('aria-label', 'Command suggestions');
+  suggestionBox.hidden = true;
+  hostNode.appendChild(suggestionBox);
+  return suggestionBox;
+}
+
+function openSuggestionBox() {
+  const boxNode = ensureSuggestionBox();
+  if (!boxNode) return;
+  suggestionBoxOpen = true;
+  boxNode.hidden = false;
+}
+
+function hideSuggestionBox() {
+  suggestionBoxOpen = false;
+  suggestionIndex = -1;
+  if (suggestionBox) suggestionBox.hidden = true;
+}
+
+function hideSuggestions() {
+  hideSuggestionBox();
+  suggestionMode = 'complete';
+  ghostRemainder = '';
+  ghostFullLine = '';
+  renderGhostText();
+}
+
+function closeSuggestions() {
+  const wasOpen = suggestionBoxOpen || suggestionMode === 'history';
+  hideSuggestions();
+  return wasOpen;
+}
+
+function renderSuggestionBox(candidates) {
+  const boxNode = ensureSuggestionBox();
+  if (!boxNode) return;
+  boxNode.textContent = '';
+  suggestionItems = candidates;
+  if (suggestionIndex >= candidates.length) suggestionIndex = candidates.length - 1;
+  const modeHeader = document.createElement('div');
+  modeHeader.className = 'suggest-header';
+  modeHeader.textContent = suggestionMode === 'history' ? '(reverse-i-search) history' : 'suggestions';
+  boxNode.appendChild(modeHeader);
+  candidates.forEach((candidate, candidateIndex) => {
+    const itemButton = document.createElement('button');
+    itemButton.type = 'button';
+    itemButton.className = 'suggest-item';
+    itemButton.setAttribute('role', 'option');
+    if (candidateIndex === suggestionIndex) {
+      itemButton.classList.add('active');
+      itemButton.setAttribute('aria-selected', 'true');
+    }
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'suggest-label';
+    labelSpan.textContent = candidate.label;
+    const tagSpan = document.createElement('span');
+    tagSpan.className = 'suggest-tag';
+    tagSpan.textContent = candidateSourceTag(candidate);
+    itemButton.appendChild(labelSpan);
+    itemButton.appendChild(tagSpan);
+    itemButton.addEventListener('mousedown', (pressEvent) => {
+      pressEvent.preventDefault();
+      acceptCandidate(candidate);
+      if (term) term.focus();
+      refreshSuggestions();
+    });
+    itemButton.addEventListener('mousemove', () => {
+      if (suggestionIndex !== candidateIndex) {
+        suggestionIndex = candidateIndex;
+        renderSuggestionBox(suggestionItems);
+      }
+    });
+    boxNode.appendChild(itemButton);
+  });
+  const footerHint = document.createElement('div');
+  footerHint.className = 'suggest-footer';
+  footerHint.textContent = 'Tab accept · ↑↓ navigate · Enter run · Esc close';
+  boxNode.appendChild(footerHint);
+}
+
+function measureCellSize() {
+  if (cachedCellSize) return cachedCellSize;
+  const probeNode = document.createElement('div');
+  probeNode.textContent = 'M';
+  probeNode.style.cssText = 'position:absolute;visibility:hidden;font:13px "JetBrains Mono", monospace;line-height:1.5;';
+  document.body.appendChild(probeNode);
+  cachedCellSize = { width: probeNode.offsetWidth || 8, height: probeNode.offsetHeight || 20 };
+  probeNode.remove();
+  return cachedCellSize;
+}
+
+function ensureGhostNode() {
+  if (ghostNode) return ghostNode;
+  const hostNode = document.getElementById('terminal-container');
+  if (!hostNode) return null;
+  ghostNode = document.createElement('span');
+  ghostNode.id = 'terminal-ghost';
+  ghostNode.setAttribute('aria-hidden', 'true');
+  hostNode.appendChild(ghostNode);
+  return ghostNode;
+}
+
+function renderGhostText() {
+  const ghostElement = ensureGhostNode();
+  if (!ghostElement) return;
+  if (!ghostRemainder || mode !== 'local' || bootDone === false) {
+    ghostElement.style.display = 'none';
+    return;
+  }
+  const cellSize = measureCellSize();
+  const activeBuffer = term.buffer.active;
+  ghostElement.textContent = ghostRemainder;
+  ghostElement.style.display = 'block';
+  ghostElement.style.left = `${8 + activeBuffer.cursorX * cellSize.width}px`;
+  ghostElement.style.top = `${8 + activeBuffer.cursorY * cellSize.height}px`;
+}
+
+function refreshSuggestions() {
+  if (!term || bootDone === false || mode !== 'local' || isForegroundBusy()) {
+    hideSuggestions();
+    return;
+  }
+  const candidates = collectAllCandidates();
+  if (candidates.length > 0) {
+    const topCandidate = candidates[suggestionIndex >= 0 && suggestionIndex < candidates.length ? suggestionIndex : 0];
+    if (topCandidate.kind === 'history') {
+      ghostKind = 'history';
+      ghostFullLine = topCandidate.label;
+      ghostRemainder = topCandidate.label.slice(inputBuffer.length);
+    } else {
+      ghostKind = 'token';
+      ghostFullLine = '';
+      ghostRemainder = topCandidate.label.slice(lastCompleteBase.length);
+    }
+  } else {
+    ghostRemainder = '';
+    ghostFullLine = '';
+  }
+  renderGhostText();
+  if (suggestionBoxOpen) {
+    if (candidates.length === 0) {
+      hideSuggestionBox();
+    } else {
+      renderSuggestionBox(candidates);
+    }
+  } else if (!suppressAutoBox && candidates.length > 0 && candidates.length <= 8 && inputBuffer.trim()) {
+    openSuggestionBox();
+    renderSuggestionBox(candidates);
+  }
+}
+
+function acceptGhostText() {
+  if (!ghostRemainder || mode !== 'local' || bootDone === false || isForegroundBusy()) return false;
+  if (ghostKind === 'history' && ghostFullLine) {
+    inputBuffer = ghostFullLine;
+    redrawInputLine();
+  } else {
+    for (const ghostChar of ghostRemainder) {
+      inputBuffer = `${inputBuffer}${ghostChar}`;
+      term.write(ghostChar);
+    }
+  }
+  ghostRemainder = '';
+  ghostFullLine = '';
+  renderGhostText();
+  refreshSuggestions();
   return true;
 }
 
-function handleTabCompletion(activeTerm) {
-  if (!bootDone || !inputBuffer.trim() || isForegroundBusy()) return;
-  const partial = inputBuffer.trim().toLowerCase();
-  const isPath = partial.startsWith('./') || partial.startsWith('/') || partial.startsWith('~');
-  const { candidates, completeBase } = collectTabCandidates(partial, isPath);
-  if (candidates.length === 1) {
-    applySingleCompletion(activeTerm, candidates[0], completeBase);
-  } else if (candidates.length > 1) {
-    applyCompletionList(activeTerm, candidates, completeBase);
-  } else {
-    activeTerm.write('\x07');
+function acceptCandidate(candidate) {
+  if (candidate.kind === 'history') {
+    inputBuffer = candidate.label;
+    redrawInputLine();
+    return;
   }
+  applySingleCompletion(term, candidate.label, lastCompleteBase);
+}
+
+function redrawInputLine() {
+  term.write('\r\x1b[K');
+  writePrompt(term);
+  term.write(inputBuffer);
+}
+
+function submitBufferLine() {
+  term.write('\r\n');
+  const commandLine = inputBuffer;
+  if (commandLine.trim()) {
+    CMD_HISTORY.push(commandLine);
+    CMD_HISTORY.idx = -1;
+  }
+  inputBuffer = '';
+  suppressAutoBox = false;
+  hideSuggestions();
+  if (bootDone) executeCommand(commandLine, term);
+}
+
+// Strip leading shell prompts ($, ❯, user@host) from pasted text so a
+// docs-site copy-paste runs instead of failing with "command not found".
+function cleanPastedLine(rawLine) {
+  const trimmedLine = String(rawLine).replace(/^\s+/, '').replace(/\s+$/, '');
+  const promptPatterns = [
+    /^db@dvxb\.io.*❯\s*/,
+    /^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+:[^#$]*[#$]\s*/,
+    /^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+\s+[#$]\s*/,
+    /^\$[ \t]+/,
+    /^[❯>#][ \t]+/,
+  ];
+  for (const promptPattern of promptPatterns) {
+    if (promptPattern.test(trimmedLine)) return trimmedLine.replace(promptPattern, '');
+  }
+  return trimmedLine;
+}
+
+function looksLikePaste(chunk) {
+  return chunk.includes('\n') || chunk.length > 12;
+}
+
+function handlePaste(pastedText) {
+  const endsWithNewline = /(\r\n|\r|\n)$/.test(pastedText);
+  const rawLines = String(pastedText).split(/\r\n|\r|\n/);
+  const cleanedLines = rawLines.map(cleanPastedLine).filter((cleanedLine) => cleanedLine.length > 0);
+  cleanedLines.forEach((cleanedLine, lineIndex) => {
+    const isLastLine = lineIndex === cleanedLines.length - 1;
+    if (isLastLine && !endsWithNewline) {
+      inputBuffer = `${inputBuffer}${cleanedLine}`;
+      term.write(cleanedLine);
+      return;
+    }
+    inputBuffer = `${inputBuffer}${cleanedLine}`;
+    term.write(cleanedLine);
+    submitBufferLine();
+  });
+}
+
+function openHistorySearch() {
+  if (!bootDone || isForegroundBusy() || mode !== 'local') return;
+  suggestionMode = 'history';
+  suggestionIndex = -1;
+  openSuggestionBox();
+  refreshSuggestions();
+}
+
+function handleTabCompletion(activeTerm) {
+  if (!bootDone || isForegroundBusy() || mode !== 'local') return;
+  if (suggestionBoxOpen && suggestionItems.length > 0) {
+    const pickIndex = suggestionIndex < 0 ? 0 : suggestionIndex;
+    acceptCandidate(suggestionItems[pickIndex]);
+    refreshSuggestions();
+    return;
+  }
+  if (!inputBuffer.trim()) return;
+  const candidates = collectAllCandidates();
+  if (candidates.length === 0) {
+    activeTerm.write('\x07');
+    return;
+  }
+  if (candidates.length === 1) {
+    acceptCandidate(candidates[0]);
+    refreshSuggestions();
+    return;
+  }
+  const tokenLabels = candidates.filter((candidate) => candidate.kind === 'token').map((candidate) => candidate.label);
+  if (tokenLabels.length > 1) {
+    let sharedLength = tokenLabels[0].length;
+    for (const tokenLabel of tokenLabels.slice(1)) {
+      let cursor = 0;
+      while (cursor < sharedLength && cursor < tokenLabel.length && tokenLabel[cursor] === tokenLabels[0][cursor]) cursor++;
+      sharedLength = cursor;
+    }
+    if (sharedLength > lastCompleteBase.length) {
+      const sharedPrefix = tokenLabels[0].slice(0, sharedLength);
+      const missingPrefix = sharedPrefix.slice(lastCompleteBase.length);
+      for (const prefixChar of missingPrefix) {
+        inputBuffer = `${inputBuffer}${prefixChar}`;
+        activeTerm.write(prefixChar);
+      }
+    }
+  }
+  openSuggestionBox();
+  refreshSuggestions();
+}
+
+function moveSuggestionHighlight(step) {
+  const candidates = suggestionItems.length > 0 ? suggestionItems : collectAllCandidates();
+  if (candidates.length === 0) return;
+  if (!suggestionBoxOpen) openSuggestionBox();
+  suggestionIndex = suggestionIndex < 0 ? 0 : (suggestionIndex + step + candidates.length) % candidates.length;
+  renderSuggestionBox(candidates);
+  const highlighted = candidates[suggestionIndex];
+  if (highlighted.kind === 'history') {
+    ghostKind = 'history';
+    ghostFullLine = highlighted.label;
+    ghostRemainder = highlighted.label.slice(inputBuffer.length);
+  } else {
+    ghostKind = 'token';
+    ghostFullLine = '';
+    ghostRemainder = highlighted.label.slice(lastCompleteBase.length);
+  }
+  renderGhostText();
 }
 
 function handleInput(data) {
   if (mode === 'v86') {
-    v86ExitBuffer = (v86ExitBuffer + data.toLowerCase()).slice(-30);
+    v86ExitBuffer = `${v86ExitBuffer}${data.toLowerCase()}`.slice(-30);
     if (data === '\x1a' || v86ExitBuffer.includes('exit\r') || v86ExitBuffer.includes('exit\n')) {
       v86ExitBuffer = '';
       if (typeof window.exitVM === 'function') window.exitVM();
@@ -98,8 +438,25 @@ function handleInput(data) {
     return;
   }
 
+  if (data === '\x12') { openHistorySearch(); return; }
+  if (data === '\x06') {
+    if (acceptGhostText()) return;
+  }
+  if (data === '\x1b') {
+    if (closeSuggestions()) {
+      suppressAutoBox = true;
+      return;
+    }
+  }
+  if (data === '\x1b[C') {
+    if (acceptGhostText()) return;
+    return;
+  }
+  if (data === '\x1b[D') return;
+
   if (data === '\x1b[A') {
     if (!bootDone || isForegroundBusy()) return;
+    if (suggestionBoxOpen) { moveSuggestionHighlight(-1); return; }
     if (CMD_HISTORY.idx < CMD_HISTORY.length - 1) {
       CMD_HISTORY.idx++;
       const entry = CMD_HISTORY[CMD_HISTORY.length - 1 - CMD_HISTORY.idx];
@@ -107,12 +464,14 @@ function handleInput(data) {
       term.write('\r\x1b[K');
       writePrompt(term);
       term.write(entry);
+      refreshSuggestions();
     }
     return;
   }
 
   if (data === '\x1b[B') {
     if (!bootDone || isForegroundBusy()) return;
+    if (suggestionBoxOpen) { moveSuggestionHighlight(1); return; }
     if (CMD_HISTORY.idx >= 0) {
       CMD_HISTORY.idx--;
       if (CMD_HISTORY.idx >= 0) {
@@ -123,43 +482,48 @@ function handleInput(data) {
       term.write('\r\x1b[K');
       writePrompt(term);
       term.write(inputBuffer);
+      refreshSuggestions();
     }
     return;
   }
 
-  if (data === '\x1b[C' || data === '\x1b[D') return;
-
   if (data === '\t') { handleTabCompletion(term); return; }
+
+  if (looksLikePaste(data)) {
+    if (!bootDone || isForegroundBusy()) return;
+    suppressAutoBox = false;
+    handlePaste(data);
+    refreshSuggestions();
+    return;
+  }
 
   for (const char of data) {
     if (char === '\r') {
-      term.write('\r\n');
-      if (inputBuffer.trim()) {
-        CMD_HISTORY.push(inputBuffer);
-        CMD_HISTORY.idx = -1;
-      }
-      const cmd = inputBuffer;
-      inputBuffer = '';
-      if (bootDone) executeCommand(cmd, term);
+      submitBufferLine();
     } else if (char === '\x7f') {
       if (inputBuffer.length > 0) {
         inputBuffer = inputBuffer.slice(0, -1);
         term.write('\b \b');
+        suppressAutoBox = false;
       }
     } else if (char === '\x03') {
       if (isForegroundBusy()) {
         inputBuffer = '';
+        hideSuggestions();
         requestForegroundCancel();
       } else {
         inputBuffer = '';
+        hideSuggestions();
         term.write('^C\r\n');
         writePrompt(term);
       }
     } else if (char >= ' ') {
-      inputBuffer += char;
+      inputBuffer = `${inputBuffer}${char}`;
       term.write(char);
+      suppressAutoBox = false;
     }
   }
+  refreshSuggestions();
 }
 
 function createTerminal(container) {
@@ -213,9 +577,16 @@ function createTerminal(container) {
   }
 
   const ro = new ResizeObserver(() => {
+    cachedCellSize = null;
     if (fitAddon) try { fitAddon.fit(); } catch (_) {}
   });
   ro.observe(container);
+
+  // Ghost text is cursor-anchored: hide it while the buffer scrolls under
+  // it so a stale overlay never floats over old output.
+  container.addEventListener('scroll', () => {
+    if (ghostNode) ghostNode.style.display = 'none';
+  }, true);
 
   // Touch-scroll fallback for the terminal buffer: xterm 6.0.0 broke native
   // touch scrolling upstream, and its canvas absorbs touches before any
@@ -254,7 +625,18 @@ function setV86InputHandler(handler) {
   if (handler) v86ExitBuffer = '';
 }
 
-function setMode(m) { mode = m; }
+function setMode(nextMode) {
+  mode = nextMode;
+  if (typeof document === 'undefined') return;
+  const modePill = document.getElementById('mode-pill');
+  if (modePill) {
+    const pillLabel = nextMode === 'v86' ? 'linux' : 'shell';
+    modePill.textContent = pillLabel;
+    modePill.dataset.mode = pillLabel;
+  }
+  const exitButton = document.getElementById('exit-vm-button');
+  if (exitButton) exitButton.hidden = nextMode !== 'v86';
+}
 function getMode() { return mode; }
 function getTerm() { return term; }
 function isBootDone() { return bootDone; }

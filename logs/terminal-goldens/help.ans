@@ -18,7 +18,7 @@ help
   [38;2;60;200;120mfortune       [0m[38;2;220;220;230mRandom programming quote[0m
   [38;2;60;200;120mcowsay <msg>  [0m[38;2;220;220;230mCow says your message[0m
   [38;2;60;200;120mmatrix        [0m[38;2;220;220;230mToggle matrix rain overlay[0m
-  [38;2;60;200;120mvm            [0m[38;2;220;220;230mBoot Buildroot Linux VM[0m
+  [38;2;60;200;120mvm            [0m[38;2;220;220;230mRun Linux in your browser (5–15s to boot)[0m
   [38;2;60;200;120mcrt           [0m[38;2;220;220;230mToggle CRT scanline overlay[0m
   [38;2;60;200;120mnoise         [0m[38;2;220;220;230mToggle noise texture overlay[0m
   [38;2;60;200;120mhistory       [0m[38;2;220;220;230mShow command history[0m

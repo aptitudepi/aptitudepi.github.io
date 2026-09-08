@@ -5,12 +5,27 @@ let v86Emulator = null;
 let v86Ready = false;
 let v86Loading = false;
 
-function loadScript(url) {
-  return new Promise((resolve, reject) => {
+function loadScript(url, runSignal) {
+  return new Promise((resolveScript, rejectScript) => {
+    if (runSignal?.aborted) {
+      rejectScript(new DOMException('VM boot cancelled', 'AbortError'));
+      return;
+    }
     const scriptNode = document.createElement('script');
     scriptNode.src = url;
-    scriptNode.onload = resolve;
-    scriptNode.onerror = reject;
+    const abortListener = () => {
+      scriptNode.remove();
+      rejectScript(new DOMException('VM boot cancelled', 'AbortError'));
+    };
+    runSignal?.addEventListener('abort', abortListener, { once: true });
+    scriptNode.onload = () => {
+      runSignal?.removeEventListener('abort', abortListener);
+      resolveScript(undefined);
+    };
+    scriptNode.onerror = () => {
+      runSignal?.removeEventListener('abort', abortListener);
+      rejectScript(new Error(`failed to load ${url}`));
+    };
     document.head.appendChild(scriptNode);
   });
 }
@@ -29,10 +44,11 @@ async function bootVM(term, runSignal) {
   }
 
   v86Loading = true;
-  term.writeln('\x1b[38;2;100;140;200mLoading v86 emulator...\x1b[0m');
+  term.writeln('\x1b[38;2;100;140;200mRun Linux in your browser — loading the emulator (5–15s to boot)...\x1b[0m');
+  term.writeln('\x1b[38;2;80;80;90m(Ctrl+C cancels the boot and returns to the shell)\x1b[0m');
 
   try {
-    await loadScript('assets/v86/v86_all.js');
+    await loadScript('assets/v86/v86_all.js', runSignal);
     runSignal?.throwIfAborted();
     term.writeln('\x1b[38;2;100;200;100mv86 loaded.\x1b[0m');
     term.writeln('\x1b[38;2;100;140;200mBooting Buildroot Linux...\x1b[0m');
