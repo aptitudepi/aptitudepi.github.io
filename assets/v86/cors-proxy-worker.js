@@ -16,9 +16,204 @@ const CORS_HEADERS = {
 };
 
 // WAVE 9a guestbook foundation: server-side name sanitize plus slug helpers.
-// Moniker display prep only — no collection here. Wave 9b derives city from
-// IP at POST and assembles visitor@city-slug with a random-handle fallback;
-// the worker never trusts a client-sent moniker field.
+// WAVE 9b: the moniker is assembled server-side at POST (city derived from
+// the Cloudflare IP lookup, slug plus sanitize server-side, random-handle
+// fallback, never trusts a client-sent moniker field).
+// WAVE 9b guestbook private telemetry: owner-eyes-only encrypted blob plus
+// sanitized public copy. Transport is POST {name, message, gpg} where gpg is
+// the browser-encrypted armored blob (or null when client collection failed).
+// The worker NEVER parses or decrypts the blob: it validates the public copy,
+// persists the public post in WALL_KV, and stores the opaque blob in the
+// TELEMETRY R2 bucket when bound (httpMetadata contentType
+// application/pgp-encrypted plus private no-store; customMetadata postId,
+// createdAt, fpHash) or in WALL_KV under telemetry:<post-id>.asc otherwise.
+// Blob writes run via ctx.waitUntil so the visitor response is never gated.
+// NOTE (2026-09-08): R2 is not enabled on this Cloudflare account (API 10042
+// "Please enable R2 through the Cloudflare Dashboard"), so `wrangler r2
+// bucket create` is BLOCKED until the owner enables R2 in the dashboard. The
+// KV fallback below is the active path; add an r2_buckets TELEMETRY binding
+// to wrangler.jsonc once R2 is enabled — no worker code change needed.
+// Raw visitor IPs are never persisted outside the encrypted blob: rate
+// limiting keeps transient HMAC daily-salt keyed counters only, and the
+// moniker keeps an IP-derived city slug (random-handle fallback).
+// Post shape stays {id, name, message, timestamp}: post-moderation stance (no
+// queue), keep-forever (no TTL on the posts put), no archival job, no email
+// anywhere. Delete tokens are random 128-bit values returned once at submit;
+// the server stores ONLY a salted SHA-256 hash beside the public record and
+// verifies deletes without decrypting the blob.
+const WALL_OWNER_KEY_FINGERPRINT = `157414f82954c9726f9068fc742ae9990a8b5952`;
+const WALL_POSTS_MAX = 50;
+const WALL_MESSAGE_MAX = 280;
+const WALL_LINK_MAX = 2;
+const WALL_RATE_LIMIT_MAX = 10;
+const WALL_RATE_LIMIT_TTL_SECONDS = 3600;
+
+const WALL_HANDLE_ADJECTIVES = [
+  `amber`, `brisk`, `calm`, `dapple`, `eager`, `fable`, `glint`, `harbor`,
+  `ivory`, `juniper`, `kindred`, `lumen`, `mossy`, `nimble`, `opal`, `prism`,
+];
+const WALL_HANDLE_NOUNS = [
+  `fox`, `heron`, `ibis`, `jay`, `koala`, `lark`, `moth`, `newt`,
+  `otter`, `pipit`, `quail`, `raven`, `stoat`, `tern`, `urchin`, `wren`,
+];
+
+function wallRandomHex(byteCount) {
+  const randomBytes = new Uint8Array(byteCount);
+  crypto.getRandomValues(randomBytes);
+  const hexParts = [];
+  for (const randomByte of randomBytes) {
+    hexParts.push(randomByte.toString(16).padStart(2, `0`));
+  }
+  return hexParts.join(``);
+}
+
+async function wallSha256Hex(sourceText) {
+  const textBytes = new TextEncoder().encode(sourceText);
+  const digestBytes = await crypto.subtle.digest(`SHA-256`, textBytes);
+  const digestView = new Uint8Array(digestBytes);
+  const hexParts = [];
+  for (const digestByte of digestView) {
+    hexParts.push(digestByte.toString(16).padStart(2, `0`));
+  }
+  return hexParts.join(``);
+}
+
+async function wallHmacHex(secretText, valueText) {
+  const textEncoder = new TextEncoder();
+  const hmacKey = await crypto.subtle.importKey(
+    `raw`,
+    textEncoder.encode(secretText),
+    { name: `HMAC`, hash: `SHA-256` },
+    false,
+    [`sign`],
+  );
+  const signatureBytes = await crypto.subtle.sign(`HMAC`, hmacKey, textEncoder.encode(valueText));
+  const signatureView = new Uint8Array(signatureBytes);
+  const hexParts = [];
+  for (const signatureByte of signatureView) {
+    hexParts.push(signatureByte.toString(16).padStart(2, `0`));
+  }
+  return hexParts.join(``);
+}
+
+function wallStripHtml(rawText) {
+  return String(rawText ?? ``).replace(/<[^>]*>/g, ``);
+}
+
+function wallStripAnsi(rawText) {
+  const sourceText = String(rawText ?? ``);
+  let cleanText = ``;
+  for (const glyph of sourceText) {
+    const codePoint = glyph.codePointAt(0);
+    const isBadControl =
+      codePoint < 0x20 ? codePoint !== 0x0a && codePoint !== 0x0d && codePoint !== 0x09 : codePoint === 0x7f;
+    if (isBadControl === false) {
+      cleanText = `${cleanText}${glyph}`;
+    }
+  }
+  return cleanText;
+}
+
+// Spam heuristics on the public fields only: empty, over-length, or
+// link-stuffed posts are rejected with a plan-language message. Returns an
+// error string, or null when the message is acceptable.
+function wallSpamVerdict(cleanMessage) {
+  if (cleanMessage.length === 0) {
+    return `Message cannot be empty`;
+  }
+  if (Array.from(cleanMessage).length > WALL_MESSAGE_MAX) {
+    return `Message is too long (kept to 280 characters)`;
+  }
+  const schemeLinks = cleanMessage.match(/https?:\/\//g) ?? [];
+  const bareLinks = cleanMessage.match(/www\./g) ?? [];
+  if (schemeLinks.length + bareLinks.length > WALL_LINK_MAX) {
+    return `Message looks like link spam — keep it to two links or fewer`;
+  }
+  return null;
+}
+
+// HMAC daily-salt keyed counter with a short TTL. Only the digest is
+// persisted — raw IPs never touch storage outside the encrypted blob.
+async function wallRateLimitExceeded(observedIp, requestAgent, env) {
+  if (env === null || env === undefined || env.WALL_KV === undefined) {
+    return false;
+  }
+  const dayString = new Date().toISOString().slice(0, 10);
+  const rateSecret =
+    typeof env.RATE_LIMIT_SECRET === `string` && env.RATE_LIMIT_SECRET.length > 0
+      ? env.RATE_LIMIT_SECRET
+      : `dvxb-wall-fallback-salt`;
+  const digestInput = `${dayString}|${observedIp}|${requestAgent}`;
+  const digestHex = await wallHmacHex(rateSecret, digestInput);
+  const counterKey = `wall:rl:${dayString}:${digestHex.slice(0, 32)}`;
+  const storedCount = await env.WALL_KV.get(counterKey);
+  const currentCount = Number(storedCount ?? 0);
+  if (Number.isFinite(currentCount) && currentCount >= WALL_RATE_LIMIT_MAX) {
+    return true;
+  }
+  const nextCount = Number.isFinite(currentCount) ? currentCount + 1 : 1;
+  await env.WALL_KV.put(counterKey, String(nextCount), { expirationTtl: WALL_RATE_LIMIT_TTL_SECONDS });
+  return false;
+}
+
+function wallRandomHandle() {
+  const pickBytes = new Uint8Array(3);
+  crypto.getRandomValues(pickBytes);
+  const adjectivePick = WALL_HANDLE_ADJECTIVES[pickBytes[0] % WALL_HANDLE_ADJECTIVES.length];
+  const nounPick = WALL_HANDLE_NOUNS[pickBytes[1] % WALL_HANDLE_NOUNS.length];
+  const digitSuffix = String((pickBytes[2] % 90) + 10);
+  return `${adjectivePick}-${nounPick}-${digitSuffix}`;
+}
+
+function wallTimingEqual(firstHex, secondHex) {
+  if (firstHex.length !== secondHex.length) {
+    return false;
+  }
+  let difference = 0;
+  for (let compareIndex = 0; compareIndex < firstHex.length; compareIndex += 1) {
+    difference |= firstHex.charCodeAt(compareIndex) ^ secondHex.charCodeAt(compareIndex);
+  }
+  return difference === 0;
+}
+
+// Opaque blob store: validates the armor envelope only (never the plaintext),
+// then persists via ctx.waitUntil so the visitor response is never gated.
+function queueWallTelemetryStore(postId, createdAt, armoredBlob, env, ctx) {
+  const persistTask = (async () => {
+    try {
+      if (typeof armoredBlob !== `string` || armoredBlob.startsWith(`-----BEGIN PGP MESSAGE-----`) === false) {
+        return;
+      }
+      if (armoredBlob.length > 131072) {
+        console.warn(`wall telemetry: blob oversize, dropped`);
+        return;
+      }
+      const postIdText = String(postId);
+      if (env !== null && env !== undefined && env.TELEMETRY !== undefined) {
+        await env.TELEMETRY.put(`telemetry/${postIdText}.asc`, armoredBlob, {
+          httpMetadata: { contentType: `application/pgp-encrypted`, cacheControl: `private, no-store` },
+          customMetadata: { postId: postIdText, createdAt, fpHash: WALL_OWNER_KEY_FINGERPRINT },
+        });
+        return;
+      }
+      if (env !== null && env !== undefined && env.WALL_KV !== undefined) {
+        await env.WALL_KV.put(`telemetry:${postIdText}.asc`, armoredBlob, {
+          metadata: { postId: postIdText, createdAt, fpHash: WALL_OWNER_KEY_FINGERPRINT },
+        });
+      }
+    } catch (storeError) {
+      console.warn(`wall telemetry: blob store failed`, storeError);
+    }
+  })();
+  if (ctx !== null && ctx !== undefined && typeof ctx.waitUntil === `function`) {
+    ctx.waitUntil(persistTask);
+    return;
+  }
+  persistTask.catch((waitError) => {
+    console.warn(`wall telemetry: blob store failed`, waitError);
+  });
+}
+
 function slugWallSegment(rawSegment) {
   const lowered = String(rawSegment ?? '').trim().toLowerCase();
   const keptChars = [];
@@ -43,7 +238,7 @@ function sanitizeWallName(rawName) {
   return slugText.slice(0, 40);
 }
 
-async function handleRequest(request, env) {
+async function handleRequest(request, env, ctx) {
   // Block unauthorized origins
   const origin = request.headers.get('Origin');
   if (origin && !ALLOWED_ORIGINS.some(r => r.test(origin))) {
@@ -134,7 +329,9 @@ async function handleRequest(request, env) {
           try {
             const uParam = new URLSearchParams(rawUrl.split('?')[1]).get('uddg');
             if (uParam) cleanUrl = decodeURIComponent(uParam);
-          } catch (_e) {}
+          } catch (uddgError) {
+            console.warn(`search: uddg unwrap failed`, uddgError);
+          }
         }
 
         if (title && snippet) {
@@ -175,6 +372,9 @@ async function handleRequest(request, env) {
   // In-memory fallback array for global guestbook entries
   let WALL_POSTS = typeof globalThis._WALL_POSTS !== 'undefined' ? globalThis._WALL_POSTS : [];
   globalThis._WALL_POSTS = WALL_POSTS;
+  if (typeof globalThis._WALL_DELTOKENS === 'undefined') {
+    globalThis._WALL_DELTOKENS = {};
+  }
 
   // ── 5. Global Guestbook Endpoint (/wall) ──
   if (url.pathname === '/wall') {
@@ -184,7 +384,9 @@ async function handleRequest(request, env) {
         try {
           const stored = await env.WALL_KV.get('posts', { type: 'json' });
           if (stored) posts = stored;
-        } catch (_e) {}
+        } catch (readError) {
+          console.warn(`wall: kv read failed`, readError);
+        }
       }
       return new Response(JSON.stringify({ posts }), {
         status: 200,
@@ -195,43 +397,185 @@ async function handleRequest(request, env) {
     if (request.method === 'POST') {
       try {
         const body = await request.json();
-        // WAVE 9a guestbook foundation: no AI replies, no approval queue
+        // WAVE 9b guestbook: no AI replies, no approval queue
         // (post-moderation stance), keep-forever (no TTL on the KV put
-        // below), no archival job, no email field anywhere. Any body.moniker
-        // sent by a client is ignored on purpose: the moniker is assembled
-        // server-side (Wave 9b adds the IP-derived city plus fallback).
-        const authorName = sanitizeWallName(body.name);
-        const userMsg = (body.message || '').slice(0, 280);
-
-        if (!userMsg) {
-          return new Response(JSON.stringify({ error: 'Message cannot be empty' }), { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+        // below), no archival job, no email field anywhere. The public copy
+        // is anonymous-by-design: any body.moniker sent by a client is
+        // ignored on purpose and body.name is never persisted — the moniker
+        // is assembled server-side as visitor@city-slug (city from the
+        // Cloudflare IP lookup) with a visitor@random-handle fallback.
+        const observedIp = request.headers.get('cf-connecting-ip') || '';
+        const requestAgent = request.headers.get('user-agent') || '';
+        let limitedVisitor = false;
+        try {
+          limitedVisitor = await wallRateLimitExceeded(observedIp, requestAgent, env);
+        } catch (limitError) {
+          console.warn(`wall: rate-limit check failed open`, limitError);
+          limitedVisitor = false;
         }
+        if (limitedVisitor) {
+          return new Response(JSON.stringify({ error: `The guestbook is catching its breath — please try again in a little while.` }), { status: 429, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+        }
+
+        const rawMessage = typeof body.message === 'string' ? body.message : '';
+        const cleanMessage = wallStripAnsi(wallStripHtml(rawMessage)).trim().slice(0, 280);
+        const spamError = wallSpamVerdict(cleanMessage);
+        if (spamError) {
+          return new Response(JSON.stringify({ error: spamError }), { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+        }
+
+        const cloudCity = request.cf && typeof request.cf.city === 'string' ? request.cf.city : '';
+        const citySlug = slugWallSegment(cloudCity);
+        const monikerName = citySlug ? `visitor@${citySlug}`.slice(0, 48) : `visitor@${wallRandomHandle()}`;
 
         // Post shape: { id, name, message, timestamp }. Stored legacy posts
         // keep their aiReply field until overwritten; clients no longer read
         // it. One-time migration (do NOT execute here): delete the key once
         // via `wrangler kv:key delete --binding WALL_KV posts` to drop it.
+        const postId = Date.now();
+        const createdAt = new Date().toISOString().split('T')[0];
         const newPost = {
-          id: Date.now(),
-          name: authorName,
-          message: userMsg,
-          timestamp: new Date().toISOString().split('T')[0]
+          id: postId,
+          name: monikerName,
+          message: cleanMessage,
+          timestamp: createdAt
         };
 
         WALL_POSTS.unshift(newPost);
-        if (WALL_POSTS.length > 50) WALL_POSTS.pop();
+        if (WALL_POSTS.length > WALL_POSTS_MAX) WALL_POSTS.pop();
 
         if (env && env.WALL_KV) {
-          try { await env.WALL_KV.put('posts', JSON.stringify(WALL_POSTS)); } catch (_e) {}
+          try { await env.WALL_KV.put('posts', JSON.stringify(WALL_POSTS)); } catch (persistError) { console.warn(`wall: kv put failed`, persistError); }
         }
 
-        return new Response(JSON.stringify({ success: true, post: newPost }), {
+        // Delete token: random 128-bit, returned once; the server stores
+        // ONLY a salted SHA-256 hash beside the public record, so deletes
+        // verify without ever decrypting the telemetry blob. Token loss
+        // falls back to manual review by the site owner.
+        const deleteToken = wallRandomHex(16);
+        const tokenSalt = wallRandomHex(16);
+        const tokenHash = await wallSha256Hex(`${tokenSalt}:${deleteToken}`);
+        const tokenKey = `wall:deltoken:${String(postId)}`;
+        const tokenRecord = JSON.stringify({ salt: tokenSalt, hash: tokenHash });
+        if (env && env.WALL_KV) {
+          try { await env.WALL_KV.put(tokenKey, tokenRecord); } catch (tokenError) { console.warn(`wall: delete-token put failed`, tokenError); }
+        } else {
+          globalThis._WALL_DELTOKENS[tokenKey] = tokenRecord;
+        }
+
+        // Private telemetry blob: opaque to this worker (never parsed or
+        // decrypted). Stored via ctx.waitUntil so the visitor response below
+        // is never gated on the blob write.
+        const armoredBlob = typeof body.gpg === 'string' ? body.gpg : '';
+        queueWallTelemetryStore(postId, createdAt, armoredBlob, env, ctx);
+
+        return new Response(JSON.stringify({ success: true, post: newPost, deleteToken }), {
           status: 201,
           headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
         });
       } catch (err) {
         return new Response(JSON.stringify({ error: `Wall post failed: ${err.message}` }), { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
       }
+    }
+  }
+
+  // ── 5b. Guestbook API alias (/api/guestbook) ──
+  // GET lists the same sanitized public copy as /wall (used by the owner
+  // decrypt CLI). DELETE /api/guestbook/:id removes a post when the
+  // one-time delete token verifies against the stored salted hash.
+  if (url.pathname === '/api/guestbook' && request.method === 'GET') {
+    let apiPosts = WALL_POSTS;
+    if (env && env.WALL_KV) {
+      try {
+        const storedPosts = await env.WALL_KV.get('posts', { type: 'json' });
+        if (storedPosts) apiPosts = storedPosts;
+      } catch (apiReadError) {
+        console.warn(`wall: api kv read failed`, apiReadError);
+      }
+    }
+    return new Response(JSON.stringify({ posts: apiPosts }), {
+      status: 200,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+    });
+  }
+
+  const guestbookDeleteMatch = url.pathname.match(/^\/api\/guestbook\/([A-Za-z0-9_-]+)$/);
+  if (guestbookDeleteMatch && request.method === 'DELETE') {
+    try {
+      const targetId = guestbookDeleteMatch[1];
+      let suppliedToken = url.searchParams.get('token') || '';
+      try {
+        const deleteBody = await request.json();
+        if (deleteBody && typeof deleteBody.token === 'string') {
+          suppliedToken = deleteBody.token;
+        }
+      } catch (bodyError) {
+        console.warn(`wall: delete body unreadable, trying query token`, bodyError);
+      }
+      if (!suppliedToken) {
+        return new Response(JSON.stringify({ error: `Delete token required — contact the site owner for manual review if it was lost.` }), { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+      }
+      const tokenKey = `wall:deltoken:${targetId}`;
+      let storedRecord = null;
+      if (env && env.WALL_KV) {
+        try {
+          storedRecord = await env.WALL_KV.get(tokenKey, { type: 'json' });
+        } catch (tokenReadError) {
+          console.warn(`wall: delete-token read failed`, tokenReadError);
+        }
+      } else if (globalThis._WALL_DELTOKENS[tokenKey]) {
+        try {
+          storedRecord = JSON.parse(globalThis._WALL_DELTOKENS[tokenKey]);
+        } catch (parseError) {
+          console.warn(`wall: in-memory token parse failed`, parseError);
+        }
+      }
+      if (storedRecord === null || storedRecord === undefined || typeof storedRecord.salt !== 'string' || typeof storedRecord.hash !== 'string') {
+        return new Response(JSON.stringify({ error: `Unknown or expired delete token — contact the site owner for manual review.` }), { status: 404, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+      }
+      const candidateHash = await wallSha256Hex(`${storedRecord.salt}:${suppliedToken}`);
+      if (wallTimingEqual(candidateHash, storedRecord.hash) === false) {
+        return new Response(JSON.stringify({ error: `Unknown or expired delete token — contact the site owner for manual review.` }), { status: 404, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+      }
+      let currentPosts = WALL_POSTS;
+      if (env && env.WALL_KV) {
+        try {
+          const storedPosts = await env.WALL_KV.get('posts', { type: 'json' });
+          if (storedPosts) currentPosts = storedPosts;
+        } catch (listError) {
+          console.warn(`wall: delete list read failed`, listError);
+        }
+      }
+      const keptPosts = currentPosts.filter((keptPost) => String(keptPost.id) !== targetId);
+      WALL_POSTS = keptPosts;
+      globalThis._WALL_POSTS = keptPosts;
+      const cleanupTask = (async () => {
+        try {
+          if (env && env.WALL_KV) {
+            await env.WALL_KV.put('posts', JSON.stringify(keptPosts));
+            await env.WALL_KV.delete(tokenKey);
+            await env.WALL_KV.delete(`telemetry:${targetId}.asc`);
+          } else {
+            delete globalThis._WALL_DELTOKENS[tokenKey];
+          }
+          if (env !== null && env !== undefined && env.TELEMETRY !== undefined) {
+            await env.TELEMETRY.delete(`telemetry/${targetId}.asc`);
+          }
+        } catch (cleanupError) {
+          console.warn(`wall: delete cleanup failed`, cleanupError);
+        }
+      })();
+      if (ctx !== null && ctx !== undefined && typeof ctx.waitUntil === `function`) {
+        ctx.waitUntil(cleanupTask);
+      } else {
+        await cleanupTask;
+      }
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+      });
+    } catch (err) {
+      return new Response(JSON.stringify({ error: `Wall delete failed: ${err.message}` }), { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
     }
   }
 
@@ -276,8 +620,8 @@ async function handleRequest(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
-    return handleRequest(request, env);
+  async fetch(request, env, ctx) {
+    return handleRequest(request, env, ctx);
   }
 };
 

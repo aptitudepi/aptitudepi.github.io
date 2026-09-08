@@ -1168,7 +1168,60 @@ async function runNoiseCommand(term, args, runSignal) {
   }
   return;
 }
+async function runWallDeleteCommand(term, args, runSignal) {
+  const targetId = String(args[1] ?? ``).trim();
+  if (targetId.length === 0) {
+    term.writeln(`${SITE_ERR}Usage: wall delete <post-id> [delete-token]${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: paste the id from your post; the token was shown once at submit (also kept in browser storage)${ANSI_RESET}`);
+    return;
+  }
+  let deleteToken = String(args[2] ?? ``).trim();
+  if (deleteToken.length === 0) {
+    try {
+      deleteToken = String(localStorage.getItem(`guestbook:delete:${targetId}`) ?? ``);
+    } catch (lookupError) {
+      term.writeln(`${SITE_FAINT}Browser storage unavailable; paste the delete token explicitly.${ANSI_RESET}`);
+      deleteToken = ``;
+    }
+  }
+  if (deleteToken.length === 0) {
+    term.writeln(`${SITE_ERR}No delete token found for that post.${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: rerun with the token, or contact the site owner for manual review${ANSI_RESET}`);
+    return;
+  }
+  term.writeln(`${SITE_FAINT}Requesting deletion...${ANSI_RESET}`);
+  try {
+    const deleteResp = await fetch(`https://0.supernovadkb.workers.dev/api/guestbook/${encodeURIComponent(targetId)}`, {
+      method: `DELETE`,
+      headers: { 'Content-Type': `application/json` },
+      body: JSON.stringify({ token: deleteToken }),
+      signal: runSignal,
+    });
+    const deleteData = await deleteResp.json();
+    if (deleteData.success) {
+      term.writeln(`${SITE_GREEN}\x1b[1mEntry deleted from the guestbook.${ANSI_RESET}`);
+      try {
+        localStorage.removeItem(`guestbook:delete:${targetId}`);
+      } catch (forgetError) {
+        term.writeln(`${SITE_FAINT}Browser storage kept a stale token copy; the server entry is gone.${ANSI_RESET}`);
+      }
+    } else {
+      term.writeln(`${SITE_ERR}Delete failed: ${stripAnsi(deleteData.error || `Unknown error`)}${ANSI_RESET}`);
+      term.writeln(`${SITE_MUTED}Next: check the id/token, or contact the site owner for manual review${ANSI_RESET}`);
+    }
+  } catch (postError) {
+    if (isAbortError(postError)) throw postError;
+    term.writeln(`${SITE_ERR}Delete error: ${postError.message}${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: retry \`wall delete <post-id>\` or check your connection${ANSI_RESET}`);
+  }
+  return;
+}
 async function runWallCommand(term, args, runSignal) {
+  const leadArg = String(args[0] ?? ``).toLowerCase();
+  if (leadArg === `delete`) {
+    await runWallDeleteCommand(term, args, runSignal);
+    return;
+  }
   const msg = args.join(' ');
   if (!msg) {
     term.writeln(`${SITE_FAINT}Fetching global visitor wall...${ANSI_RESET}`);
@@ -1193,17 +1246,51 @@ async function runWallCommand(term, args, runSignal) {
     return;
   }
   term.writeln(`${SITE_FAINT}Posting message to global wall...${ANSI_RESET}`);
+  const trimmedMessage = msg.trim();
+  if (trimmedMessage.length === 0) {
+    term.writeln(`${SITE_ERR}Message cannot be empty${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: retry \`wall <message>\` or run \`wall\` to read the wall${ANSI_RESET}`);
+    return;
+  }
+  if (Array.from(trimmedMessage).length > 280) {
+    term.writeln(`${SITE_ERR}Message is too long (kept to 280 characters)${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: shorten the message and retry \`wall <message>\`${ANSI_RESET}`);
+    return;
+  }
   try {
+    // WAVE 9b private telemetry: allowlist device signals encrypted in the
+    // browser to the owner's public key (fail-closed — any throw drops the
+    // telemetry blob and the public post still submits). openpgp loads lazily
+    // here, after validation, so the initial bundle never carries it.
+    let armoredTelemetry = null;
+    try {
+      const telemetryModule = await import(`./wall-telemetry.js`);
+      term.writeln(`${SITE_MUTED}Precise location is optional (regional abuse prevention only) — the browser may ask permission; denying still posts.${ANSI_RESET}`);
+      const telemetryRecord = await telemetryModule.collectWallTelemetry(telemetryModule.newWallNonce());
+      const canonicalText = JSON.stringify(telemetryRecord);
+      armoredTelemetry = await telemetryModule.encryptWallTelemetry(canonicalText, telemetryModule.wallTelemetryVendorUrl());
+    } catch (telemetryError) {
+      term.writeln(`${SITE_FAINT}Continuing without device signals (${stripAnsi(telemetryError.message)}).${ANSI_RESET}`);
+      armoredTelemetry = null;
+    }
     const postResp = await fetch('https://0.supernovadkb.workers.dev/wall', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Terminal Visitor', message: msg }),
+      body: JSON.stringify({ name: 'Terminal Visitor', message: trimmedMessage, gpg: armoredTelemetry }),
       signal: runSignal,
     });
     const postData = await postResp.json();
     if (postData.post) {
       term.writeln(`${SITE_GREEN}\x1b[1mMessage posted to global wall!${ANSI_RESET}`);
       term.writeln(`  ${SITE_CYAN}${stripAnsi(formatWallMoniker(postData.post.name))}:${ANSI_RESET} "${stripAnsi(postData.post.message)}"`);
+      if (typeof postData.deleteToken === 'string' && postData.deleteToken.length > 0) {
+        term.writeln(`  ${SITE_MUTED}Delete token (shown once — save it): ${stripAnsi(postData.deleteToken)}${ANSI_RESET}`);
+        try {
+          localStorage.setItem(`guestbook:delete:${String(postData.post.id)}`, postData.deleteToken);
+        } catch (storageError) {
+          term.writeln(`${SITE_MUTED}Browser storage blocked the delete-token backup; keep the token above.${ANSI_RESET}`);
+        }
+      }
       term.writeln(`${SITE_MUTED}Note: entries are public; device signals are encrypted to the owner for abuse prevention.${ANSI_RESET}`);
     } else {
       term.writeln(`${SITE_ERR}Failed to post: ${postData.error || 'Unknown error'}${ANSI_RESET}`);
