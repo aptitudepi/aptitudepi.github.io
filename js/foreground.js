@@ -3,21 +3,36 @@
 // Exactly one foreground command owns the terminal at a time: every shell
 // execution (sync fast path plus async ai/weather/hn/md/vm/search/myip/wall/
 // ai-memory/devmode) runs inside runForeground, which owns the single
-// post-completion prompt. A second submit while busy prints a busy line
-// naming the running command and is refused (no queueing). Ctrl+C aborts the
-// run's AbortController; an AbortError surfaces as a neutral `^C cancelled`
-// line, never an error stack. A visible role=status node announces active
-// runs to screen readers; it lives in the DOM (not the xterm stream) so the
-// deterministic golden snapshots stay byte-exact.
+// post-completion prompt. A second non-ai submit while busy prints a busy line
+// naming the running command and is refused (no queueing). A second `ai` (or
+// `llm`) submit while busy is never silently dropped: it prints a
+// queued-behind-current status line and holds until the running command
+// finishes, then runs as a fresh foreground owner so both answers render.
+// Queue depth is capped at one waiting ai; deeper ai submits get an explicit
+// queue-full message. Ctrl+C aborts the run's AbortController; an AbortError
+// surfaces as a neutral `^C cancelled` line, never an error stack. A visible
+// role=status node announces active runs to screen readers; it lives in the
+// DOM (not the xterm stream) so the deterministic golden snapshots stay
+// byte-exact.
 
 let currentRun = null;
 let promptRenderer = null;
+const pendingAiQueue = [];
+const MAX_AI_QUEUE_DEPTH = 1;
 
 const FG_MUTED = '\x1b[38;2;140;140;155m';
 const FG_RESET = '\x1b[0m';
 
 function setPromptRenderer(renderer) {
   promptRenderer = renderer;
+}
+
+function isAiCommandName(commandName) {
+  return commandName === 'ai' || commandName === 'llm';
+}
+
+function getAiQueueDepth() {
+  return pendingAiQueue.length;
 }
 
 function isForegroundBusy() {
@@ -68,14 +83,34 @@ function hideForegroundStatus() {
   statusNode.textContent = '';
 }
 
-// Run workFunction(runSignal) as the single foreground command. Refuses with
-// a busy line when another command is active. Resolves true when the work ran
-// (exactly one prompt is rendered here), false when refused. A work result of
-// exactly false skips the trailing prompt (v86 takes over the terminal).
+// Run workFunction(runSignal) as the single foreground command. A second
+// non-ai submit while busy is refused with a busy line. A second `ai`/`llm`
+// submit is never silently dropped: it prints a queued-behind-current status
+// line and holds until the running command finishes, then runs as a fresh
+// foreground owner (exactly one prompt per run, in order) so both answers
+// render. Queue depth is capped: deeper ai submits get an explicit queue-full
+// message. Resolves true when the work ran (exactly one prompt is rendered
+// here), false when refused. A work result of exactly false skips the trailing
+// prompt (v86 takes over the terminal).
 async function runForeground(commandName, term, workFunction) {
   if (currentRun) {
-    const runningName = currentRun.commandName;
-    term.writeln(`${FG_MUTED}${commandName} is blocked — ${runningName} is still running (Ctrl+C to cancel)${FG_RESET}`);
+    if (isAiCommandName(commandName)) {
+      if (pendingAiQueue.length >= MAX_AI_QUEUE_DEPTH) {
+        const fullRunningName = currentRun.commandName;
+        term.writeln(`${FG_MUTED}ai queue is full — ${fullRunningName} is running and one ai is already queued (Ctrl+C to cancel)${FG_RESET}`);
+        return false;
+      }
+      const queuedBehindName = currentRun.commandName;
+      term.writeln(`${FG_MUTED}ai queued behind ${queuedBehindName} — holding…${FG_RESET}`);
+      let resolveQueued = null;
+      const queuedPromise = new Promise((resolveHold) => {
+        resolveQueued = resolveHold;
+      });
+      pendingAiQueue.push({ commandName, term, workFunction, resolveQueued });
+      return queuedPromise;
+    }
+    const blockedRunningName = currentRun.commandName;
+    term.writeln(`${FG_MUTED}${commandName} is blocked — ${blockedRunningName} is still running (Ctrl+C to cancel)${FG_RESET}`);
     return false;
   }
   const abortController = new AbortController();
@@ -94,8 +129,21 @@ async function runForeground(commandName, term, workFunction) {
     hideForegroundStatus();
     if (wasCancelled) term.writeln(`${FG_MUTED}^C cancelled${FG_RESET}`);
     if (promptRenderer && (wasCancelled || workResult !== false)) promptRenderer(term);
+    const nextQueued = pendingAiQueue.shift();
+    if (nextQueued) {
+      runForeground(nextQueued.commandName, nextQueued.term, nextQueued.workFunction).then((drainResult) => {
+        nextQueued.resolveQueued(drainResult);
+      }).catch((drainError) => {
+        try {
+          nextQueued.term.writeln(`${FG_MUTED}queued ai failed: ${drainError.message}${FG_RESET}`);
+        } catch (writelnError) {
+          console.warn(`queued ai drain writeln failed: ${writelnError.message}`);
+        }
+        nextQueued.resolveQueued(false);
+      });
+    }
   }
   return true;
 }
 
-export { runForeground, setPromptRenderer, isForegroundBusy, currentForegroundName, requestForegroundCancel, isAbortError };
+export { runForeground, setPromptRenderer, isForegroundBusy, currentForegroundName, requestForegroundCancel, isAbortError, isAiCommandName, getAiQueueDepth };

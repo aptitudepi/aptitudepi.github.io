@@ -15,6 +15,35 @@ let activeModel = 0;
 let pipeline = null;
 let pipelineLoading = false;
 
+// Last cloud-failure prompt, stored as an immutable snapshot (a fresh String
+// copy that is never mutated) so `ai retry` replays the exact prompt.
+// Guarded by aiGenerationInflight so a replay never runs parallel to an
+// in-flight generation (no double-bill); the foreground runner serializes ai
+// runs, and this flag is the second line of defence for any direct call.
+let lastFailedPromptSnapshot = null;
+let aiGenerationInflight = false;
+
+function getLastFailedPrompt() {
+  return lastFailedPromptSnapshot;
+}
+
+function clearLastFailedPrompt() {
+  lastFailedPromptSnapshot = null;
+}
+
+function isAiGenerationInflight() {
+  return aiGenerationInflight;
+}
+
+function storeFailedPromptSnapshot(failedPrompt) {
+  const snapshotCopy = String(failedPrompt);
+  lastFailedPromptSnapshot = snapshotCopy;
+}
+
+function showAiRetryAffordance(term) {
+  term.writeln(`\x1b[2mRetry available — type \`ai retry\` to replay the exact prompt\x1b[0m`);
+}
+
 async function loadPipeline(term) {
   if (activeModel === 0) return 'groq'; // Cloud mode
   if (pipeline) return pipeline;
@@ -258,10 +287,12 @@ async function streamGroq(prompt, context, term, runSignal) {
     appendHistoryTurn('user', prompt);
     appendHistoryTurn('assistant', fullResponse);
     processToolCalls(fullResponse, term);
+    return true;
   } catch (streamError) {
     if (isAbortError(streamError)) throw streamError;
     term.writeln(`\r\x1b[91mGroq cloud stream error: ${streamError.message}\x1b[0m`);
     term.writeln(`\x1b[2mTip: Switch to local in-browser model using \`ai-model 1\`\x1b[0m`);
+    return false;
   }
 }
 
@@ -319,57 +350,100 @@ function showAiStatus(term) {
   term.writeln(`\x1b[2mnetwork required (cloud inference or model download)\x1b[0m`);
 }
 
+async function runAiGeneration(targetPrompt, term, runSignal) {
+  if (aiGenerationInflight) {
+    term.writeln(`\x1b[2mai retry blocked — ai generation already in flight (no parallel cloud request)\x1b[0m`);
+    return;
+  }
+  aiGenerationInflight = true;
+  const promptSnapshot = String(targetPrompt);
+  try {
+    const webSearchFlag = promptSnapshot.startsWith(`web `) || promptSnapshot.startsWith(`search `) || promptSnapshot.includes(`--web`);
+    const cleanQuery = promptSnapshot.replace(/^(web|search)\s+/, ``).replace(/\s+--web/, ``).trim();
+
+    // Orb searching state is always paired with adjacent Downloading text;
+    // composing below is always paired with adjacent Generating text.
+    startThinkingOrb(term, `searching`);
+    term.writeln(`\x1b[2mDownloading… Searching portfolio context...\x1b[0m`);
+    try {
+      let context = await retrieveContext(cleanQuery, term);
+
+      if (webSearchFlag) {
+        if (term) term.writeln(`\x1b[2mFetching live web results via Cloudflare Worker...\x1b[0m`);
+        const webResults = await fetchWebSearch(cleanQuery, runSignal);
+        if (webResults.length) {
+          const webStr = webResults.map((webEntry, entryIndex) => `[Web Result ${entryIndex + 1}: ${webEntry.title}]\nURL: ${webEntry.url}\n${webEntry.snippet}`).join(`\n\n`);
+          context = `[Live Web Search Context]\n${webStr}\n\n${context}`;
+        } else {
+          if (term) term.writeln(`\x1b[2mNo live web results returned, relying on RAG portfolio context...\x1b[0m`);
+        }
+      }
+
+      // 2. Load model pipeline (Cloud Groq or Local ONNX)
+      const pipelineHandle = await loadPipeline(term);
+      if (!pipelineHandle) return;
+
+      setThinkingOrbState(`composing`);
+      term.writeln(`\x1b[2m\xf0\x9f\x94\x84 Generating (real-time stream)...\x1b[0m`);
+
+      if (activeModel === 0 || pipelineHandle === `groq`) {
+        const cloudOk = await streamGroq(cleanQuery, context, term, runSignal);
+        if (cloudOk) {
+          lastFailedPromptSnapshot = null;
+        } else {
+          storeFailedPromptSnapshot(promptSnapshot);
+          showAiRetryAffordance(term);
+        }
+      } else {
+        await streamLocal(pipelineHandle, cleanQuery, context, term, runSignal);
+        lastFailedPromptSnapshot = null;
+      }
+    } catch (generateError) {
+      if (isAbortError(generateError)) throw generateError;
+      term.writeln(`\x1b[91mGeneration failed: ${generateError.message}\x1b[0m`);
+      storeFailedPromptSnapshot(promptSnapshot);
+      showAiRetryAffordance(term);
+    } finally {
+      stopThinkingOrb();
+    }
+  } finally {
+    aiGenerationInflight = false;
+  }
+}
+
 async function generateOutput(prompt, term, runSignal) {
   if (!prompt) {
     term.writeln(`\x1b[2mUsage: ai <prompt>\x1b[0m`);
     term.writeln(`\x1b[2m       ai status        (show Groq-cloud vs local backend)\x1b[0m`);
+    term.writeln(`\x1b[2m       ai retry         (replay the exact failed prompt)\x1b[0m`);
     term.writeln(`\x1b[2m       ai web <query>   (live web search + LLM generation)\x1b[0m`);
     term.writeln(`\x1b[2m       ai-models        (list models)\x1b[0m`);
     term.writeln(`\x1b[2m       ai-model <id>    (switch model, 0-5)\x1b[0m`);
     return;
   }
 
-  if (prompt === 'status') {
+  if (prompt === `status`) {
     showAiStatus(term);
     return;
   }
 
-  const isWebSearch = prompt.startsWith('web ') || prompt.startsWith('search ') || prompt.includes('--web');
-  const cleanQuery = prompt.replace(/^(web|search)\s+/, '').replace(/\s+--web/, '').trim();
-
-  startThinkingOrb(term, isWebSearch ? 'searching web' : 'searching');
-  try {
-    let context = await retrieveContext(cleanQuery, term);
-
-    if (isWebSearch) {
-      if (term) term.writeln(`\x1b[2mFetching live web results via Cloudflare Worker...\x1b[0m`);
-      const webResults = await fetchWebSearch(cleanQuery, runSignal);
-      if (webResults.length) {
-        const webStr = webResults.map((r, i) => `[Web Result ${i + 1}: ${r.title}]\nURL: ${r.url}\n${r.snippet}`).join('\n\n');
-        context = `[Live Web Search Context]\n${webStr}\n\n${context}`;
-      } else {
-        if (term) term.writeln(`\x1b[2mNo live web results returned, relying on RAG portfolio context...\x1b[0m`);
-      }
+  if (prompt === `retry`) {
+    const storedSnapshot = lastFailedPromptSnapshot;
+    if (!storedSnapshot) {
+      term.writeln(`\x1b[2mNo failed ai prompt to retry.\x1b[0m`);
+      return;
     }
-
-    // 2. Load model pipeline (Cloud Groq or Local ONNX)
-    const p = await loadPipeline(term);
-    if (!p) return;
-
-    setThinkingOrbState('composing');
-    term.writeln(`\x1b[2m\xf0\x9f\x94\x84 Generating (real-time stream)...\x1b[0m`);
-
-    if (activeModel === 0 || p === 'groq') {
-      await streamGroq(cleanQuery, context, term, runSignal);
-    } else {
-      await streamLocal(p, cleanQuery, context, term, runSignal);
+    if (aiGenerationInflight) {
+      term.writeln(`\x1b[2mai retry blocked — ai generation already in flight (no parallel cloud request)\x1b[0m`);
+      return;
     }
-  } catch (generateError) {
-    if (isAbortError(generateError)) throw generateError;
-    term.writeln(`\x1b[91mGeneration failed: ${generateError.message}\x1b[0m`);
-  } finally {
-    stopThinkingOrb();
+    // Replay the immutable snapshot, never the literal retry token.
+    const replayPrompt = String(storedSnapshot);
+    await runAiGeneration(replayPrompt, term, runSignal);
+    return;
   }
+
+  await runAiGeneration(prompt, term, runSignal);
 }
 
 function showModelSelector(term) {
@@ -403,4 +477,4 @@ async function switchModel(id, term) {
   term.writeln(`\x1b[2mNext \`ai\` call will load this model\x1b[0m`);
 }
 
-export { generateOutput, showModelSelector, switchModel, MODELS };
+export { generateOutput, showModelSelector, switchModel, MODELS, getLastFailedPrompt, clearLastFailedPrompt, isAiGenerationInflight };
