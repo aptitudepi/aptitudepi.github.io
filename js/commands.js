@@ -15,6 +15,8 @@
 // prints only entries with helpDisplay (34 rows) under an Available
 // commands (36) header; `man`, `llm` and `guestbook` are executable but
 // unlisted on purpose so the count and rows stay byte-identical.
+// WAVE 9a: `wall` and `guestbook` both carry plain/examples/argsSpec (alias
+// drift closed); neither change affects the help rows or the counts above.
 
 import { isAbortError } from './foreground.js';
 import { sanitizeTerminalText, renderMarkdown } from './markdown.js';
@@ -761,6 +763,35 @@ function stripAnsi(s) {
   return out;
 }
 
+// WAVE 9a guestbook foundation: moniker display shape (no collection yet).
+// Wave 9b assembles the canonical moniker server-side at POST (city derived
+// from IP, slug plus sanitize server-side, random-handle fallback, never
+// trusts a client-sent moniker field). Until then the existing name field is
+// mapped here: a name already shaped like visitor@city-slug renders as-is,
+// anything else renders as visitor@<slug-of-name> (visitor@anonymous empty).
+function formatWallMoniker(displayName) {
+  const rawText = String(displayName ?? '').trim().toLowerCase();
+  if (rawText.includes('@')) {
+    return rawText.slice(0, 48);
+  }
+  const slugChars = [];
+  for (const glyph of rawText) {
+    const codePoint = glyph.codePointAt(0);
+    const isLowerLetter = codePoint >= 0x61 && codePoint <= 0x7A;
+    const isDigitChar = codePoint >= 0x30 && codePoint <= 0x39;
+    if (isLowerLetter || isDigitChar) {
+      slugChars.push(glyph);
+    } else if (glyph === ' ' || glyph === '_' || glyph === '-' || glyph === '.') {
+      slugChars.push('-');
+    }
+  }
+  const slugText = slugChars.join('').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+  if (!slugText) {
+    return 'visitor@anonymous';
+  }
+  return `visitor@${slugText}`;
+}
+
 function renderComment(term, item, depth) {
   if (!item || item.deleted || item.dead) return;
   const indent = '  '.repeat(depth);
@@ -1145,15 +1176,12 @@ async function runWallCommand(term, args, runSignal) {
       const wallResp = await fetch('https://0.supernovadkb.workers.dev/wall', { signal: runSignal });
       const wallData = await wallResp.json();
       const posts = wallData.posts || [];
-      term.writeln(`${SITE_GREEN}\x1b[1mdvxb.io Global Visitor Guestbook & AI Wall:\x1b[0m${ANSI_RESET}`);
+      term.writeln(`${SITE_GREEN}\x1b[1mdvxb.io Global Visitor Guestbook:\x1b[0m${ANSI_RESET}`);
       if (!posts.length) {
         term.writeln(`${SITE_MUTED}No entries yet. Be the first to leave a message using: wall <your message>${ANSI_RESET}`);
       } else {
         for (const post of posts) {
-          term.writeln(`  ${SITE_CYAN}[${stripAnsi(post.timestamp)}] ${stripAnsi(post.name)}:${ANSI_RESET} "${stripAnsi(post.message)}"`);
-          if (post.aiReply) {
-            term.writeln(`      ${SITE_GREEN}AI Signature Reply:${ANSI_RESET} ${SITE_FAINT}${stripAnsi(post.aiReply)}${ANSI_RESET}`);
-          }
+          term.writeln(`  ${SITE_CYAN}[${stripAnsi(post.timestamp)}] ${stripAnsi(formatWallMoniker(post.name))}:${ANSI_RESET} "${stripAnsi(post.message)}"`);
         }
       }
       term.writeln(`\n${SITE_MUTED}Tip: Leave your own message using: wall <message>${ANSI_RESET}`);
@@ -1164,7 +1192,7 @@ async function runWallCommand(term, args, runSignal) {
     }
     return;
   }
-  term.writeln(`${SITE_FAINT}Posting message to global wall & generating AI reply...${ANSI_RESET}`);
+  term.writeln(`${SITE_FAINT}Posting message to global wall...${ANSI_RESET}`);
   try {
     const postResp = await fetch('https://0.supernovadkb.workers.dev/wall', {
       method: 'POST',
@@ -1175,8 +1203,8 @@ async function runWallCommand(term, args, runSignal) {
     const postData = await postResp.json();
     if (postData.post) {
       term.writeln(`${SITE_GREEN}\x1b[1mMessage posted to global wall!${ANSI_RESET}`);
-      term.writeln(`  ${SITE_CYAN}${stripAnsi(postData.post.name)}:${ANSI_RESET} "${stripAnsi(postData.post.message)}"`);
-      term.writeln(`  ${SITE_GREEN}AI Reply:${ANSI_RESET} ${stripAnsi(postData.post.aiReply)}`);
+      term.writeln(`  ${SITE_CYAN}${stripAnsi(formatWallMoniker(postData.post.name))}:${ANSI_RESET} "${stripAnsi(postData.post.message)}"`);
+      term.writeln(`${SITE_MUTED}Note: entries are public; device signals are encrypted to the owner for abuse prevention.${ANSI_RESET}`);
     } else {
       term.writeln(`${SITE_ERR}Failed to post: ${postData.error || 'Unknown error'}${ANSI_RESET}`);
       term.writeln(`${SITE_MUTED}Next: retry \`wall <message>\` or run \`wall\` to read the wall${ANSI_RESET}`);
@@ -2072,10 +2100,10 @@ const COMMAND_REGISTRY = [
     name: "guestbook",
     aliases: [],
     aliasOf: "wall",
-    plain: "Alias for wall",
+    plain: "View or post on the global guestbook",
     category: "CORE",
     argsSpec: "[message]",
-    examples: ["guestbook"],
+    examples: ["guestbook", "guestbook hello from the terminal!"],
     helpDisplay: null,
     helpDesc: null,
     helpPos: null,
@@ -2287,4 +2315,5 @@ export {
   COMMAND_COMPLETION_NAMES, TOOL_ALLOWLIST_NAMES, TOOL_ALLOWLIST_BARE_ONLY,
   NEOFETCH_TRY_COMMANDS, isAiCommandName, renderMan, setPrefetchedLocation,
   commandCount, helpText, recordCommandOutput, readLastCommandOutput,
+  formatWallMoniker,
 };

@@ -1,5 +1,15 @@
 {
   "name": "0",
   "compatibility_date": "2026-07-14",
-  "main": "assets/v86/cors-proxy-worker.js"
+  "main": "assets/v86/cors-proxy-worker.js",
+  // WAVE 9a guestbook foundation: WALL_KV persists /wall posts (keep-forever,
+  // no TTL). Local dev: run `wrangler dev --persist` so the binding works
+  // against local persisted state instead of erroring with no KV.
+  "kv_namespaces": [
+    {
+      "binding": "WALL_KV",
+      "id": "cae9623f0da444a1b0c6ab921148f6ca",
+      "preview_id": "8940fb28f72e4c8ebc32a9c27b46f9ea"
+    }
+  ]
 }

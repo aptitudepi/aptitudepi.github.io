@@ -15,6 +15,34 @@ const CORS_HEADERS = {
   'access-control-max-age': '86400',
 };
 
+// WAVE 9a guestbook foundation: server-side name sanitize plus slug helpers.
+// Moniker display prep only — no collection here. Wave 9b derives city from
+// IP at POST and assembles visitor@city-slug with a random-handle fallback;
+// the worker never trusts a client-sent moniker field.
+function slugWallSegment(rawSegment) {
+  const lowered = String(rawSegment ?? '').trim().toLowerCase();
+  const keptChars = [];
+  for (const glyph of lowered) {
+    const codePoint = glyph.codePointAt(0);
+    const isLowerLetter = codePoint >= 0x61 && codePoint <= 0x7A;
+    const isDigitChar = codePoint >= 0x30 && codePoint <= 0x39;
+    if (isLowerLetter || isDigitChar) {
+      keptChars.push(glyph);
+    } else if (glyph === ' ' || glyph === '_' || glyph === '-' || glyph === '.') {
+      keptChars.push('-');
+    }
+  }
+  return keptChars.join('').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function sanitizeWallName(rawName) {
+  const slugText = slugWallSegment(rawName);
+  if (!slugText) {
+    return 'Anonymous Visitor';
+  }
+  return slugText.slice(0, 40);
+}
+
 async function handleRequest(request, env) {
   // Block unauthorized origins
   const origin = request.headers.get('Origin');
@@ -30,7 +58,9 @@ async function handleRequest(request, env) {
   const url = new URL(request.url);
 
   // ── 1. Groq AI Gateway Handler (/ai or POST to worker) ──
-  if (url.pathname === '/ai' || (request.method === 'POST' && !url.searchParams.get('url'))) {
+  // WAVE 9a: the bare-POST fallback is scoped to the root path so POST /wall
+  // reaches the guestbook handler below (it was previously swallowed here).
+  if (url.pathname === '/ai' || (url.pathname === '/' && request.method === 'POST' && !url.searchParams.get('url'))) {
     try {
       const body = await request.json();
       const apiKey = (env && env.GROQ_API_KEY) || (typeof GROQ_API_KEY !== 'undefined' ? GROQ_API_KEY : '');
@@ -48,7 +78,7 @@ async function handleRequest(request, env) {
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: body.model || 'qwen/qwen3.6-27b',
+          model: body.model || 'qwen/qwen3.8-27b',
           messages: body.messages,
           stream: true,
           max_tokens: body.max_tokens || 1024,
@@ -146,7 +176,7 @@ async function handleRequest(request, env) {
   let WALL_POSTS = typeof globalThis._WALL_POSTS !== 'undefined' ? globalThis._WALL_POSTS : [];
   globalThis._WALL_POSTS = WALL_POSTS;
 
-  // ── 5. Global AI Wall & Guestbook Endpoint (/wall) ──
+  // ── 5. Global Guestbook Endpoint (/wall) ──
   if (url.pathname === '/wall') {
     if (request.method === 'GET') {
       let posts = WALL_POSTS;
@@ -165,44 +195,26 @@ async function handleRequest(request, env) {
     if (request.method === 'POST') {
       try {
         const body = await request.json();
-        const authorName = (body.name || 'Anonymous Visitor').slice(0, 40);
+        // WAVE 9a guestbook foundation: no AI replies, no approval queue
+        // (post-moderation stance), keep-forever (no TTL on the KV put
+        // below), no archival job, no email field anywhere. Any body.moniker
+        // sent by a client is ignored on purpose: the moniker is assembled
+        // server-side (Wave 9b adds the IP-derived city plus fallback).
+        const authorName = sanitizeWallName(body.name);
         const userMsg = (body.message || '').slice(0, 280);
 
         if (!userMsg) {
           return new Response(JSON.stringify({ error: 'Message cannot be empty' }), { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
         }
 
-        // Generate AI signature reply via Groq
-        let aiReply = 'Thanks for leaving a message on the dvxb.io wall!';
-        const apiKey = (env && env.GROQ_API_KEY) || (typeof GROQ_API_KEY !== 'undefined' ? GROQ_API_KEY : '');
-        if (apiKey) {
-          try {
-            const aiResp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-              body: JSON.stringify({
-                model: 'qwen/qwen3.6-27b',
-                messages: [
-                  { role: 'system', content: 'You are Devkumar Banerjee. Write a friendly, 1-2 sentence response to a guestbook entry on your personal portfolio website. Be warm and concise.' },
-                  { role: 'user', content: `${authorName} wrote: "${userMsg}"` }
-                ],
-                max_tokens: 256,
-                temperature: 0.7
-              })
-            });
-            if (aiResp.ok) {
-              const resJson = await aiResp.json();
-              const rawReply = resJson.choices[0]?.message?.content || aiReply;
-              aiReply = rawReply.replace(/<think>[\s\S]*?<\/think>/g, '').trim() || aiReply;
-            }
-          } catch (_e) {}
-        }
-
+        // Post shape: { id, name, message, timestamp }. Stored legacy posts
+        // keep their aiReply field until overwritten; clients no longer read
+        // it. One-time migration (do NOT execute here): delete the key once
+        // via `wrangler kv:key delete --binding WALL_KV posts` to drop it.
         const newPost = {
           id: Date.now(),
           name: authorName,
           message: userMsg,
-          aiReply: aiReply.trim(),
           timestamp: new Date().toISOString().split('T')[0]
         };
 
@@ -268,3 +280,5 @@ export default {
     return handleRequest(request, env);
   }
 };
+
+export { slugWallSegment, sanitizeWallName };
