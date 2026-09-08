@@ -83,6 +83,7 @@ async function loadPipeline(term) {
     return pipeline;
   } catch (e) {
     if (term) term.writeln(`\r\x1b[91mFailed to load local model: ${e.message}\x1b[0m`);
+    if (term) term.writeln(`\x1b[2mNext: retry \`ai <prompt>\`, or switch back with \`ai-model 0\` for Groq cloud\x1b[0m`);
     pipelineLoading = false;
     return null;
   }
@@ -347,6 +348,7 @@ function showAiStatus(term) {
   term.writeln(`\x1b[1mAI backend status\x1b[0m`);
   term.writeln(`\x1b[2mactive: ${current.name} — ${backend}\x1b[0m`);
   term.writeln(`\x1b[2mdefault: Groq cloud model; switch with ai-model <id>\x1b[0m`);
+  term.writeln(`\x1b[2mCloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download\x1b[0m`);
   term.writeln(`\x1b[2mnetwork required (cloud inference or model download)\x1b[0m`);
 }
 
@@ -419,6 +421,7 @@ async function generateOutput(prompt, term, runSignal) {
     term.writeln(`\x1b[2m       ai web <query>   (live web search + LLM generation)\x1b[0m`);
     term.writeln(`\x1b[2m       ai-models        (list models)\x1b[0m`);
     term.writeln(`\x1b[2m       ai-model <id>    (switch model, 0-5)\x1b[0m`);
+    term.writeln(`\x1b[2mCloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download\x1b[0m`);
     return;
   }
 
@@ -431,6 +434,7 @@ async function generateOutput(prompt, term, runSignal) {
     const storedSnapshot = lastFailedPromptSnapshot;
     if (!storedSnapshot) {
       term.writeln(`\x1b[2mNo failed ai prompt to retry.\x1b[0m`);
+      term.writeln(`\x1b[2mNext: run \`ai <prompt>\` to start a request\x1b[0m`);
       return;
     }
     if (aiGenerationInflight) {

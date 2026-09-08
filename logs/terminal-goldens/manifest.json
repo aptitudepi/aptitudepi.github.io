@@ -1,7 +1,7 @@
 {
   "version": 1,
   "tool": "tools/snapshot-terminal.mjs",
-  "commit": "019f713e5234b5841dffa04b1cb122cc9f4b0ef1",
+  "commit": "d2aa42a7ffcdcc0d1089264474666b8a79cec8a7",
   "origin": "http://127.0.0.1:8901/",
   "viewport": {
     "width": 1280,
@@ -17,8 +17,8 @@
     {
       "command": "(boot)",
       "file": "boot.ans",
-      "sha256": "702a20e6dd910ee846655fe6cf124011eb0ba0a97ac9961d2c1eec2e73cc40de",
-      "bytes": 2953,
+      "sha256": "acae34717ca881e59c766de6d9c1f8ce3a3bd9cce056a53451ce1dddb32106f8",
+      "bytes": 3053,
       "prompts": 1
     },
     {
@@ -31,8 +31,8 @@
     {
       "command": "unknown-cmd",
       "file": "unknown-cmd.ans",
-      "sha256": "e7c887b1d3da4c035bc602e0e72ea0ef846d7f75222e36410d3f1b51c254d3b8",
-      "bytes": 220,
+      "sha256": "c95ace47a69feb31e8404ad585edfca528a3f08f70d95953522bcf7729049bcd",
+      "bytes": 288,
       "prompts": 1
     },
     {
@@ -52,15 +52,15 @@
     {
       "command": "neofetch",
       "file": "neofetch.ans",
-      "sha256": "fa59113241e7a6c229f2a70024b26db02abc151561795427b497af12c346fb36",
-      "bytes": 2023,
+      "sha256": "c682ba6d752e6424a45c13dd6e615e5b4b9c986cfa56cbd459588bda329b4ab8",
+      "bytes": 2123,
       "prompts": 1
     },
     {
       "command": "about",
       "file": "about.ans",
-      "sha256": "e8f0e4e83ead071b9fb6d8c4a09928eff3d7a3e213f30cb81415e7867eb16db8",
-      "bytes": 810,
+      "sha256": "e31e20fd088e63d6a1b2c3e12e8d173400c83ea72922e7cbb4fecb80920ebac7",
+      "bytes": 943,
       "prompts": 1
     },
     {
@@ -94,22 +94,22 @@
     {
       "command": "weather --help",
       "file": "weather-help.ans",
-      "sha256": "f2ee4a9ff974d2c2ea5d77ba0deaab972875506f0d365b11c9a3eaaca5ec79b9",
-      "bytes": 479,
+      "sha256": "2bd7c96ccb09c9a516001ea9a148b62371491b94de70499d1fda58246853a4a7",
+      "bytes": 577,
       "prompts": 1
     },
     {
       "command": "search --help",
       "file": "search-help.ans",
-      "sha256": "c0371aecebda18854023c6605c5496d4708c68a785490cee3494b6b2a8c79eb5",
-      "bytes": 280,
+      "sha256": "832d110a7dede341776eaad9ec763ad00f13d31e6833877f2b347e7d12f41b49",
+      "bytes": 353,
       "prompts": 1
     },
     {
       "command": "hn --help",
       "file": "hn-help.ans",
-      "sha256": "dbe4e5b5696e2979af9574be7f0dac9e7fac491fde1435465c96fd22cf3a1ad9",
-      "bytes": 205,
+      "sha256": "a05cb78838ae2e7674a72b7fb361c5f687a653cdd897fc57d8b62aa8b21eae7e",
+      "bytes": 284,
       "prompts": 1
     },
     {

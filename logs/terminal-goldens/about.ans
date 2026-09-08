@@ -5,6 +5,7 @@ about
 Builder of terminal-themed portfolios with [38;2;60;190;220mxterm.js[0m
 frosted glass UI, [38;2;60;190;220mThree.js[0m particle effects, and a
 networked AI assistant ([38;2;60;190;220mGroq[0m cloud default, local option)
+[38;2;140;140;155mCloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download[0m
 Systems tinkerer, researcher, and open-source
 contributor. Interested in ML infrastructure, developer tooling,
 and building things that feel alive.

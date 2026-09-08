@@ -79,6 +79,7 @@ async function bootVM(term, runSignal) {
     v86Loading = false;
     if (isAbortError(bootError)) throw bootError;
     term.writeln(`\x1b[38;2;220;80;80mError: ${bootError.message}\x1b[0m`);
+    term.writeln(`\x1b[38;2;140;140;155mNext: retry \`vm\`, or reload the page and try again\x1b[0m`);
     return true;
   }
 }

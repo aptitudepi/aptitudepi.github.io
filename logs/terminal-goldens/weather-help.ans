@@ -1,6 +1,7 @@
 weather --help
 [38;2;140;140;155mFetching location...[0m
 [38;2;220;80;100mCould not determine location.[0m
+[38;2;140;140;155mNext: retry `weather`, or check your connection and allow location access[0m
 [38;2;100;100;115m  .       .       .[0m
 [38;2;100;100;115m    .   .   .   .[0m
 [38;2;100;100;115m  .  +  .  +  .[0m

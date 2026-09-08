@@ -563,6 +563,7 @@ function neofetch(term) {
     { label: 'Skills', value: `Python · PyTorch · C · C++ · Java · Linux · Docker · Ansible · Keras · Streamlit` },
     { label: 'Certs', value: `GSEC · GFACT · AZ-900 · SC-900 · Linux Pro · CCST · ITF+ · RVFA` },
     { label: 'Shell', value: `fish 3.7` },
+    { label: 'AI', value: `Groq cloud default (local option) · cloud prompts sent via Worker proxy` },
     { label: 'Uptime', value: uptimeStr() },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
     { label: '', value: `${tryText}${' '.repeat(blockCol - visibleLen(tryText))}${blocks1}` },
@@ -684,6 +685,7 @@ async function weatherCommand(term, args, runSignal) {
     catch (locationError) {
       if (isAbortError(locationError)) throw locationError;
       term.writeln(`${SITE_ERR}Could not determine location.${ANSI_RESET}`);
+      term.writeln(`${SITE_MUTED}Next: retry \`weather\`, or check your connection and allow location access${ANSI_RESET}`);
       term.writeln(`${SITE_FAINT}  .       .       .${ANSI_RESET}`);
       term.writeln(`${SITE_FAINT}    .   .   .   .${ANSI_RESET}`);
       term.writeln(`${SITE_FAINT}  .  +  .  +  .${ANSI_RESET}`);
@@ -713,6 +715,7 @@ async function weatherCommand(term, args, runSignal) {
     } catch (debugError) {
       if (isAbortError(debugError)) throw debugError;
       term.writeln(`${SITE_ERR}ipapi.co error: ${debugError.message}${ANSI_RESET}`);
+      term.writeln(`${SITE_MUTED}Next: retry \`weather --debug\` or check your connection${ANSI_RESET}`);
     }
     return;
   }
@@ -746,6 +749,7 @@ async function weatherCommand(term, args, runSignal) {
   } catch (weatherError) {
     if (isAbortError(weatherError)) throw weatherError;
     term.writeln(`${SITE_ERR}Failed to fetch weather data${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: retry \`weather\` or try again shortly${ANSI_RESET}`);
   }
 }
 
@@ -810,11 +814,13 @@ async function hnCommand(term, args, runSignal) {
     const idx = parseInt(args[0], 10);
     if (isNaN(idx) || idx < 1 || idx > _hnItems.length) {
       term.writeln(`${SITE_ERR}hn: invalid index${ANSI_RESET}`);
+      term.writeln(`${SITE_MUTED}Next: run \`hn\` to refresh the list, then \`hn <number>\`${ANSI_RESET}`);
       return;
     }
     const item = _hnItems[idx - 1];
     if (!item) {
       term.writeln(`${SITE_ERR}hn: item not found${ANSI_RESET}`);
+      term.writeln(`${SITE_MUTED}Next: run \`hn\` to refresh the list, then \`hn <number>\`${ANSI_RESET}`);
       return;
     }
     term.writeln(`${SITE_MUTED}Fetching story #${item.id}...${ANSI_RESET}`);
@@ -865,6 +871,7 @@ async function hnCommand(term, args, runSignal) {
     } catch (storyError) {
       if (isAbortError(storyError)) throw storyError;
       term.writeln(`${SITE_ERR}Failed to fetch story #${item.id}${ANSI_RESET}`);
+      term.writeln(`${SITE_MUTED}Next: retry the story, or run \`hn\` to refresh the list${ANSI_RESET}`);
     }
     return;
   }
@@ -895,11 +902,12 @@ async function hnCommand(term, args, runSignal) {
   } catch (listError) {
     if (isAbortError(listError)) throw listError;
     term.writeln(`${SITE_ERR}Failed to fetch Hacker News${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: retry \`hn\` or check your connection${ANSI_RESET}`);
   }
 }
 
 function mdCommand(term, args) {
-  if (!args.length) { term.writeln(`${SITE_ERR}md: missing URL${ANSI_RESET}`); return; }
+  if (!args.length) { term.writeln(`${SITE_ERR}md: missing URL${ANSI_RESET}`); term.writeln(`${SITE_MUTED}Next: run \`md <url>\` with a markdown URL${ANSI_RESET}`); return; }
   let url = args[0];
   if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
   term.writeln(`${SITE_MUTED}Opening ${url} in markdown viewer...${ANSI_RESET}`);
@@ -932,6 +940,7 @@ function mdCommand(term, args) {
     document.addEventListener('keydown', onEsc);
   } catch (viewerError) {
     term.writeln(`${SITE_ERR}Failed to open markdown viewer${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: check the URL and retry \`md <url>\`${ANSI_RESET}`);
   }
 }
 
@@ -1039,6 +1048,7 @@ async function executeSingleCommand(trimmed, term, runSignal) {
       term.writeln(`Builder of terminal-themed portfolios with ${SITE_CYAN}xterm.js${ANSI_RESET}`);
       term.writeln(`frosted glass UI, ${SITE_CYAN}Three.js${ANSI_RESET} particle effects, and a`);
       term.writeln(`networked AI assistant (${SITE_CYAN}Groq${ANSI_RESET} cloud default, local option)`);
+      term.writeln(`${SITE_MUTED}Cloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download${ANSI_RESET}`);
       term.writeln(`Systems tinkerer, researcher, and open-source`);
       term.writeln(`contributor. Interested in ML infrastructure, developer tooling,`);
       term.writeln(`and building things that feel alive.`);
@@ -1090,6 +1100,7 @@ async function executeSingleCommand(trimmed, term, runSignal) {
         term.writeln(`${SITE_GREEN}Matrix rain started. Press Escape to exit.${ANSI_RESET}`);
       } else {
         term.writeln(`${SITE_ERR}Matrix rain module not loaded${ANSI_RESET}`);
+      term.writeln(`${SITE_MUTED}Next: reload the page and retry \`matrix\`${ANSI_RESET}`);
       }
       break;
     case 'vm':
@@ -1098,6 +1109,7 @@ async function executeSingleCommand(trimmed, term, runSignal) {
         return window.bootVM(term, runSignal);
       }
       term.writeln(`${SITE_ERR}VM module not loaded${ANSI_RESET}`);
+      term.writeln(`${SITE_MUTED}Next: reload the page and retry \`vm\`${ANSI_RESET}`);
       break;
     case 'ai':
     case 'llm':
@@ -1109,6 +1121,7 @@ async function executeSingleCommand(trimmed, term, runSignal) {
         devtools.toggleDevPanel();
       } catch (devError) {
         term.writeln(`${SITE_ERR}Failed to load dev panel: ${devError.message}${ANSI_RESET}`);
+        term.writeln(`${SITE_MUTED}Next: reload the page and retry \`devmode\`${ANSI_RESET}`);
       }
       break;
     case 'ai-models':
@@ -1135,6 +1148,7 @@ async function executeSingleCommand(trimmed, term, runSignal) {
         const searchData = await searchResp.json();
         if (!searchData.results || !searchData.results.length) {
           term.writeln(`${SITE_MUTED}No search results found.${ANSI_RESET}`);
+          term.writeln(`${SITE_MUTED}Next: try different keywords or retry the search${ANSI_RESET}`);
         } else {
           term.writeln(`${SITE_GREEN}\x1b[1mSearch Results for "${stripAnsi(query)}":\x1b[0m${ANSI_RESET}`);
           for (let resultIndex = 0; resultIndex < searchData.results.length; resultIndex++) {
@@ -1147,6 +1161,7 @@ async function executeSingleCommand(trimmed, term, runSignal) {
       } catch (searchError) {
         if (isAbortError(searchError)) throw searchError;
         term.writeln(`${SITE_ERR}Search error: ${searchError.message}${ANSI_RESET}`);
+        term.writeln(`${SITE_MUTED}Next: retry the search or check your connection${ANSI_RESET}`);
       }
       break;
     }
@@ -1167,6 +1182,7 @@ async function executeSingleCommand(trimmed, term, runSignal) {
       } catch (pingError) {
         if (isAbortError(pingError)) throw pingError;
         term.writeln(`${SITE_ERR}Ping error: ${pingError.message}${ANSI_RESET}`);
+        term.writeln(`${SITE_MUTED}Next: retry \`ping\` or check your connection${ANSI_RESET}`);
       }
       break;
     }
@@ -1230,6 +1246,7 @@ async function executeSingleCommand(trimmed, term, runSignal) {
         } catch (wallError) {
           if (isAbortError(wallError)) throw wallError;
           term.writeln(`${SITE_ERR}Failed to load wall: ${wallError.message}${ANSI_RESET}`);
+          term.writeln(`${SITE_MUTED}Next: retry \`wall\` or check your connection${ANSI_RESET}`);
         }
         break;
       }
@@ -1248,10 +1265,12 @@ async function executeSingleCommand(trimmed, term, runSignal) {
           term.writeln(`  ${SITE_GREEN}AI Reply:${ANSI_RESET} ${stripAnsi(postData.post.aiReply)}`);
         } else {
           term.writeln(`${SITE_ERR}Failed to post: ${postData.error || 'Unknown error'}${ANSI_RESET}`);
+          term.writeln(`${SITE_MUTED}Next: retry \`wall <message>\` or run \`wall\` to read the wall${ANSI_RESET}`);
         }
       } catch (postError) {
         if (isAbortError(postError)) throw postError;
         term.writeln(`${SITE_ERR}Wall post error: ${postError.message}${ANSI_RESET}`);
+        term.writeln(`${SITE_MUTED}Next: retry \`wall <message>\` or run \`wall\` to read the wall${ANSI_RESET}`);
       }
       break;
     }
@@ -1274,8 +1293,10 @@ async function executeSingleCommand(trimmed, term, runSignal) {
       if (suggestion) {
         term.writeln(`${SITE_ERR}${cmd}: command not found${ANSI_RESET}`);
         term.writeln(`${SITE_MUTED}Did you mean \`${SITE_WHITE}${suggestion}${SITE_MUTED}\`?${ANSI_RESET}`);
+        term.writeln(`${SITE_MUTED}Next: type \`help\` for the full command list${ANSI_RESET}`);
       } else {
         term.writeln(`${SITE_ERR}${cmd}: command not found${ANSI_RESET}`);
+        term.writeln(`${SITE_MUTED}Next: type \`help\` for the full command list${ANSI_RESET}`);
       }
       break;
     }
