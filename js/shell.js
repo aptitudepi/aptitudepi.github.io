@@ -2,7 +2,7 @@ import { runForeground, setPromptRenderer, isForegroundBusy } from './foreground
 import {
   neofetch, SITE_GREEN, SITE_WHITE, SITE_CYAN, SITE_BLUE, SITE_MUTED, SITE_OK,
   SITE_ERR, SITE_FAINT, ANSI_RESET, resolveCommand, suggestCommand,
-  tokenizeCommandLine, setPrefetchedLocation,
+  tokenizeCommandLine, setPrefetchedLocation, recordCommandOutput,
 } from './commands.js';
 
 let asyncCPU = null;
@@ -164,7 +164,33 @@ async function executeSingleCommand(trimmed, term, runSignal) {
   const args = parts.slice(1).map((argText) => argText.replace(/^"(.*)"$/, '$1'));
   const entry = resolveCommand(cmd);
   if (entry) {
-    return entry.run(term, args, runSignal);
+    // Capture a copy of the command stream for the `export` story. The
+    // wrapper forwards every call untouched, so golden bytes never change.
+    const capturedChunks = [];
+    const captureTerm = {
+      write(chunkText) {
+        capturedChunks.push(String(chunkText));
+        term.write(chunkText);
+      },
+      writeln(lineText) {
+        capturedChunks.push(`${String(lineText ?? '')}\n`);
+        term.writeln(lineText);
+      },
+      clear() {
+        capturedChunks.length = 0;
+        if (typeof term.clear === 'function') {
+          term.clear();
+        }
+      },
+    };
+    try {
+      const runResult = await entry.run(captureTerm, args, runSignal);
+      recordCommandOutput(capturedChunks.join(''));
+      return runResult;
+    } catch (runError) {
+      recordCommandOutput(capturedChunks.join(''));
+      throw runError;
+    }
   }
   const suggestion = suggestCommand(cmd);
   if (suggestion) {

@@ -9,8 +9,9 @@
 // read-only tool-allowlist security posture.
 //
 // Intentional, documented deltas (NOT drift):
-//   - `man`, `llm`, `guestbook` execute but stay unlisted: COMMANDS keeps 36
-//     so `help` output stays byte-identical to the goldens.
+//   - `man`, `llm`, `guestbook` plus the WAVE 8 portfolio set (`projects`,
+//     `case`, `skills`, `timeline`, `export`) execute but stay unlisted:
+//     COMMANDS keeps 36 so `help` output stays byte-identical to the goldens.
 //   - `google`, `ddg`, `ping` are listed but have no `help` row (as before);
 //     their one-line help lives in the registry and renders via `man`.
 //   - the AI tool allowlist deliberately excludes clear/vm/ai(+llm)/ai-model/
@@ -39,7 +40,7 @@ const LEGACY_ALLOWLIST = new Set([
 
 const NEVER_ALLOWED = [`clear`, `vm`, `ai`, `llm`, `ai-model`, `md`, `devmode`, `guestbook`, `man`];
 
-const UNLISTED_EXECUTABLE = [`llm`, `guestbook`, `man`];
+const UNLISTED_EXECUTABLE = [`llm`, `guestbook`, `man`, `projects`, `case`, `skills`, `timeline`, `export`];
 
 let failureCount = 0;
 
@@ -175,7 +176,7 @@ check(
 // 7. Completion covers COMMANDS plus exactly the documented unlisted extras.
 check(COMMANDS.every((name) => COMMAND_COMPLETION_NAMES.includes(name)), `completion covers every COMMANDS name`);
 const completionExtras = COMMAND_COMPLETION_NAMES.filter((name) => !COMMANDS.includes(name));
-check(JSON.stringify([...completionExtras].sort()) === JSON.stringify([...UNLISTED_EXECUTABLE].sort()), `completion extras are exactly llm/guestbook/man`);
+check(JSON.stringify([...completionExtras].sort()) === JSON.stringify([...UNLISTED_EXECUTABLE].sort()), `completion extras are exactly the unlisted set (${UNLISTED_EXECUTABLE.join(`/`)})`);
 
 // 8. Alias resolution shares the canonical run function.
 check(resolveCommand(`cv`)?.run === resolveCommand(`neofetch`)?.run, `cv shares the neofetch run`);

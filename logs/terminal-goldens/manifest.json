@@ -1,7 +1,7 @@
 {
   "version": 1,
   "tool": "tools/snapshot-terminal.mjs",
-  "commit": "a5bf6633b682a75b13cbcdc2df31dd98774c448c",
+  "commit": "fa48cf3687c843e85207a2596ee205232f4ff52f",
   "origin": "http://127.0.0.1:8901/",
   "viewport": {
     "width": 1280,
@@ -113,6 +113,69 @@
       "prompts": 1
     },
     {
+      "command": "cat resume.md",
+      "file": "cat-resume.ans",
+      "sha256": "f1c713f6edb0b5cb07687efde2db32f40e06e7d8ee490eb8cc889634b7977c71",
+      "bytes": 2380,
+      "prompts": 1
+    },
+    {
+      "command": "projects",
+      "file": "projects.ans",
+      "sha256": "b77906b3ecf8a7c17d846ca26ec804aefcab6b775029c300864a98cb763d6672",
+      "bytes": 1704,
+      "prompts": 1
+    },
+    {
+      "command": "projects python",
+      "file": "projects-filter.ans",
+      "sha256": "1281f43e316f9cc022526433b7fd3192e7e1175406572ad516666d4044a7ec57",
+      "bytes": 1041,
+      "prompts": 1
+    },
+    {
+      "command": "projects --json",
+      "file": "projects-json.ans",
+      "sha256": "1d3437026e3c7917b7bfc415cb615e9dcb0d3a81a96415c1ad351ccbe4306e83",
+      "bytes": 1349,
+      "prompts": 1
+    },
+    {
+      "command": "case pcpg",
+      "file": "case-pcpg.ans",
+      "sha256": "f302541c73839ea5e406a6ac6ef00e851c992f1efe3e5bf0477e884abefe8ca4",
+      "bytes": 928,
+      "prompts": 1
+    },
+    {
+      "command": "skills",
+      "file": "skills.ans",
+      "sha256": "95111765a05d02bd6034139cfe74e91d8f29def408cc593256b414a302028793",
+      "bytes": 1181,
+      "prompts": 1
+    },
+    {
+      "command": "timeline",
+      "file": "timeline.ans",
+      "sha256": "0be9dc591d781d0dc47b15b22db136f04d134249f433c2f76b5323de855e394a",
+      "bytes": 1562,
+      "prompts": 1
+    },
+    {
+      "command": "export about",
+      "file": "export-about.ans",
+      "sha256": "be37d7d36bf5f53f4e920bf25c2c13bc9e478de18e0626705762006d0f8e7dfc",
+      "bytes": 1110,
+      "prompts": 1
+    },
+    {
+      "command": "md https://bad.invalid/post.md",
+      "file": "md-fallback.ans",
+      "sha256": "42d1d64d76294cdd9a12fa7d8cd62de4caa2bc9128904b53ac2902ea3c2408cc",
+      "bytes": 551,
+      "prompts": 1
+    },
+    {
       "command": "md --help",
       "file": "md-help.ans",
       "sha256": "076a5844e4e8ae1f7bab8be6c209e49175f1e0b06aa16f5521ccbb96660e88e7",
@@ -120,5 +183,5 @@
       "prompts": 1
     }
   ],
-  "totalPrompts": 15
+  "totalPrompts": 24
 }

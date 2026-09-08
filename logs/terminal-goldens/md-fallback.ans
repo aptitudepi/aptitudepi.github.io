@@ -1,0 +1,12 @@
+md https://bad.invalid/post.md
+[1m[38;2;80;140;250mMarkdown unavailable[0m
+
+Could not fetch https://bad.invalid/post.md.[0m
+
+The fullscreen viewer is the primary markdown surface; this inline render is the[0m
+offline fallback.[0m
+
+[38;2;60;200;120m•[0m Check the URL and retry [38;2;60;200;120mmd <url>[0m
+[38;2;60;200;120m•[0m Keep the file under 5 MB for the viewer[0m
+
+[38;2;60;200;120mdb[0m[38;2;220;220;230m@[0m[38;2;60;190;220mdvxb.io[0m[38;2;140;140;155m [0m[38;2;80;140;250m~[0m[38;2;140;140;155m❯ [0m

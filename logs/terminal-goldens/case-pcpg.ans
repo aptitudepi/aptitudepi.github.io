@@ -1,0 +1,24 @@
+case pcpg
+[1m[38;2;60;190;220mPCPG Analyzer[0m
+
+[1m[38;2;220;220;230mStack:[0m Python · Streamlit · Pandas[0m
+
+[1m[38;2;220;220;230mProblem[0m
+
+Web-based framework for dynamic analysis and visualization of Pheochromocytoma &[0m
+Paraganglioma transcriptome data to support cancer researchers worldwide.[0m
+
+[1m[38;2;220;220;230mRole[0m
+
+Author — built alongside UTHSCSA transcriptomics work.[0m
+
+[1m[38;2;220;220;230mOutcome[0m
+
+Supports cancer researchers worldwide with dynamic transcriptome analysis.[0m
+
+[1m[38;2;220;220;230mLinks[0m
+
+[38;2;60;200;120m•[0m [38;2;60;190;220m[4mSource[0m ([38;2;140;140;155mhttps://github.com/aptitudepi/pcpg-analyzer[0m)[0m
+[38;2;60;200;120m•[0m Demo: see the Source link[0m
+
+[38;2;60;200;120mdb[0m[38;2;220;220;230m@[0m[38;2;60;190;220mdvxb.io[0m[38;2;140;140;155m [0m[38;2;80;140;250m~[0m[38;2;140;140;155m❯ [0m

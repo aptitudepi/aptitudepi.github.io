@@ -53,6 +53,18 @@ const SESSION_LIST = [
   { commandText: `weather --help`, goldenFile: `weather-help.ans` },
   { commandText: `search --help`, goldenFile: `search-help.ans` },
   { commandText: `hn --help`, goldenFile: `hn-help.ans` },
+  { commandText: `cat resume.md`, goldenFile: `cat-resume.ans` },
+  { commandText: `projects`, goldenFile: `projects.ans` },
+  { commandText: `projects python`, goldenFile: `projects-filter.ans` },
+  { commandText: `projects --json`, goldenFile: `projects-json.ans` },
+  { commandText: `case pcpg`, goldenFile: `case-pcpg.ans` },
+  { commandText: `skills`, goldenFile: `skills.ans` },
+  { commandText: `timeline`, goldenFile: `timeline.ans` },
+  { commandText: `export about`, goldenFile: `export-about.ans` },
+  { commandText: `md https://bad.invalid/post.md`, goldenFile: `md-fallback.ans` },
+  // `md --help` opens the fullscreen viewer iframe (legacy golden pin), so
+  // it runs last: the iframe would intercept terminal clicks for any later
+  // session.
   { commandText: `md --help`, goldenFile: `md-help.ans` },
 ];
 

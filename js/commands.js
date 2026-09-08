@@ -17,6 +17,7 @@
 // unlisted on purpose so the count and rows stay byte-identical.
 
 import { isAbortError } from './foreground.js';
+import { sanitizeTerminalText, renderMarkdown } from './markdown.js';
 
 const pageLoadTime = Date.now();
 
@@ -107,6 +108,49 @@ If you'd like to connect, collaborate, or discuss exciting projects, please do n
 github
 keybase
 resume.pdf`],
+  ['/home/db/resume.md', `# Devkumar Banerjee
+
+B.S. Computer Science, Texas A&M (2029) — \`db@dvxb.io\`
+
+*Student, researcher, builder — College Station, TX*
+
+- [GitHub](https://github.com/aptitudepi)
+- [LinkedIn](https://linkedin.com/in/dvkb)
+- Mail: \`dkb@tamu.edu\`
+
+## Research
+
+- Cancer radiology @ **MD Anderson**
+- Graph neural networks @ **DIVE Lab**
+- Security @ **AGGIES Lab**
+- Nanomedicine ML @ **Houston Methodist**
+- Transcriptomics platforms @ **UTHSCSA**
+
+## Work
+
+1. AI/SRE Intern @ **Lockheed Martin**
+2. SF Dev @ **The Association of Former Students**
+
+## Skills
+
+| Domain | Tools |
+| --- | --- |
+| Languages | Python, C/C++, Java, JavaScript, SQL, Bash, YAML, HTML/CSS, R |
+| Frameworks | PyTorch, TensorFlow, scikit-learn, Flask, Streamlit, Node.js, RESTful APIs |
+| Systems | Linux, Docker, Podman, Ansible, AWS GovCloud, Git, GitLab CI/CD, GitHub Actions |
+
+## Certs
+
+GSEC · GFACT · AZ-900 · SC-900 · Linux Pro · CCST · ITF+ · RVFA
+
+---
+
+## Try it live
+
+\`\`\`sh
+ai what did Devkumar research?
+projects --json
+\`\`\``],
 ]);
 
 const RESUME = {
@@ -119,6 +163,72 @@ const RESUME = {
   Certs: ['GSEC', 'GFACT', 'AZ-900', 'SC-900', 'Linux Pro', 'CCST', 'ITF+', 'RVFA'],
   User: 'db',
 };
+
+// Portfolio project cards (WAVE 8). Descriptions, tags and repo URLs repeat
+// the site project section verbatim — no invented facts. Roles/outcomes
+// paraphrase the resume page and about copy only.
+const PORTFOLIO_PROJECTS = [
+  {
+    key: 'aggiemap',
+    name: 'TheAggieMap',
+    tags: ['Next.js', 'FastAPI', 'TypeScript'],
+    description: `Monorepo with a Next.js 14 frontend and FastAPI backend serving as Aggieland's interactive campus map. Built for HowdyHack 2025.`,
+    repo: 'https://github.com/aptitudepi/TheAggieMap',
+    role: 'Led full-stack integration across the FastAPI backend and Next.js frontend; deployed both services with systemd.',
+    outcome: 'Best Aggie Hack — HowdyHack 2025.',
+  },
+  {
+    key: 'pcpg',
+    name: 'PCPG Analyzer',
+    tags: ['Python', 'Streamlit', 'Pandas'],
+    description: 'Web-based framework for dynamic analysis and visualization of Pheochromocytoma & Paraganglioma transcriptome data to support cancer researchers worldwide.',
+    repo: 'https://github.com/aptitudepi/pcpg-analyzer',
+    role: 'Author — built alongside UTHSCSA transcriptomics work.',
+    outcome: 'Supports cancer researchers worldwide with dynamic transcriptome analysis.',
+  },
+  {
+    key: 'tidal',
+    name: 'Doctor-Robot (TIDALHack)',
+    tags: ['Groq', 'XGBoost', 'Streamlit'],
+    description: 'Maps natural-language symptom descriptions to structured medical data and classifies into 40+ diseases using an XGBoost classifier with Groq-hosted LLMs.',
+    repo: 'https://github.com/aptitudepi/TIDALHack',
+    role: 'Author — symptom-mapping pipeline plus XGBoost classifier.',
+    outcome: 'Classifies 40+ diseases from natural-language symptoms.',
+  },
+  {
+    key: 'neural',
+    name: 'Neural-Networks-From-Scratch',
+    tags: ['Python', 'NumPy', 'Deep Learning'],
+    description: 'Implementations of neural network architectures built from scratch using only NumPy, demonstrating a deep understanding of fundamental ML concepts and backpropagation.',
+    repo: 'https://github.com/aptitudepi/Neural-Networks-From-Scratch',
+    role: 'Author — every architecture from scratch in NumPy.',
+    outcome: 'Working backpropagation without frameworks.',
+  },
+];
+
+// Career timeline (WAVE 8). Every row restates the resume page / about copy.
+const TIMELINE_ENTRIES = [
+  { date: 'May 2026 – Present', title: 'AI Systems / SRE Intern', org: 'Lockheed Martin' },
+  { date: 'Jun 2026 – Present', title: 'Data Research Intern', org: 'UT MD Anderson' },
+  { date: 'Jan 2026 – Present', title: 'Undergraduate Researcher', org: 'DIVE Lab' },
+  { date: 'May 2025 – Present', title: 'Undergraduate Researcher', org: 'AGGIES Lab' },
+  { date: 'Aug 2025 – May 2029', title: 'B.S. Computer Science', org: 'Texas A&M' },
+  { date: 'May – Aug 2025', title: 'SRE Intern', org: 'Lockheed Martin' },
+  { date: 'Earlier', title: 'Nanomedicine ML research', org: 'Houston Methodist' },
+  { date: 'Earlier', title: 'Transcriptomics platforms', org: 'UTHSCSA' },
+];
+
+// Last foreground command output (WAVE 8 export story). The shell dispatcher
+// records every command's forwarded stream here; `export` saves it.
+let lastCommandOutput = '';
+
+function recordCommandOutput(outputText) {
+  lastCommandOutput = String(outputText ?? '');
+}
+
+function readLastCommandOutput() {
+  return lastCommandOutput;
+}
 
 const FORTUNES = [
   'Technology is anything that wasn\'t around when you were born — Alan Kay',
@@ -766,10 +876,35 @@ async function hnCommand(term, args, runSignal) {
   }
 }
 
-function mdCommand(term, args) {
+async function mdCommand(term, args, runSignal) {
   if (!args.length) { term.writeln(`${SITE_ERR}md: missing URL${ANSI_RESET}`); term.writeln(`${SITE_MUTED}Next: run \`md <url>\` with a markdown URL${ANSI_RESET}`); return; }
   let url = args[0];
-  if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+  if (!url.startsWith('http://') && !url.startsWith('https://')) url = `https://${url}`;
+  // Probe the URL first: reachable markdown still opens the fullscreen
+  // viewer (primary path, output unchanged); a fetch failure falls back to
+  // the shared inline terminal renderer with fixed strings only, so the
+  // fallback stays deterministic across environments. Flag-like tokens
+  // (e.g. `--help`) are not URLs: they keep the legacy viewer path so the
+  // `md-help` golden stays byte-identical.
+  const flagToken = String(args[0]).startsWith('-');
+  let markdownSource = null;
+  if (flagToken === false) {
+    try {
+      const fetchResp = await fetch(url, { signal: runSignal });
+      if (fetchResp.ok) markdownSource = await fetchResp.text();
+    } catch (fetchError) {
+      if (isAbortError(fetchError)) throw fetchError;
+      markdownSource = null;
+    }
+  }
+  if (markdownSource === null && flagToken === false) {
+    const fallbackWidth = Number(term.cols) || 80;
+    const fallbackDoc = `# Markdown unavailable\n\nCould not fetch ${url}.\n\nThe fullscreen viewer is the primary markdown surface; this inline render is the offline fallback.\n\n- Check the URL and retry \`md <url>\`\n- Keep the file under 5 MB for the viewer`;
+    for (const fallbackLine of renderMarkdown(fallbackDoc, fallbackWidth)) {
+      term.writeln(fallbackLine);
+    }
+    return;
+  }
   term.writeln(`${SITE_MUTED}Opening ${url} in markdown viewer...${ANSI_RESET}`);
   try {
     const existing = document.getElementById('md-viewer-iframe');
@@ -843,6 +978,11 @@ async function runCatCommand(term, args, runSignal) {
   const catContent = lookupVfsPath(args[0]);
   if (catContent === undefined) {
     term.writeln(`${SITE_ERR}cat: ${args[0]}: No such file or directory${ANSI_RESET}`);
+  } else if (String(args[0]).toLowerCase().endsWith('.md')) {
+    const catWidth = Number(term.cols) || 80;
+    for (const renderedLine of renderMarkdown(catContent, catWidth)) {
+      term.writeln(renderedLine);
+    }
   } else {
     catContent.split('\n').forEach(l => term.writeln(`${SITE_WHITE}${l}${ANSI_RESET}`));
   }
@@ -1097,6 +1237,158 @@ async function runMyipCommand(term, args, runSignal) {
   }
   return;
 }
+async function runProjectsCommand(term, args, runSignal) {
+  const jsonMode = args.includes('--json');
+  const filterWords = args.filter((argText) => argText !== '--json');
+  const filterText = sanitizeTerminalText(filterWords.join(' ')).toLowerCase();
+  const matchedProjects = PORTFOLIO_PROJECTS.filter((project) => {
+    if (filterText.trim() === '') {
+      return true;
+    }
+    const haystackText = `${project.name} ${project.tags.join(' ')} ${project.description}`.toLowerCase();
+    return haystackText.includes(filterText);
+  });
+  if (jsonMode) {
+    const jsonPayload = matchedProjects.map((project) => ({ name: project.name, tags: project.tags, description: project.description, repo: project.repo }));
+    term.writeln(JSON.stringify(jsonPayload));
+    return;
+  }
+  if (matchedProjects.length === 0) {
+    term.writeln(`${SITE_ERR}No projects match "${filterText}"${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: run \`projects\` to list everything${ANSI_RESET}`);
+    return;
+  }
+  term.writeln(`${ANSI_BOLD}${SITE_WHITE}Portfolio projects (${matchedProjects.length})${ANSI_RESET}`);
+  for (const project of matchedProjects) {
+    term.writeln(`  ${SITE_GREEN}${project.name}${ANSI_RESET} ${SITE_FAINT}${project.tags.join(' · ')}${ANSI_RESET}`);
+    term.writeln(`    ${SITE_MUTED}${project.description}${ANSI_RESET}`);
+    term.writeln(`    ${SITE_BLUE}${project.repo}${ANSI_RESET}`);
+  }
+  term.writeln(`${SITE_MUTED}Next: run \`case <name>\` for a deep dive, e.g. \`case pcpg\`${ANSI_RESET}`);
+  return;
+}
+
+async function runCaseCommand(term, args, runSignal) {
+  const queryKey = sanitizeTerminalText(args.join(' ')).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const caseProject = PORTFOLIO_PROJECTS.find((project) => {
+    const projectKey = project.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return projectKey.includes(queryKey) && queryKey !== '';
+  });
+  if (caseProject === undefined) {
+    const knownKeys = PORTFOLIO_PROJECTS.map((project) => project.key).join(', ');
+    term.writeln(`${SITE_ERR}case: unknown project "${sanitizeTerminalText(args.join(' '))}"${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Available cases: ${knownKeys}${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: run \`case <name>\`, e.g. \`case pcpg\`${ANSI_RESET}`);
+    return;
+  }
+  const caseDoc = `## ${caseProject.name}\n\n**Stack:** ${caseProject.tags.join(' · ')}\n\n### Problem\n\n${caseProject.description}\n\n### Role\n\n${caseProject.role}\n\n### Outcome\n\n${caseProject.outcome}\n\n### Links\n\n- [Source](${caseProject.repo})\n- Demo: see the Source link`;
+  const caseWidth = Number(term.cols) || 80;
+  for (const caseLine of renderMarkdown(caseDoc, caseWidth)) {
+    term.writeln(caseLine);
+  }
+  return;
+}
+
+async function runSkillsCommand(term, args, runSignal) {
+  const skillNames = RESUME.Skills;
+  const nameWidth = Math.max(...skillNames.map((skillText) => skillText.length));
+  term.writeln(`${ANSI_BOLD}${SITE_WHITE}Technical skills (${skillNames.length})${ANSI_RESET}`);
+  for (const skillName of skillNames) {
+    term.writeln(`  ${SITE_CYAN}${skillName.padEnd(nameWidth)}${ANSI_RESET} ${SITE_GREEN}${'█'.repeat(10)}${ANSI_RESET}`);
+  }
+  term.writeln(`${SITE_MUTED}Full bars show coverage from the resume skill list, not a ranking${ANSI_RESET}`);
+  return;
+}
+
+async function runTimelineCommand(term, args, runSignal) {
+  term.writeln(`${ANSI_BOLD}${SITE_WHITE}Career timeline${ANSI_RESET}`);
+  for (let entryIndex = 0; entryIndex < TIMELINE_ENTRIES.length; entryIndex++) {
+    const timelineEntry = TIMELINE_ENTRIES[entryIndex];
+    const branchMark = entryIndex === TIMELINE_ENTRIES.length - 1 ? '└──' : '├──';
+    term.writeln(`  ${SITE_GREEN}${branchMark}${ANSI_RESET} ${SITE_CYAN}${timelineEntry.date}${ANSI_RESET} — ${SITE_WHITE}${timelineEntry.title}${ANSI_RESET} ${SITE_MUTED}@ ${timelineEntry.org}${ANSI_RESET}`);
+  }
+  term.writeln(`${SITE_MUTED}Source: resume page and about section${ANSI_RESET}`);
+  return;
+}
+
+function triggerFileDownload(fileName, fileText) {
+  try {
+    const fileBlob = new Blob([fileText], { type: 'text/plain' });
+    const downloadUrl = URL.createObjectURL(fileBlob);
+    const anchorNode = document.createElement('a');
+    anchorNode.href = downloadUrl;
+    anchorNode.download = fileName;
+    document.body.appendChild(anchorNode);
+    anchorNode.click();
+    anchorNode.remove();
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 4000);
+  } catch (downloadError) {
+    console.warn(`export download skipped: ${downloadError.message}`);
+  }
+}
+
+function saveExportFile(term, baseName, fileText) {
+  const safeBase = String(baseName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'output';
+  const exportPath = `/home/db/exports/${safeBase}.txt`;
+  vfs.set(normalizeVfsPath(exportPath), fileText);
+  triggerFileDownload(`${safeBase}.txt`, fileText);
+  const lineCount = fileText.split('\n').length;
+  term.writeln(`${SITE_GREEN}Saved output to ${exportPath} (${lineCount} lines)${ANSI_RESET}`);
+  term.writeln(`${SITE_MUTED}Next: run \`cat ${exportPath}\` to read it back${ANSI_RESET}`);
+}
+
+async function runExportCommand(term, args, runSignal) {
+  if (args.length === 0) {
+    const previousOutput = stripAnsi(readLastCommandOutput());
+    if (previousOutput.trim() === '') {
+      term.writeln(`${SITE_ERR}export: no previous command output to save${ANSI_RESET}`);
+      term.writeln(`${SITE_MUTED}Next: run a command first, e.g. \`export neofetch\`${ANSI_RESET}`);
+      return;
+    }
+    saveExportFile(term, 'last', previousOutput);
+    return;
+  }
+  const headName = String(args[0]).toLowerCase();
+  const exportEntry = resolveCommand(headName);
+  if (exportEntry === null) {
+    term.writeln(`${SITE_ERR}export: unknown command ${sanitizeTerminalText(args[0])}${ANSI_RESET}`);
+    const exportSuggestion = suggestCommand(headName);
+    if (exportSuggestion) {
+      term.writeln(`${SITE_MUTED}Did you mean \`${SITE_WHITE}${exportSuggestion}${SITE_MUTED}\`?${ANSI_RESET}`);
+    }
+    term.writeln(`${SITE_MUTED}Next: type \`help\` for the full command list${ANSI_RESET}`);
+    return;
+  }
+  if (exportEntry.name === 'export' || exportEntry.name === 'clear' || exportEntry.name === 'vm') {
+    term.writeln(`${SITE_ERR}export: '${exportEntry.name}' needs the live terminal and cannot be captured${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: export a read-only command, e.g. \`export neofetch\`${ANSI_RESET}`);
+    return;
+  }
+  const capturedChunks = [];
+  const captureTerm = {
+    write(chunkText) {
+      capturedChunks.push(String(chunkText));
+      term.write(chunkText);
+    },
+    writeln(lineText) {
+      capturedChunks.push(`${String(lineText ?? '')}\n`);
+      term.writeln(lineText);
+    },
+    clear() {
+      capturedChunks.length = 0;
+      term.clear();
+    },
+  };
+  await exportEntry.run(captureTerm, args.slice(1), runSignal);
+  const capturedOutput = stripAnsi(capturedChunks.join(''));
+  if (capturedOutput.trim() === '') {
+    term.writeln(`${SITE_ERR}export: '${exportEntry.name}' produced no output to save${ANSI_RESET}`);
+    return;
+  }
+  saveExportFile(term, exportEntry.name, capturedOutput);
+  return;
+}
+
 async function runDevmodeCommand(term, args, runSignal) {
   term.writeln(`${SITE_MUTED}Loading dev panel…${ANSI_RESET}`);
   try {
@@ -1812,6 +2104,100 @@ const COMMAND_REGISTRY = [
     aiQueue: false,
     run: runManCommand,
   },
+  // WAVE 8 portfolio commands. Unlisted on purpose (like man/llm/guestbook)
+  // so `help` output and the COMMANDS count stay byte-identical to the
+  // goldens; the palette, tab completion and `man` pick them up from the
+  // registry automatically.
+  {
+    name: "projects",
+    aliases: [],
+    aliasOf: null,
+    plain: "Browse projects",
+    category: "CORE",
+    argsSpec: "[filter] [--json]",
+    examples: ["projects", "projects python", "projects --json"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runProjectsCommand,
+  },
+  {
+    name: "case",
+    aliases: [],
+    aliasOf: null,
+    plain: "Read a project case study",
+    category: "CORE",
+    argsSpec: "<name>",
+    examples: ["case pcpg", "case aggiemap"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runCaseCommand,
+  },
+  {
+    name: "skills",
+    aliases: [],
+    aliasOf: null,
+    plain: "Show technical skills",
+    category: "CORE",
+    argsSpec: "",
+    examples: ["skills"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runSkillsCommand,
+  },
+  {
+    name: "timeline",
+    aliases: [],
+    aliasOf: null,
+    plain: "Show career timeline",
+    category: "CORE",
+    argsSpec: "",
+    examples: ["timeline"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runTimelineCommand,
+  },
+  {
+    name: "export",
+    aliases: [],
+    aliasOf: null,
+    plain: "Save command output to a file",
+    category: "ADDITIONAL",
+    argsSpec: "<command>",
+    examples: ["export neofetch", "export projects --json"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runExportCommand,
+  },
 ];
 
 // gh-CLI style manual renderer: NAME / CATEGORY / USAGE / EXAMPLES.
@@ -1900,5 +2286,5 @@ export {
   COMMAND_REGISTRY, resolveCommand, suggestCommand, tokenizeCommandLine,
   COMMAND_COMPLETION_NAMES, TOOL_ALLOWLIST_NAMES, TOOL_ALLOWLIST_BARE_ONLY,
   NEOFETCH_TRY_COMMANDS, isAiCommandName, renderMan, setPrefetchedLocation,
-  commandCount, helpText,
+  commandCount, helpText, recordCommandOutput, readLastCommandOutput,
 };
