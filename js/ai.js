@@ -1,6 +1,7 @@
 import { startThinkingOrb, setThinkingOrbState, stopThinkingOrb } from './orb.js';
 import { retrieveContext } from './rag.js';
 import { isAbortError } from './foreground.js';
+import { TOOL_ALLOWLIST_NAMES, TOOL_ALLOWLIST_BARE_ONLY, tokenizeCommandLine } from './commands.js';
 
 const MODELS = [
   { id: 'qwen/qwen3.8-27b', name: 'qwen3.8-27b', size: '0MB (Cloud)', dtype: 'api', desc: 'qwen3.8-27b + bge-small-en (default)' },
@@ -138,19 +139,15 @@ function processToolCalls(fullText, term) {
 // (md), posts publicly (wall with a message) or wipes the screen (clear) is
 // refused. Model output is untrusted (prompt injection via RAG context, web
 // results or memory), so this is default-deny. `wall` is allowed only bare
-// (read the guestbook, don't post).
-const TOOL_ALLOWLIST = new Set([
-  'whoami', 'hostname', 'date', 'uptime', 'uname', 'pwd', 'cat', 'ls', 'echo',
-  'neofetch', 'resfetch', 'about', 'fortune', 'cowsay', 'help', 'matrix',
-  'weather', 'hn', 'cv', 'search', 'google', 'ddg', 'myip', 'ping', 'history',
-  'ai-models', 'ai-memory', 'crt', 'noise',
-]);
+// (read the guestbook, don't post). Names come from the single command
+// registry (js/commands.js); the bare-only exception is `wall` alone.
+const TOOL_ALLOWLIST = new Set(TOOL_ALLOWLIST_NAMES);
 
 function toolAllowed(raw) {
-  const parts = String(raw).trim().match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+  const parts = tokenizeCommandLine(String(raw).trim());
   if (!parts.length) return false;
   const name = parts[0].toLowerCase();
-  if (name === 'wall') return parts.length === 1;
+  if (TOOL_ALLOWLIST_BARE_ONLY.includes(name)) return parts.length === 1;
   return TOOL_ALLOWLIST.has(name);
 }
 

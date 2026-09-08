@@ -1,4 +1,5 @@
-import { executeCommand, bootSequence, writePrompt, COMMANDS, vfs, SITE_FAINT, ANSI_RESET, CMD_HISTORY } from './shell.js';
+import { executeCommand, bootSequence, writePrompt, vfs, SITE_FAINT, ANSI_RESET, CMD_HISTORY } from './shell.js';
+import { COMMAND_COMPLETION_NAMES } from './commands.js';
 import { isForegroundBusy, requestForegroundCancel } from './foreground.js';
 
 let term = null;
@@ -27,12 +28,12 @@ function collectTabCandidates(partial, isPath) {
       if (base.startsWith(lastWord)) candidates.push(base);
     }
     if (!candidates.length) {
-      for (const c of COMMANDS) {
+      for (const c of COMMAND_COMPLETION_NAMES) {
         if (c.startsWith(lastWord)) candidates.push(c);
       }
     }
   } else {
-    for (const c of COMMANDS) {
+    for (const c of COMMAND_COMPLETION_NAMES) {
       if (c.startsWith(partial)) candidates.push(c);
     }
     if (!candidates.length) {

@@ -15,6 +15,10 @@
 // DOM (not the xterm stream) so the deterministic golden snapshots stay
 // byte-exact.
 
+// ai/llm queue routing reads alias knowledge from the single command
+// registry (js/commands.js) instead of a hardcoded name pair.
+import { isAiCommandName } from './commands.js';
+
 let currentRun = null;
 let promptRenderer = null;
 const pendingAiQueue = [];
@@ -25,10 +29,6 @@ const FG_RESET = '\x1b[0m';
 
 function setPromptRenderer(renderer) {
   promptRenderer = renderer;
-}
-
-function isAiCommandName(commandName) {
-  return commandName === 'ai' || commandName === 'llm';
 }
 
 function getAiQueueDepth() {

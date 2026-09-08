@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "snapshot": "node tools/snapshot-terminal.mjs"
+    "snapshot": "node tools/snapshot-terminal.mjs",
+    "assert:registry": "node tools/assert-registry.mjs"
   },
   "dependencies": {
     "playwright": "^1.63.0"
