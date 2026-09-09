@@ -1,7 +1,7 @@
 {
   "version": 1,
   "tool": "tools/snapshot-terminal.mjs",
-  "commit": "0cfc05d00e49dc8405e6b1aaa62e3f8f2ad10b3b",
+  "commit": "abd48fcc86438c71bbd7a4d5b94df4d135a1cc18",
   "origin": "http://127.0.0.1:8901/",
   "viewport": {
     "width": 1280,
