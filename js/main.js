@@ -69,6 +69,31 @@ document.addEventListener('keydown', e => {
   }
 }, { capture: true });
 
+function initTerminalIntroLazy() {
+  const mountNode = document.getElementById(`terminal-intro`);
+  if (!mountNode) return;
+  const bootIntroModule = () => {
+    import(`./three-terminal-intro.js`).then((introModule) => {
+      try {
+        introModule.initTerminalIntro();
+      } catch (introInitError) {
+        console.warn(`[main] terminal intro skipped: ${introInitError.message}`);
+      }
+    }).catch((introImportError) => {
+      console.warn(`[main] terminal intro import skipped: ${introImportError.message}`);
+    });
+  };
+  try {
+    if (typeof window.requestIdleCallback === `function`) {
+      window.requestIdleCallback(bootIntroModule, { timeout: 3000 });
+    } else {
+      window.setTimeout(bootIntroModule, 1200);
+    }
+  } catch (idleError) {
+    console.warn(`[main] terminal intro schedule skipped: ${idleError.message}`);
+  }
+}
+
 function triggerMatrixRain() {
   setKonami(true);
   if (!isMatrixActive()) {
@@ -123,6 +148,12 @@ function init() {
     // driver paints the canvas (see toggleDevPanel thermal wiring).
     window.__mainThermal = initThermalAscii(thermalCanvas, { art: ASCII_ART, ramp: RAMP_MIXED });
   }
+
+  // WAVE 13 establishing shot: dynamic import only, after first DOM paint via
+  // idle callback, so three.js never sits in the critical path and LCP stays
+  // poster-first. The module no-ops to poster + Enter button on every
+  // fallback path (reduced-motion, Save-Data, mobile, no WebGL).
+  initTerminalIntroLazy();
 
   // Subscribe to universal reactive store
   store.subscribe('theme', (theme) => {

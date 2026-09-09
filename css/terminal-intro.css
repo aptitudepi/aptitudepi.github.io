@@ -1,0 +1,136 @@
+/* css/terminal-intro.css — WAVE 13 establishing-shot beat after the hero.
+ *
+ * Object + single Enter button only: no headline, no nav dot. The static
+ * poster paints first (LCP untouched, three never in the critical path);
+ * the WebGL canvas overlays it only while the solved frame is live, and
+ * every exit (handoff, dim, fallback) lands back on the poster.
+ * Phosphor-flash crossfade budget: <=200ms (see FLASH_MILLIS).
+ */
+
+#terminal-intro {
+  position: relative;
+  z-index: 1;
+  max-width: 70rem;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4) var(--space-4);
+  text-align: center;
+}
+
+.terminal-intro-stage {
+  position: relative;
+  max-width: 60rem;
+  margin: 0 auto;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 1px solid var(--color-terminal-border);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(120% 90% at 50% 0%, oklch(0.16 0.03 260) 0%, transparent 55%),
+    linear-gradient(135deg, oklch(0.07 0.01 260) 0%, oklch(0.05 0.005 260) 100%);
+  box-shadow: 0 1.25rem 3.75rem oklch(0 0 0 / 0.55);
+}
+
+.terminal-intro-poster {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background-size: cover;
+  background-position: center;
+}
+
+.terminal-intro-poster-text {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
+
+.terminal-intro-poster.has-frame .terminal-intro-poster-text {
+  opacity: 0;
+}
+
+.terminal-intro-gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 1;
+  transition: opacity 200ms var(--ease-out-expo);
+}
+
+.terminal-intro-stage.is-dimmed .terminal-intro-gl {
+  opacity: 0;
+}
+
+.terminal-intro-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(100% 100% at 50% 50%, oklch(0.95 0.02 240) 0%, oklch(0.7 0.08 250 / 0.9) 100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.terminal-intro-flash.is-flashing {
+  opacity: 1;
+  transition: opacity 160ms ease-out;
+}
+
+.terminal-intro-enter {
+  margin-top: var(--space-4);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text);
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-full);
+  padding: var(--space-3) var(--space-8);
+  cursor: pointer;
+  transition: background var(--transition-interactive), border-color var(--transition-interactive), box-shadow var(--transition-interactive);
+}
+
+.terminal-intro-enter:hover {
+  background: var(--color-glass-hover);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow-blue);
+}
+
+.terminal-intro-enter:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.terminal-intro-noscript {
+  margin-top: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.terminal-intro-noscript a {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+/* Poster-only paths never animate the beat. */
+@media (prefers-reduced-motion: reduce) {
+  .terminal-intro-gl,
+  .terminal-intro-enter,
+  .terminal-intro-flash {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  #terminal-intro {
+    padding: var(--space-4) var(--space-4) var(--space-2);
+  }
+
+  .terminal-intro-stage {
+    aspect-ratio: 4 / 3;
+  }
+}

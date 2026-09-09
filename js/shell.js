@@ -2,7 +2,7 @@ import { runForeground, setPromptRenderer, isForegroundBusy } from './foreground
 import {
   neofetch, SITE_GREEN, SITE_WHITE, SITE_CYAN, SITE_BLUE, SITE_MUTED, SITE_OK,
   SITE_ERR, SITE_FAINT, ANSI_RESET, resolveCommand, suggestCommand,
-  tokenizeCommandLine, setPrefetchedLocation, recordCommandOutput,
+  tokenizeCommandLine, setPrefetchedLocation, recordCommandOutput, BOOT_SCRIPT,
 } from './commands.js';
 
 let asyncCPU = null;
@@ -79,22 +79,20 @@ function bootSequence(term, onDone) {
   if (!BOOT_MSGS) {
     const cpu = asyncCPU || getCPU();
     const memGB = navigator.deviceMemory || 2;
-    BOOT_MSGS = [
-      { text: '[    0.000000] Booting dvxb.io...', color: SITE_FAINT },
+    // Dynamic probe lines stay local; the static service lines come from the
+    // shared BOOT_SCRIPT constant so the transcript and the 3D intro texture
+    // painter read the same source. Order and colors are unchanged.
+    const dynamicLines = [
+      { text: `[    0.000000] Booting dvxb.io...`, color: SITE_FAINT },
       { text: `[    0.004201] CPU: ${cpu} Genuine`, color: SITE_FAINT },
       { text: `[    0.008503] GPU: ${getGPU()}`, color: SITE_FAINT },
       { text: `[  OK  ] System clock: ${new Date().toLocaleTimeString()}`, color: SITE_OK },
       { text: `[    0.012755] Memory: 8MB stack / ${memGB}GB heap`, color: SITE_FAINT },
-      { text: '[  OK  ] Started auditd.service', color: SITE_OK },
-      { text: '[  OK  ] Mounted /research', color: SITE_OK },
-      { text: '[  OK  ] Started decipher-psma@MDA.service', color: SITE_OK },
-      { text: '[  OK  ] Started physics-gnn@DIVE.TAMU.service', color: SITE_OK },
-      { text: '[  OK  ] Started sok-water@AGGIES.TAMU.service', color: SITE_OK },
-      { text: '[  OK  ] Started build-agent@LM.service', color: SITE_OK },
-      { text: '[  OK  ] Reached target cs-student.target', color: SITE_OK },
-      { text: '[  OK  ] Started Builder.service', color: SITE_OK },
-      { text: '[  OK  ] Reached target Builder.target', color: SITE_OK },
     ];
+    const sharedLines = BOOT_SCRIPT.map((scriptEntry) => {
+      return { text: scriptEntry.text, color: scriptEntry.fill };
+    });
+    BOOT_MSGS = [...dynamicLines, ...sharedLines];
   }
   let i = 0;
   function writeNext() {
