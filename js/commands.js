@@ -22,6 +22,7 @@
 
 import { isAbortError } from './foreground.js';
 import { sanitizeTerminalText, renderMarkdown } from './markdown.js';
+import { combinedTimeoutSignal, SEARCH_TIMEOUT_MILLIS } from './fetch-timeout.js';
 
 const pageLoadTime = Date.now();
 
@@ -641,8 +642,9 @@ async function getLocation(runSignal) {
     });
     const geoResp = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`,
-      { headers: { 'User-Agent': navigator.userAgent }, signal: runSignal }
+      { headers: { 'User-Agent': navigator.userAgent }, signal: combinedTimeoutSignal(runSignal, 10000) }
     );
+    if (!geoResp.ok) throw new Error(`geo HTTP ${geoResp.status}`);
     const geoData = await geoResp.json();
     const a = geoData.address || {};
     return {
@@ -654,7 +656,8 @@ async function getLocation(runSignal) {
     };
   } catch (locationError) {
     if (isAbortError(locationError)) throw locationError;
-    const ipResp = await fetch('https://ipapi.co/json/', { signal: runSignal });
+    const ipResp = await fetch('https://ipapi.co/json/', { signal: combinedTimeoutSignal(runSignal, 10000) });
+    if (!ipResp.ok) throw new Error(`ipapi HTTP ${ipResp.status}`);
     const ipData = await ipResp.json();
     return {
       lat: ipData.latitude,
@@ -700,7 +703,8 @@ async function weatherCommand(term, args, runSignal) {
     term.writeln(`${SITE_LABEL}prefetched:${ANSI_RESET} ${SITE_WHITE}${_prefetchedLocation !== null}${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}Fetching raw ipapi response...${ANSI_RESET}`);
     try {
-      const debugResp = await fetch('https://ipapi.co/json/', { signal: runSignal });
+      const debugResp = await fetch('https://ipapi.co/json/', { signal: combinedTimeoutSignal(runSignal, 10000) });
+      if (!debugResp.ok) throw new Error(`ipapi HTTP ${debugResp.status}`);
       const debugData = await debugResp.json();
       for (const fieldName of ['city','region','region_code','country','country_code','latitude','longitude']) {
         term.writeln(`  ${SITE_FAINT}${fieldName}:${ANSI_RESET} ${SITE_GREEN}${JSON.stringify(debugData[fieldName])}${ANSI_RESET}`);
@@ -715,7 +719,8 @@ async function weatherCommand(term, args, runSignal) {
 
   term.writeln(`${SITE_MUTED}Fetching weather for ${locStr}...${ANSI_RESET}`);
   try {
-    const wResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto`, { signal: runSignal });
+    const wResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto`, { signal: combinedTimeoutSignal(runSignal, 10000) });
+    if (!wResp.ok) throw new Error(`weather HTTP ${wResp.status}`);
     const wData = await wResp.json();
     const cw = wData.current_weather;
     const tempUnit = isF ? '°F' : '°C';
@@ -846,7 +851,8 @@ async function hnCommand(term, args, runSignal) {
     }
     term.writeln(`${SITE_MUTED}Fetching story #${item.id}...${ANSI_RESET}`);
     try {
-      const storyResp = await fetch(`https://hacker-news.firebaseio.com/v0/item/${item.id}.json`, { signal: runSignal });
+      const storyResp = await fetch(`https://hacker-news.firebaseio.com/v0/item/${item.id}.json`, { signal: combinedTimeoutSignal(runSignal, 10000) });
+      if (!storyResp.ok) throw new Error(`story HTTP ${storyResp.status}`);
       const story = await storyResp.json();
       if (!story) throw new Error('empty');
 
@@ -869,7 +875,7 @@ async function hnCommand(term, args, runSignal) {
         const commentIds = story.kids.slice(0, 10);
         const comments = await Promise.all(
           commentIds.map((commentId) =>
-            fetch(`https://hacker-news.firebaseio.com/v0/item/${commentId}.json`, { signal: runSignal }).then((commentResp) => commentResp.json())
+            fetch(`https://hacker-news.firebaseio.com/v0/item/${commentId}.json`, { signal: combinedTimeoutSignal(runSignal, 10000) }).then((commentResp) => commentResp.ok ? commentResp.json() : null)
           )
         );
         for (const comment of comments) {
@@ -877,7 +883,7 @@ async function hnCommand(term, args, runSignal) {
             const replyIds = comment.kids.slice(0, 3);
             comment._replies = (await Promise.all(
               replyIds.map((replyId) =>
-                fetch(`https://hacker-news.firebaseio.com/v0/item/${replyId}.json`, { signal: runSignal }).then((replyResp) => replyResp.json())
+                fetch(`https://hacker-news.firebaseio.com/v0/item/${replyId}.json`, { signal: combinedTimeoutSignal(runSignal, 10000) }).then((replyResp) => replyResp.ok ? replyResp.json() : null)
               )
             )).filter(Boolean);
           }
@@ -899,11 +905,12 @@ async function hnCommand(term, args, runSignal) {
 
   term.writeln(`${SITE_MUTED}Fetching top stories...${ANSI_RESET}`);
   try {
-    const idsResp = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json', { signal: runSignal });
+    const idsResp = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json', { signal: combinedTimeoutSignal(runSignal, 10000) });
+    if (!idsResp.ok) throw new Error(`topstories HTTP ${idsResp.status}`);
     const ids = await idsResp.json();
     const topIds = ids.slice(0, 30);
     const items = await Promise.all(topIds.map((topId) =>
-      fetch(`https://hacker-news.firebaseio.com/v0/item/${topId}.json`, { signal: runSignal }).then((itemResp) => itemResp.json())
+      fetch(`https://hacker-news.firebaseio.com/v0/item/${topId}.json`, { signal: combinedTimeoutSignal(runSignal, 10000) }).then((itemResp) => itemResp.ok ? itemResp.json() : null)
     ));
     _hnItems = items;
     term.writeln(`${SITE_CYAN}┌────┬──────────────────────────────────────────────────┬───────┬────────┐${ANSI_RESET}`);
@@ -941,7 +948,7 @@ async function mdCommand(term, args, runSignal) {
   let markdownSource = null;
   if (flagToken === false) {
     try {
-      const fetchResp = await fetch(url, { signal: runSignal });
+      const fetchResp = await fetch(url, { signal: combinedTimeoutSignal(runSignal, 10000) });
       if (fetchResp.ok) markdownSource = await fetchResp.text();
     } catch (fetchError) {
       if (isAbortError(fetchError)) throw fetchError;
@@ -1298,8 +1305,9 @@ async function runWallDeleteCommand(term, args, runSignal) {
       method: `DELETE`,
       headers: { 'Content-Type': `application/json` },
       body: JSON.stringify({ token: deleteToken }),
-      signal: runSignal,
+      signal: combinedTimeoutSignal(runSignal, 10000),
     });
+    if (!deleteResp.ok) throw new Error(`delete HTTP ${deleteResp.status}`);
     const deleteData = await deleteResp.json();
     if (deleteData.success) {
       term.writeln(`${SITE_GREEN}\x1b[1mEntry deleted from the guestbook.${ANSI_RESET}`);
@@ -1329,7 +1337,8 @@ async function runWallCommand(term, args, runSignal) {
   if (!msg) {
     term.writeln(`${SITE_FAINT}Fetching global visitor wall...${ANSI_RESET}`);
     try {
-      const wallResp = await fetch('https://0.supernovadkb.workers.dev/wall', { signal: runSignal });
+      const wallResp = await fetch('https://0.supernovadkb.workers.dev/wall', { signal: combinedTimeoutSignal(runSignal, 10000) });
+      if (!wallResp.ok) throw new Error(`wall HTTP ${wallResp.status}`);
       const wallData = await wallResp.json();
       const posts = wallData.posts || [];
       term.writeln(`${SITE_GREEN}\x1b[1mdvxb.io Global Visitor Guestbook:\x1b[0m${ANSI_RESET}`);
@@ -1380,8 +1389,9 @@ async function runWallCommand(term, args, runSignal) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Terminal Visitor', message: trimmedMessage, gpg: armoredTelemetry }),
-      signal: runSignal,
+      signal: combinedTimeoutSignal(runSignal, 10000),
     });
+    if (!postResp.ok) throw new Error(`wall HTTP ${postResp.status}`);
     const postData = await postResp.json();
     if (postData.post) {
       term.writeln(`${SITE_GREEN}\x1b[1mMessage posted to global wall!${ANSI_RESET}`);
@@ -1414,7 +1424,8 @@ async function runSearchCommand(term, args, runSignal) {
   }
   term.writeln(`${SITE_FAINT}Searching web via Cloudflare Worker...${ANSI_RESET}`);
   try {
-    const searchResp = await fetch(`https://0.supernovadkb.workers.dev/search?q=${encodeURIComponent(query)}`, { signal: runSignal });
+    const searchResp = await fetch(`https://0.supernovadkb.workers.dev/search?q=${encodeURIComponent(query)}`, { signal: combinedTimeoutSignal(runSignal, SEARCH_TIMEOUT_MILLIS) });
+    if (!searchResp.ok) throw new Error(`search HTTP ${searchResp.status}`);
     const searchData = await searchResp.json();
     if (!searchData.results || !searchData.results.length) {
       term.writeln(`${SITE_MUTED}No search results found.${ANSI_RESET}`);
@@ -1439,7 +1450,8 @@ async function runMyipCommand(term, args, runSignal) {
   term.writeln(`${SITE_FAINT}Pinging Cloudflare Worker gateway...${ANSI_RESET}`);
   const startMillis = performance.now();
   try {
-    const pingResp = await fetch('https://0.supernovadkb.workers.dev/ip', { signal: runSignal });
+    const pingResp = await fetch('https://0.supernovadkb.workers.dev/ip', { signal: combinedTimeoutSignal(runSignal, 10000) });
+    if (!pingResp.ok) throw new Error(`ping HTTP ${pingResp.status}`);
     const pingInfo = await pingResp.json();
     const latency = Math.round(performance.now() - startMillis);
     term.writeln(`${SITE_GREEN}\x1b[1mNetwork Diagnostics & IP Location:\x1b[0m${ANSI_RESET}`);

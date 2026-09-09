@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "snapshot": "node tools/snapshot-terminal.mjs",
+    "check:budgets": "node tools/check-budgets.mjs",
     "assert:registry": "node tools/assert-registry.mjs"
   },
   "dependencies": {

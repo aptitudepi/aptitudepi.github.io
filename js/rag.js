@@ -1,3 +1,5 @@
+import { combinedTimeoutSignal } from './fetch-timeout.js';
+
 let embedderPipeline = null;
 let embedderLoading = false;
 let contextCache = null;
@@ -58,11 +60,12 @@ function clearThresholdOverride() {
 async function loadContextData() {
   if (contextCache) return contextCache;
   try {
-    const res = await fetch('assets/context-embeddings.json');
-    contextCache = await res.json();
+    const contextResp = await fetch('assets/context-embeddings.json', { signal: combinedTimeoutSignal(null, 10000) });
+    if (!contextResp.ok) throw new Error(`HTTP ${contextResp.status}`);
+    contextCache = await contextResp.json();
     return contextCache;
-  } catch (e) {
-    console.error('Failed to load context-embeddings.json:', e);
+  } catch (contextError) {
+    console.error('Failed to load context-embeddings.json:', contextError);
     return [];
   }
 }

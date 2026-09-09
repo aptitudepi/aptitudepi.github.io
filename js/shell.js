@@ -1,4 +1,5 @@
 import { runForeground, setPromptRenderer, isForegroundBusy } from './foreground.js';
+import { combinedTimeoutSignal } from './fetch-timeout.js';
 import {
   neofetch, SITE_GREEN, SITE_WHITE, SITE_CYAN, SITE_BLUE, SITE_MUTED, SITE_OK,
   SITE_ERR, SITE_FAINT, ANSI_RESET, resolveCommand, suggestCommand,
@@ -20,10 +21,13 @@ let asyncCPU = null;
       }
     }
   } catch (_) {}
-  fetch('https://ipapi.co/json/')
-    .then(r => r.json())
-    .then(d => { setPrefetchedLocation({ lat: d.latitude, lon: d.longitude, city: d.city, region: d.region, region_code: d.region_code, country: d.country_code }); })
-    .catch(() => {});
+  fetch('https://ipapi.co/json/', { signal: combinedTimeoutSignal(null, 8000) })
+    .then((locationResp) => {
+      if (!locationResp.ok) throw new Error(`HTTP ${locationResp.status}`);
+      return locationResp.json();
+    })
+    .then((locationData) => { setPrefetchedLocation({ lat: locationData.latitude, lon: locationData.longitude, city: locationData.city, region: locationData.region, region_code: locationData.region_code, country: locationData.country_code }); })
+    .catch((prefetchError) => { console.warn(`location prefetch skipped: ${prefetchError.message}`); });
 })();
 
 function getCPU() {
@@ -42,26 +46,46 @@ function getCPU() {
 }
 
 function getGPU() {
+  // Boot probe only: the throwaway context is released immediately after the
+  // read (mirror the topo isSupported idiom) so boot never holds a spare GL
+  // context, and local refs are nulled for collection.
+  let probeCanvas = null;
+  let probeGl = null;
   try {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (gl) {
+    probeCanvas = document.createElement('canvas');
+    probeGl = probeCanvas.getContext('webgl') || probeCanvas.getContext('experimental-webgl');
+    if (probeGl) {
       // Prefer the spec'd plain RENDERER string — real GPU name on modern
       // engines, so no UA sniff and no deprecated debug-info extension probe
       // (Firefox logs a warning for it). Fall back to the extension only when
       // RENDERER is a useless generic placeholder (older engines).
-      let r = '';
-      try { r = String(gl.getParameter(gl.RENDERER) || '').trim(); } catch (_) { r = ''; }
-      if (/^(webkit webgl|mozilla|generic|unknown)/i.test(r)) r = '';
-      if (!r) {
-        try {
-          const ext = gl.getExtension('WEBGL_debug_renderer_info');
-          if (ext) r = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '').trim();
-        } catch (_) { r = ''; }
+      let rendererText = '';
+      try { rendererText = String(probeGl.getParameter(probeGl.RENDERER) || '').trim(); } catch {
+        rendererText = '';
       }
-      return r.replace(/^ANGLE\s*\(/i, '').replace(/\)$/, '') || 'Unknown';
+      if (/^(webkit webgl|mozilla|generic|unknown)/i.test(rendererText)) rendererText = '';
+      if (!rendererText) {
+        try {
+          const debugExtension = probeGl.getExtension('WEBGL_debug_renderer_info');
+          if (debugExtension) rendererText = String(probeGl.getParameter(debugExtension.UNMASKED_RENDERER_WEBGL) || '').trim();
+        } catch {
+          rendererText = '';
+        }
+      }
+      return rendererText.replace(/^ANGLE\s*\(/i, '').replace(/\)$/, '') || 'Unknown';
     }
-  } catch (_) {}
+  } catch (probeError) {
+    console.warn(`gpu probe skipped: ${probeError.message}`);
+  } finally {
+    try {
+      const loseExtension = probeGl ? probeGl.getExtension('WEBGL_lose_context') : null;
+      if (loseExtension && typeof loseExtension.loseContext === 'function') loseExtension.loseContext();
+    } catch (releaseError) {
+      probeGl = null;
+    }
+    probeGl = null;
+    probeCanvas = null;
+  }
   return 'Unknown';
 }
 

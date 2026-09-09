@@ -24,26 +24,44 @@ import { isMotionOK, onMotionChange } from './motion.js';
 /* ── Initial device estimate ───────────────── */
 
 // Cheap one-off read of the GPU renderer string. Returns '' if unavailable.
+// Boot probe only: the throwaway context is released immediately after the
+// read (mirror the topo isSupported idiom) so boot never holds a spare GL
+// context, and local refs are nulled for collection.
 function readRenderer() {
+  let probeCanvas = null;
+  let probeGl = null;
   try {
-    const c = document.createElement('canvas');
-    const gl = c.getContext('webgl2') || c.getContext('webgl');
-    if (!gl) return '';
+    probeCanvas = document.createElement('canvas');
+    probeGl = probeCanvas.getContext('webgl2') || probeCanvas.getContext('webgl');
+    if (!probeGl) return '';
     // Modern engines report the real GPU on plain RENDERER; reaching for the
     // deprecated WEBGL_debug_renderer_info extension first (or at all, when
     // RENDERER is already useful) makes Firefox log a deprecation warning.
-    let raw = '';
-    try { raw = String(gl.getParameter(gl.RENDERER) || '').trim(); } catch (_) { raw = ''; }
-    if (/^(webkit webgl|mozilla|generic|unknown)/i.test(raw)) raw = '';
-    if (!raw) {
-      const ext = gl.getExtension('WEBGL_debug_renderer_info');
-      if (ext) {
-        try { raw = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '').trim(); } catch (_) { raw = ''; }
+    let rawRenderer = '';
+    try { rawRenderer = String(probeGl.getParameter(probeGl.RENDERER) || '').trim(); } catch {
+      rawRenderer = '';
+    }
+    if (/^(webkit webgl|mozilla|generic|unknown)/i.test(rawRenderer)) rawRenderer = '';
+    if (!rawRenderer) {
+      const debugExtension = probeGl.getExtension('WEBGL_debug_renderer_info');
+      if (debugExtension) {
+        try { rawRenderer = String(probeGl.getParameter(debugExtension.UNMASKED_RENDERER_WEBGL) || '').trim(); } catch {
+          rawRenderer = '';
+        }
       }
     }
-    return raw.toLowerCase();
-  } catch (_) {
+    return rawRenderer.toLowerCase();
+  } catch {
     return '';
+  } finally {
+    try {
+      const loseExtension = probeGl ? probeGl.getExtension('WEBGL_lose_context') : null;
+      if (loseExtension && typeof loseExtension.loseContext === 'function') loseExtension.loseContext();
+    } catch {
+      probeGl = null;
+    }
+    probeGl = null;
+    probeCanvas = null;
   }
 }
 
@@ -356,6 +374,9 @@ let last = 0;
 let running = false;
 let rafId = 0;
 let warmup = 0; // let the EMA settle before acting on it
+// Phase-5 coupled-scaler nesting depth: while > 0 the particle pause owns the
+// loop and start() stays out. Declared with the other state (declare-before-use).
+let suspendDepth = 0;
 
 function tick(ts) {
   if (!running) return;
@@ -383,6 +404,9 @@ function tick(ts) {
 
 function start() {
   if (running) return;
+  // Suspended (particle pause) owns the loop until resumePerfLoop: starting
+  // here would reset ema/warmup and leave two schedulers behind.
+  if (suspendDepth > 0) return;
   // Motion-off users are pinned at 0 and get no live loop — there is
   // nothing running for it to measure or rebalance.
   if (!isMotionOK()) {
@@ -399,6 +423,37 @@ function start() {
 function stop() {
   running = false;
   cancelAnimationFrame(rafId);
+}
+
+// Phase-5 coupled scaler: additive suspend/resume for the particle pause
+// path. suspendPerfLoop parks the RAF loop but preserves ema/warmup/last
+// exactly (start() above re-seeds them, so the pause path never reuses
+// start/stop); resumePerfLoop restarts in place only while the page is
+// visible and the motion policy passes, asserting a single RAF. Manual
+// pins are never touched — suspension is invisible to the override state,
+// and the onChange subscriber set is never modified (single qualityUnsub
+// holds by construction across any number of suspend/resume cycles).
+function suspendPerfLoop() {
+  suspendDepth += 1;
+  if (suspendDepth === 1 && running) {
+    running = false;
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+}
+
+function resumePerfLoop() {
+  if (suspendDepth > 0) suspendDepth -= 1;
+  if (suspendDepth !== 0) return;
+  if (running) return;
+  if (typeof document !== 'undefined' && document.hidden) return;
+  if (!isMotionOK()) return;
+  if (rafId !== 0) {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+  running = true;
+  rafId = requestAnimationFrame(tick);
 }
 
 if (typeof document !== 'undefined') {
@@ -503,6 +558,39 @@ const perf = {
   /** Resume: sidebar yields to URL/stored pins, else full auto. */
   clearTierOverride() {
     perf.setTierOverride(SOURCE_AUTO, SOURCE_SIDEBAR);
+  },
+
+  /**
+   * Additive suspend: park the scaler RAF while preserving ema/warmup
+   * (particle offscreen/hidden path). Nestable; never touches manual pins
+   * or the subscriber set.
+   */
+  suspendLoop() {
+    suspendPerfLoop();
+  },
+
+  /**
+   * Resume after suspend: restarts in place (ema/warmup preserved) only
+   * while the page is visible and the motion policy passes; otherwise stays
+   * parked. Asserts a single RAF.
+   */
+  resumeLoop() {
+    resumePerfLoop();
+  },
+
+  /** True while the scaler RAF is scheduled. */
+  isLoopRunning() {
+    return running;
+  },
+
+  /** Current suspend nesting depth (0 = nobody holds the loop). */
+  getSuspendDepth() {
+    return suspendDepth;
+  },
+
+  /** Live subscriber count — the single-qualityUnsub invariant probe. */
+  getListenerCount() {
+    return listeners.size;
   },
 
   /** Clamp the auto scaler into [floor, ceiling]; manual pins ignore clamps. */

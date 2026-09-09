@@ -1,3 +1,5 @@
+import { combinedTimeoutSignal } from './fetch-timeout.js';
+
 const USER = 'aptitudepi';
 const JGR = `https://github-contributions-api.jogruber.de/v4/${USER}`;
 const GH_API = 'https://api.github.com';
@@ -21,12 +23,14 @@ const ok = r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`));
 
 async function fetchContributions() {
   try {
-    const j = await (await fetch(JGR, { headers: { accept: 'application/json' } })).json();
-    const total = j.total || {};
-    const allTime = Object.values(total).reduce((s, n) => s + (Number(n) || 0), 0);
-    return { total, allTime, contributions: Array.isArray(j.contributions) ? j.contributions : [] };
-  } catch (e) {
-    console.warn('Contributions fetch fallback:', e.message);
+    const contribResp = await fetch(JGR, { headers: { accept: 'application/json' }, signal: combinedTimeoutSignal(null, 10000) });
+    if (!contribResp.ok) throw new Error(`HTTP ${contribResp.status}`);
+    const contribData = await contribResp.json();
+    const total = contribData.total || {};
+    const allTime = Object.values(total).reduce((sumTotal, yearCount) => sumTotal + (Number(yearCount) || 0), 0);
+    return { total, allTime, contributions: Array.isArray(contribData.contributions) ? contribData.contributions : [] };
+  } catch (contribError) {
+    console.warn('Contributions fetch fallback:', contribError.message);
     return null;
   }
 }
@@ -34,11 +38,11 @@ async function fetchContributions() {
 async function fetchRadarAxes() {
   try {
     const [user, repos, prs, issues, reviews] = await Promise.all([
-      fetch(`${GH_API}/users/${USER}`).then(ok).catch(() => null),
-      fetch(`${GH_API}/users/${USER}/repos?per_page=100`).then(ok).catch(() => null),
-      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr author:${USER}`)}`).then(ok).catch(() => null),
-      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:issue author:${USER}`)}`).then(ok).catch(() => null),
-      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr reviewed-by:${USER}`)}`).then(ok).catch(() => null),
+      fetch(`${GH_API}/users/${USER}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
+      fetch(`${GH_API}/users/${USER}/repos?per_page=100`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
+      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr author:${USER}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
+      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:issue author:${USER}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
+      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr reviewed-by:${USER}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
     ]);
     const stars = (Array.isArray(repos) ? repos : []).reduce((s, r) => s + (Number(r.stargazers_count) || 0), 0);
     return {

@@ -1,6 +1,7 @@
 import { startThinkingOrb, setThinkingOrbState, stopThinkingOrb } from './orb.js';
 import { retrieveRankedContext, RAG_COSINE_THRESHOLD, RAG_KEYWORD_FLOOR, effectiveCosineThreshold, setThresholdOverride, clearThresholdOverride, readThresholdOverride } from './rag.js';
 import { isAbortError } from './foreground.js';
+import { combinedTimeoutSignal, AI_STREAM_TIMEOUT_MILLIS, SEARCH_TIMEOUT_MILLIS } from './fetch-timeout.js';
 import { TOOL_ALLOWLIST_NAMES, TOOL_ALLOWLIST_BARE_ONLY, tokenizeCommandLine } from './commands.js';
 import { buildMemoryPromptContext, appendHistoryTurn, isMemoryEnabled, getStoredMemory, getStoredHistory } from './memory.js';
 
@@ -368,6 +369,9 @@ async function streamGroq(prompt, context, term, runSignal) {
   }
 
   try {
+    // Generous stream cap (not the 10s default): a live token stream runs
+    // longer than any single request/response round-trip. User Ctrl+C still
+    // wins via runSignal on the same combined signal.
     const response = await fetch(workerUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -381,7 +385,7 @@ async function streamGroq(prompt, context, term, runSignal) {
         max_tokens: 1024,
         temperature: 0.3
       }),
-      signal: runSignal,
+      signal: combinedTimeoutSignal(runSignal, AI_STREAM_TIMEOUT_MILLIS),
     });
 
     if (!response.ok || !response.body) {
@@ -464,7 +468,7 @@ async function streamLocal(p, prompt, context, term, runSignal) {
 
 export async function fetchWebSearch(query, runSignal) {
   try {
-    const res = await fetch(`https://0.supernovadkb.workers.dev/search?q=${encodeURIComponent(query)}`, { signal: runSignal });
+    const res = await fetch(`https://0.supernovadkb.workers.dev/search?q=${encodeURIComponent(query)}`, { signal: combinedTimeoutSignal(runSignal, SEARCH_TIMEOUT_MILLIS) });
     if (!res.ok) return [];
     const data = await res.json();
     return data.results || [];

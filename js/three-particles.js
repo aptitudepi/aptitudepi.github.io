@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import perf from './perf.js';
+import { isMotionOK } from './motion.js';
 let uRainbow = 0;
 
 function detectHz(cb) {
@@ -169,6 +170,11 @@ function initParticles() {
   let currentT = 0;                  // latest particle elapsed time (for topo sync)
   let topoSpeedMult = 0.25;          // topo evolves at this fraction of particle speed
   let topoPausedForSync = false;     // topo's own loop paused once sync takes over
+  // Phase-5 offscreen pause flags (mirror topo/badge/orb): declared up front
+  // so the scheduler gate above reads initialized state on every call.
+  let particleOnScreen = true;
+  let particlePageVisible = typeof document === 'undefined' ? true : !document.hidden;
+  let particlePaused = false;
 
   // How much of the 256×256 field actually draws (phase-2 tier ladder owns
   // this; see TIER_TABLE below) and the chromatic-aberration strength in the
@@ -218,9 +224,11 @@ function initParticles() {
 
   // Schedules the next particle frame unless the single background owner
   // drives (WAVE 12) or the GL context is lost — both cases must never leave
-  // a second loop behind.
+  // a second loop behind. Phase-5 pause also gates here: while off-screen or
+  // hidden nothing is scheduled (resume restarts through the same rebase).
   function scheduleParticleFrame() {
     if (schedulerOwned || particleContextLost) return;
+    if (particlePaused || !particleOnScreen || !particlePageVisible) return;
     animFrameId = requestAnimationFrame(frame);
   }
 
@@ -727,10 +735,78 @@ void main(){
   const clock = new THREE.Clock();
   let prevT = 0, ever = false;
 
+  // Phase-5 offscreen pause transitions (mirror topo/badge/orb). pause freezes
+  // the swaps and parks the standalone RAF plus the coupled perf scaler;
+  // resume rebases the clock and restarts exactly one RAF only when visible,
+  // unhidden, and motion-OK.
+  //
+  // Freeze mechanism: a pause-shift offset, NOT THREE.Clock.stop/start —
+  // Clock.start() zeroes elapsedTime (r158 semantics), so a stop/start pair
+  // would teleport the field back to t=0. Instead the clock keeps running as
+  // a wall reference while paused and each pause's wall span is folded into
+  // pauseShiftSeconds; frame() reads (elapsed - shift), so the first resumed
+  // frame continues the timeline instead of jumping.
+  let pauseShiftSeconds = 0;
+  let pauseStartElapsed = 0;
+  function isParticleLoopAllowed() {
+    return particleOnScreen && particlePageVisible && !particleContextLost;
+  }
+
+  function pauseParticleLoop() {
+    if (particlePaused) return;
+    particlePaused = true;
+    // Mark the wall span now opening; the clock itself keeps running so its
+    // elapsed stays a valid reference (see the shift note above).
+    try {
+      pauseStartElapsed = clock.getElapsedTime();
+    } catch (clockReadError) {
+      console.warn(`[particles] pause clock read skipped: ${clockReadError.message}`);
+    }
+    if (animFrameId !== null) {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+    }
+    try {
+      perf.suspendLoop();
+    } catch (suspendError) {
+      console.warn(`[particles] perf suspend skipped: ${suspendError.message}`);
+    }
+  }
+
+  function resumeParticleLoop() {
+    if (!particlePaused) return;
+    if (!particleOnScreen) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    if (!isMotionOK()) return;
+    particlePaused = false;
+    // Fold the paused wall span into the shift so the timeline continues.
+    try {
+      pauseShiftSeconds += clock.getElapsedTime() - pauseStartElapsed;
+    } catch (clockShiftError) {
+      console.warn(`[particles] resume clock shift skipped: ${clockShiftError.message}`);
+    }
+    prevT = currentT;
+    lastFrameTime = 0;
+    try {
+      perf.resumeLoop();
+    } catch (resumeError) {
+      console.warn(`[particles] perf resume skipped: ${resumeError.message}`);
+    }
+    if (!schedulerOwned && animFrameId === null && !particleContextLost) {
+      scheduleParticleFrame();
+    }
+  }
+
   function frame(ts) {
     // Context lost: stop rescheduling entirely; the restored handler below
     // rebuilds targets and restarts the loop.
     if (particleContextLost) return;
+    // Phase-5 pause: frozen while off-screen or hidden. Sim state lives in
+    // the GPU textures, so returning here freezes the rA/rB + trail swaps
+    // only — frameCount/ever/qualityUnsub/RTs are untouched. The standalone
+    // path stops rescheduling (resume restarts); the owner path returns
+    // through the same gate via stepParticleFrame.
+    if (particlePaused || !particleOnScreen || !particlePageVisible) return;
     if (ts - lastFrameTime < targetInterval - 1) { scheduleParticleFrame(); return; }
     lastFrameTime = ts;
     // Reset the render counters once per drawn frame (see autoReset note at
@@ -738,7 +814,7 @@ void main(){
     // exactly what the 1Hz sampler should report.
     R.info.reset();
 
-    const t = clock.getElapsedTime();
+    const t = clock.getElapsedTime() - pauseShiftSeconds;
     currentT = t;
     const dt = Math.min(t - prevT, 0.05);
     prevT = t;
@@ -903,6 +979,45 @@ void main(){
     lastFrameTime = 0;
     scheduleParticleFrame();
   });
+
+  // Offscreen + hidden gating (mirror topo/badge/orb): an IntersectionObserver
+  // on the canvas freezes swaps while scrolled off-screen, and
+  // visibilitychange freezes while the tab is hidden. Both funnel through the
+  // same pause/resume pair so the clock rebase + scaler coupling stay
+  // single-pathed and the standalone path never leaves a second RAF behind.
+  function handleParticleVisibilityChange() {
+    particlePageVisible = typeof document === 'undefined' ? true : !document.hidden;
+    if (particlePageVisible) {
+      resumeParticleLoop();
+    } else {
+      pauseParticleLoop();
+    }
+  }
+  try {
+    document.addEventListener('visibilitychange', handleParticleVisibilityChange);
+  } catch (visibilityWatchError) {
+    console.warn(`[particles] visibility watch skipped: ${visibilityWatchError.message}`);
+  }
+  try {
+    if (typeof IntersectionObserver !== 'undefined') {
+      const particleScreenObserver = new IntersectionObserver((entryList) => {
+        for (const screenEntry of entryList) {
+          particleOnScreen = screenEntry.isIntersecting;
+        }
+        if (particleOnScreen) {
+          resumeParticleLoop();
+        } else {
+          pauseParticleLoop();
+        }
+      });
+      particleScreenObserver.observe(canvas);
+    }
+  } catch (screenWatchError) {
+    console.warn(`[particles] screen watch skipped: ${screenWatchError.message}`);
+  }
+  // A hidden boot (background tab) starts parked: the first visible
+  // transition resumes through the same rebase path.
+  if (!particlePageVisible) pauseParticleLoop();
 
   // Learn the display's refresh rate once, seed the quality-driven knobs, then
   // let perf.onChange keep them in step with the live quality scalar. The FPS
@@ -1075,6 +1190,15 @@ void main(){
         }
       },
       setVisible(visibleValue) { setParticleVisible(visibleValue); },
+      /* Phase-5 pause probes: frozen while off-screen/hidden (swaps only).
+         pauseLoop/resumeLoop are the same transitions the observers drive,
+         exposed for acceptance probing and owner use. */
+      isPaused() { return particlePaused; },
+      isLoopAllowed() { return isParticleLoopAllowed(); },
+      getFrameCount() { return frameCount; },
+      getClock() { return currentT; },
+      pauseLoop() { pauseParticleLoop(); },
+      resumeLoop() { resumeParticleLoop(); },
     };
     // Module-scope driver so the single background owner can step frames
     // without reaching through window.

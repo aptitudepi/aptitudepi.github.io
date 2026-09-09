@@ -42,6 +42,23 @@ class SharedParticleField {
       return;
     }
 
+    // Phase-5 context discipline (mirror topo/particles): lost → prevent the
+    // default teardown, stop the RAF and mark; restored → rebuild the program
+    // + buffers (all GL handles are invalid after a restore) and resume.
+    this.contextLost = false;
+    this.canvas.addEventListener('webglcontextlost', (lostEvent) => {
+      lostEvent.preventDefault();
+      this.contextLost = true;
+      this.pause();
+    });
+    this.canvas.addEventListener('webglcontextrestored', () => {
+      this.initShaders();
+      this.resize();
+      this.contextLost = false;
+      this.rectsDirty = true;
+      this.resume();
+    });
+
     this.initShaders();
     this.resize();
 
@@ -244,6 +261,7 @@ class SharedParticleField {
   }
 
   syncLoopState() {
+    if (this.contextLost) return;
     const want = !document.hidden && this.emitters.some(e => e.visible);
     if (want && this.animFrame == null) {
       this.animFrame = requestAnimationFrame(this.render);
@@ -265,6 +283,12 @@ class SharedParticleField {
   }
 
   render() {
+    // Context lost: never reschedule behind pause() — the restored handler
+    // rebuilds and restarts.
+    if (this.contextLost) {
+      this.animFrame = null;
+      return;
+    }
     const gl = this.gl;
     if (!gl || !this.program) return;
 
@@ -335,6 +359,13 @@ function mountBadgeField() {
   field = new SharedParticleField();
   targets.forEach((targetNode) => field.addEmitter(targetNode));
   if (!field.gl) field = null;
+  // Phase-5 acceptance probe: read-only handle to the shared field.
+  if (field && typeof window !== 'undefined') {
+    window.BadgeDev = {
+      getField() { return field; },
+      isContextLost() { return field ? field.contextLost === true : false; },
+    };
+  }
 }
 
 export function initParticleBadges() {
