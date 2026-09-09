@@ -1,7 +1,7 @@
 {
   "version": 1,
   "tool": "tools/snapshot-terminal.mjs",
-  "commit": "1b87d2fa2723e577ba0cf93159c50b09e0154191",
+  "commit": "0cfc05d00e49dc8405e6b1aaa62e3f8f2ad10b3b",
   "origin": "http://127.0.0.1:8901/",
   "viewport": {
     "width": 1280,
@@ -204,6 +204,34 @@
       "prompts": 1
     },
     {
+      "command": "background",
+      "file": "background.ans",
+      "sha256": "11ca47b9b1dfb5723c19b7d3ce9ede2ecb2749f93dc676b0af3e5b58fb11ec3a",
+      "bytes": 293,
+      "prompts": 1
+    },
+    {
+      "command": "background static",
+      "file": "background-static.ans",
+      "sha256": "af7d1f013a76167aca3b6166a80a3cf8aa698e1d4d19cc1b1d2a573d9a553047",
+      "bytes": 219,
+      "prompts": 1
+    },
+    {
+      "command": "background ambient",
+      "file": "background-ambient.ans",
+      "sha256": "bf597491ffd455ad8534835a893426f8006010f475d5bb2f41af7328b218c544",
+      "bytes": 221,
+      "prompts": 1
+    },
+    {
+      "command": "man background",
+      "file": "man-background.ans",
+      "sha256": "96ebeef6e96f0d0664df513d311dd323b1dfbcb6a2b9610a9020a5655f452bec",
+      "bytes": 673,
+      "prompts": 1
+    },
+    {
       "command": "md --help",
       "file": "md-help.ans",
       "sha256": "076a5844e4e8ae1f7bab8be6c209e49175f1e0b06aa16f5521ccbb96660e88e7",
@@ -211,5 +239,5 @@
       "prompts": 1
     }
   ],
-  "totalPrompts": 28
+  "totalPrompts": 32
 }

@@ -1,7 +1,8 @@
 import { defineComponent, mountComponent } from './component.js';
 import { store } from './state.js';
 import { initMotionPolicy } from './motion.js';
-import { initParticles, setKonami } from './three-particles.js';
+import { setKonami } from './three-particles.js';
+import { initBackgrounds } from './backgrounds.js';
 import { initAnimations } from './animations.js';
 import { initGitHubStats } from './github-stats.js';
 import { initThermalAscii, RAMP_MIXED } from './thermal-ascii.js';
@@ -89,7 +90,7 @@ function init() {
   // system boots, so the first paint already honours reduced-motion /
   // saveData instead of flashing the expressive set for a frame.
   initMotionPolicy();
-  initParticles();
+  initBackgrounds();
   initNav();
   initAnimations();
   initParticleBadges();

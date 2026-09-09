@@ -97,10 +97,63 @@ float blackScholes(vec2 pos, float uTime){
 `;
 
 let animFrameId = null;
+// WAVE 12 single-owner flag: while true the background owner
+// (js/backgrounds.js) steps the particle frame via stepParticleFrame() and
+// this module never schedules its own rAF, so exactly one background loop
+// runs at a time. Flipped by takeParticleLoop() before or after init.
+let schedulerOwned = false;
+// False when WebGL construction fails: initParticles bails after painting a
+// static gradient poster, and the owner renders static instead of stepping.
+let particleAvailable = false;
+let particleCanvasNode = null;
+let particleDriver = null;
+
+// Static-gradient fallback for WebGL-disabled browsers (acceptance: no
+// exception, still a calm poster). Never touches WebGL.
+function paintStaticGradient(fallbackCanvas) {
+  if (!fallbackCanvas) return;
+  fallbackCanvas.style.background = `linear-gradient(135deg, #0b0e1a 0%, #141b2e 55%, #1d2440 100%)`;
+}
+
+// WAVE 12 ownership: hand scheduling to the single background owner. Any
+// pending standalone frame is cancelled so only the owner loop remains.
+function takeParticleLoop() {
+  schedulerOwned = true;
+  if (animFrameId !== null) {
+    cancelAnimationFrame(animFrameId);
+    animFrameId = null;
+  }
+}
+
+// One owner tick worth of particles. No-op before init or when WebGL failed.
+function stepParticleFrame(frameTimestamp) {
+  if (particleDriver) {
+    particleDriver.step(frameTimestamp);
+  }
+}
+
+function isParticleAvailable() {
+  return particleAvailable;
+}
+
+function isParticleOwned() {
+  return schedulerOwned;
+}
+
+function isParticleSelfScheduled() {
+  return animFrameId !== null && !schedulerOwned;
+}
+
+function setParticleVisible(visibleValue) {
+  if (particleCanvasNode) {
+    particleCanvasNode.style.display = visibleValue ? `` : `none`;
+  }
+}
 
 function initParticles() {
   const canvas = document.getElementById('c');
   if (!canvas) return;
+  particleCanvasNode = canvas;
 
   // Fresh device-pixel-ratio read, capped at 2. Always re-read live (never
   // cached): browser zoom / monitor moves change it under us.
@@ -163,9 +216,28 @@ function initParticles() {
   const W = () => window.innerWidth;
   const H = () => window.innerHeight;
 
-  const R = new THREE.WebGLRenderer({
-    canvas, antialias: false, alpha: false, powerPreference: 'high-performance'
-  });
+  // Schedules the next particle frame unless the single background owner
+  // drives (WAVE 12) or the GL context is lost — both cases must never leave
+  // a second loop behind.
+  function scheduleParticleFrame() {
+    if (schedulerOwned || particleContextLost) return;
+    animFrameId = requestAnimationFrame(frame);
+  }
+
+  const R = (() => {
+    try {
+      const rendererInstance = new THREE.WebGLRenderer({
+        canvas, antialias: false, alpha: false, powerPreference: 'high-performance'
+      });
+      particleAvailable = true;
+      return rendererInstance;
+    } catch (rendererError) {
+      console.warn(`[particles] WebGL unavailable, static gradient poster: ${rendererError.message}`);
+      paintStaticGradient(canvas);
+      return null;
+    }
+  })();
+  if (!R) return;
   R.setPixelRatio(PR);
   R.setSize(W(), H());
   R.autoClear = false;
@@ -659,7 +731,7 @@ void main(){
     // Context lost: stop rescheduling entirely; the restored handler below
     // rebuilds targets and restarts the loop.
     if (particleContextLost) return;
-    if (ts - lastFrameTime < targetInterval - 1) { requestAnimationFrame(frame); return; }
+    if (ts - lastFrameTime < targetInterval - 1) { scheduleParticleFrame(); return; }
     lastFrameTime = ts;
     // Reset the render counters once per drawn frame (see autoReset note at
     // renderer creation): skipped gate frames keep the last totals, which is
@@ -746,10 +818,10 @@ void main(){
 
     canvas.style.transform = `translateY(${-scrollOffset * 0.025}px)`;
 
-    // Drive the topo from the particle clock when sync is on.
-    // The topo's own rAF is paused on first drive; setClock() renders it
-    // internally afterwards. topoSpeedMult slows the landscape vs particles.
-    if (syncTopo) {
+    // Drive the topo from the particle clock when sync is on — skipped while
+    // the single background owner drives the topo itself (WAVE 12), or the
+    // two clocks would fight and the topo would render twice per tick.
+    if (syncTopo && !schedulerOwned) {
       const topoInstance = window.TopoDev?.getTopo?.();
       if (topoInstance?.ok) {
         if (!topoPausedForSync && topoInstance.running) {
@@ -760,7 +832,7 @@ void main(){
       }
     }
 
-    requestAnimationFrame(frame);
+    scheduleParticleFrame();
   }
 
   // Phase-3 1Hz telemetry: snapshot renderer.info (calls/triangles/points/
@@ -829,7 +901,7 @@ void main(){
     onResize();
     particleContextLost = false;
     lastFrameTime = 0;
-    requestAnimationFrame(frame);
+    scheduleParticleFrame();
   });
 
   // Learn the display's refresh rate once, seed the quality-driven knobs, then
@@ -968,12 +1040,16 @@ void main(){
         applyQuality(perf.quality());
       },
       /* Sync topo — particle clock drives topo's setClock(). Topo's own rAF
-         is paused; the particle loop renders it via setClock(t) each frame. */
-      setSyncTopo(on) {
-        syncTopo = on;
+         is paused; the particle loop renders it via setClock(t) each frame.
+         WAVE 12: while the single background owner drives, the owner owns the
+         topo clock — flipping the flag here must never resume topo's own
+         loop or two loops would drive it. */
+      setSyncTopo(syncOn) {
+        syncTopo = syncOn;
+        if (schedulerOwned) return;
         const topoInstance = window.TopoDev?.getTopo?.();
         if (!topoInstance?.ok) return;
-        if (on) {
+        if (syncOn) {
           topoInstance.pause();          // kill topo's own loop
           topoPausedForSync = true;
           topoInstance.setClock(currentT * topoSpeedMult); // seed from current particle time
@@ -985,8 +1061,25 @@ void main(){
       isSyncTopo() { return syncTopo; },
       /** Topo speed multiplier — fraction of particle time fed to topo clock.
        *  0.25 = topo evolves 4× slower than particles. */
-      setTopoSpeed(v) { topoSpeedMult = Math.max(0.01, Math.min(1, v)); },
+      setTopoSpeed(speedValue) { topoSpeedMult = Math.max(0.01, Math.min(1, speedValue)); },
       getTopoSpeed() { return topoSpeedMult; },
+      /* WAVE 12 owner hooks: the background owner drives frame() via
+         stepParticleFrame() and paints one static frame for static mode. */
+      takeLoop() { takeParticleLoop(); },
+      stepFrame(frameTimestamp) { frame(frameTimestamp); },
+      renderPoster() {
+        if (particleContextLost) return;
+        const posterBase = performance.now();
+        for (let warmIndex = 0; warmIndex < 6; warmIndex += 1) {
+          frame(posterBase + warmIndex * 50);
+        }
+      },
+      setVisible(visibleValue) { setParticleVisible(visibleValue); },
+    };
+    // Module-scope driver so the single background owner can step frames
+    // without reaching through window.
+    particleDriver = {
+      step(frameTimestamp) { frame(frameTimestamp); },
     };
 
     // Live boot matches the dev sidebar (particle influence 1.00): hand the
@@ -995,7 +1088,7 @@ void main(){
     const topoApi = window.TopoDev;
     if (topoApi?.getTopo?.()?.ok) topoApi.setParticleTex(window.ParticleDev.getParticleCanvas());
 
-    animFrameId = requestAnimationFrame(frame);
+    scheduleParticleFrame();
   });
 }
 
@@ -1003,4 +1096,4 @@ function setKonami(active) {
   uRainbow = active ? 1 : 0;
 }
 
-export { initParticles, setKonami };
+export { initParticles, setKonami, takeParticleLoop, stepParticleFrame, isParticleAvailable, isParticleOwned, isParticleSelfScheduled, setParticleVisible, paintStaticGradient };

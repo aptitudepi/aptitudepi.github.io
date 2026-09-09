@@ -69,6 +69,13 @@ const SESSION_LIST = [
   { commandText: `ai-memory`, goldenFile: `ai-memory.ans` },
   { commandText: `ai-memory --json`, goldenFile: `ai-memory-json.ans` },
   { commandText: `ai sources pcpg analyzer`, goldenFile: `ai-sources.ans` },
+  // WAVE 12 unified-background goldens: read-only status plus a static round
+  // trip and restore (all deterministic text). Placed before `md --help`,
+  // which runs last because its viewer iframe intercepts terminal clicks.
+  { commandText: `background`, goldenFile: `background.ans` },
+  { commandText: `background static`, goldenFile: `background-static.ans` },
+  { commandText: `background ambient`, goldenFile: `background-ambient.ans` },
+  { commandText: `man background`, goldenFile: `man-background.ans` },
   // `md --help` opens the fullscreen viewer iframe (legacy golden pin), so
   // it runs last: the iframe would intercept terminal clicks for any later
   // session.

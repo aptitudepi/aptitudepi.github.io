@@ -17,6 +17,12 @@ let lastColor = '';
 let syncEnabled = true;
 let syncSaturation = 0.25; // 0 = fixed glass, 1 = full colorcycle
 let rafId = 0;
+// WAVE 12 single-owner flag: while true the background owner
+// (js/backgrounds.js) steps the color sync via stepTopoColorSync() and drives
+// the topo clock via driveTopoClock() — this module schedules nothing, and
+// the TopoField instance stays paused, so exactly one background loop runs.
+let schedulerOwned = false;
+let topoStartPatched = false;
 
 const DEFAULTS = {
   seed: 'topo',
@@ -106,40 +112,122 @@ function initTopolines() {
   if (topo.setParticleInfluence) topo.setParticleInfluence(1);
   const readyParticleCanvas = window.ParticleDev?.getParticleCanvas?.();
   if (readyParticleCanvas && topo.setParticleTex) topo.setParticleTex(readyParticleCanvas);
-  if (!rafId && isMotionOK()) tickColorSync();
+  // WAVE 12: a topo created after takeTopoLoop() must start paused — the
+  // owner drives it, so its own loop must never run.
+  if (schedulerOwned) {
+    applyOwnershipToTopo();
+  } else if (!rafId && isMotionOK()) tickColorSync();
 }
 initTopolines._retries = 0;
 
 function tickColorSync() {
-  // Always re-schedule so the loop is never permanently lost.
-  if (!document.hidden) {
+  // Always re-schedule so the loop is never permanently lost — unless the
+  // single background owner drives (WAVE 12), in which case scheduling here
+  // would leave a second loop behind.
+  if (!schedulerOwned && !document.hidden) {
     rafId = requestAnimationFrame(tickColorSync);
   }
 
   if (!syncEnabled || !topo?.ok) return;
 
-  const nav = document.querySelector('.doc-nav');
-  if (nav) {
-    const color = getComputedStyle(nav).getPropertyValue('--nav-cycle').trim();
-    if (color && color !== lastColor) {
+  runColorSyncStep();
+}
+
+// One color-sync iteration without scheduling: the single background owner
+// calls this at its own (throttled) cadence.
+function runColorSyncStep() {
+  const navNode = document.querySelector('.doc-nav');
+  if (navNode) {
+    const cycleColor = getComputedStyle(navNode).getPropertyValue('--nav-cycle').trim();
+    if (cycleColor && cycleColor !== lastColor) {
       // Lerp between glass base and nav-cycle based on syncSaturation
       if (syncSaturation < 1) {
         const glassRGB = parseColor('#C9B8E8');
-        const navRGB = parseColor(color);
-        const t = syncSaturation;
-        const red = Math.round((glassRGB[0] + (navRGB[0] - glassRGB[0]) * t) * 255);
-        const green = Math.round((glassRGB[1] + (navRGB[1] - glassRGB[1]) * t) * 255);
-        const blue = Math.round((glassRGB[2] + (navRGB[2] - glassRGB[2]) * t) * 255);
-        const mixed = `#${red.toString(16).padStart(2, '0')}${green.toString(16).padStart(2, '0')}${blue.toString(16).padStart(2, '0')}`;
-        log('color sync →', mixed, `(sat=${t.toFixed(2)})`);
-        topo.setOptions({ color: mixed });
+        const navRGB = parseColor(cycleColor);
+        const mixRatio = syncSaturation;
+        const mixRed = Math.round((glassRGB[0] + (navRGB[0] - glassRGB[0]) * mixRatio) * 255);
+        const mixGreen = Math.round((glassRGB[1] + (navRGB[1] - glassRGB[1]) * mixRatio) * 255);
+        const mixBlue = Math.round((glassRGB[2] + (navRGB[2] - glassRGB[2]) * mixRatio) * 255);
+        const mixedColor = `#${mixRed.toString(16).padStart(2, '0')}${mixGreen.toString(16).padStart(2, '0')}${mixBlue.toString(16).padStart(2, '0')}`;
+        log('color sync →', mixedColor, `(sat=${mixRatio.toFixed(2)})`);
+        topo.setOptions({ color: mixedColor });
       } else {
-        log('color sync →', color);
-        topo.setOptions({ color });
+        log('color sync →', cycleColor);
+        topo.setOptions({ color: cycleColor });
       }
-      lastColor = color;
+      lastColor = cycleColor;
     }
   }
+}
+
+/* ── WAVE 12 single-owner hooks ─────────────────── */
+
+// Keep an owned topo paused even when its own observers (IntersectionObserver,
+// visibilitychange, motion) call start(): under ownership the background owner
+// is the only scheduler, and a self-restart would leave two loops behind.
+function applyOwnershipToTopo() {
+  if (!topo?.ok) return;
+  if (!topoStartPatched) {
+    topoStartPatched = true;
+    const originalStart = topo.start.bind(topo);
+    topo.start = () => {
+      if (schedulerOwned) return;
+      originalStart();
+    };
+  }
+  topo.pause();
+}
+
+// Hand scheduling to the single background owner: stop the color-sync loop
+// and park the TopoField instance (it renders via driveTopoClock() below).
+function takeTopoLoop() {
+  schedulerOwned = true;
+  if (rafId !== 0) {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+  applyOwnershipToTopo();
+}
+
+// One owner tick of color sync. Honors the sidebar sync toggle.
+function stepTopoColorSync() {
+  if (!syncEnabled || !topo?.ok) return;
+  runColorSyncStep();
+}
+
+// Advance the topo clock directly (TopoField.setClock renders internally while
+// paused, so no own loop is needed).
+function driveTopoClock(clockSeconds) {
+  if (topo?.ok && !topo.contextLost) {
+    topo.setClock(clockSeconds);
+  }
+}
+
+// Paint one static topo frame for static mode / posters.
+function renderTopoPoster() {
+  if (topo?.ok && !topo.contextLost) {
+    topo.resize();
+    topo.render();
+  }
+}
+
+function setTopoVisible(visibleValue) {
+  const hostNode = document.getElementById('topo-host');
+  if (hostNode) {
+    hostNode.style.display = visibleValue ? `` : `none`;
+  }
+}
+
+function isTopoRunning() {
+  return topo?.running === true;
+}
+
+function isTopoOwned() {
+  return schedulerOwned;
+}
+
+function isTopoSelfScheduled() {
+  return rafId !== 0 && !schedulerOwned;
 }
 
 /* ── Public API for dev sidebar (devmode) ────────── */
@@ -209,15 +297,19 @@ window.TopoDev = {
 function handleMotionPolicy(motionOff) {
   if (motionOff) {
     log('motion policy OFF → pushing blue');
-    cancelAnimationFrame(rafId);
-    rafId = 0;
+    // Owned → the background owner applies the policy; touching rafId here
+    // would fight the single loop.
+    if (!schedulerOwned) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
     topo?.setOptions({ color: '#0000ff' });
   } else {
     lastColor = '';
     // The subscription notifies immediately on attach (before TopoField
     // exists); only (re)start the loop once there is a field to drive —
-    // initTopolines kicks it for the boot case.
-    if (topo && !rafId) tickColorSync();
+    // initTopolines kicks it for the boot case. Owned → the owner restarts.
+    if (topo && !rafId && !schedulerOwned) tickColorSync();
   }
 }
 
@@ -230,7 +322,8 @@ document.addEventListener('visibilitychange', () => {
     cancelAnimationFrame(rafId);
     rafId = 0;
   } else {
-    if (!rafId) tickColorSync();
+    // Owned → the background owner resumes its own loop.
+    if (!rafId && !schedulerOwned) tickColorSync();
   }
 });
 
@@ -246,4 +339,4 @@ if (document.readyState === 'loading') {
   initTopolines();
 }
 
-export {};
+export { takeTopoLoop, stepTopoColorSync, driveTopoClock, renderTopoPoster, setTopoVisible, isTopoRunning, isTopoOwned, isTopoSelfScheduled };

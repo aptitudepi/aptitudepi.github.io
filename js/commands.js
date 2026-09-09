@@ -17,6 +17,8 @@
 // unlisted on purpose so the count and rows stay byte-identical.
 // WAVE 9a: `wall` and `guestbook` both carry plain/examples/argsSpec (alias
 // drift closed); neither change affects the help rows or the counts above.
+// WAVE 12: `background` (off|static|ambient|expressive) is unlisted with null
+// helpDisplay/helpPos, so the 36/34 golden pins above are untouched.
 
 import { isAbortError } from './foreground.js';
 import { sanitizeTerminalText, renderMarkdown } from './markdown.js';
@@ -1227,6 +1229,30 @@ async function runNoiseCommand(term, args, runSignal) {
   }
   return;
 }
+async function runBackgroundCommand(term, args, runSignal) {
+  const modeArg = String(args[0] ?? '').trim().toLowerCase();
+  const backgroundsModule = await import('./backgrounds.js');
+  if (!modeArg) {
+    const currentMode = backgroundsModule.getBackgroundMode();
+    term.writeln(`${SITE_WHITE}Background mode: ${currentMode.effective}${ANSI_RESET}`);
+    if (currentMode.effective !== currentMode.requested) {
+      term.writeln(`${SITE_MUTED}Requested ${currentMode.requested}, held to ${currentMode.effective} by the motion policy${ANSI_RESET}`);
+    }
+    term.writeln(`${SITE_MUTED}Next: run \`background <off|static|ambient|expressive>\`${ANSI_RESET}`);
+    return;
+  }
+  const appliedMode = backgroundsModule.setBackgroundMode(modeArg);
+  if (!appliedMode) {
+    term.writeln(`${SITE_ERR}background: unknown mode ${sanitizeTerminalText(modeArg)}${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: run \`background <off|static|ambient|expressive>\`${ANSI_RESET}`);
+    return;
+  }
+  term.writeln(`${SITE_GREEN}Background mode: ${appliedMode.effective}${ANSI_RESET}`);
+  if (appliedMode.effective !== appliedMode.requested) {
+    term.writeln(`${SITE_MUTED}Requested ${appliedMode.requested}, held to ${appliedMode.effective} by the motion policy${ANSI_RESET}`);
+  }
+  return;
+}
 async function runWallDeleteCommand(term, args, runSignal) {
   const targetId = String(args[1] ?? ``).trim();
   if (targetId.length === 0) {
@@ -2025,6 +2051,24 @@ const COMMAND_REGISTRY = [
     bareOnly: false,
     aiQueue: false,
     run: runNoiseCommand,
+  },
+  {
+    name: "background",
+    aliases: [],
+    aliasOf: null,
+    plain: "Set the background motion mode",
+    category: "ADDITIONAL",
+    argsSpec: "<mode>",
+    examples: ["background", "background ambient", "background off"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runBackgroundCommand,
   },
   {
     name: "weather",
