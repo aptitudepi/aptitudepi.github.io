@@ -175,7 +175,7 @@ function buildInitScript() {
   };
   window.__snapshotChunks = [];
   function recordTerminalWrite(kind, text) {
-    window.__snapshotChunks.push(kind === 'writeln' ? text + '\\r\\n' : text);
+    window.__snapshotChunks.push(kind === 'writeln' ? \`\${text}\\r\\n\` : text);
   }
   function wrapTerminalInstance(term) {
     if (!term || term.__snapshotWrapped) { return; }

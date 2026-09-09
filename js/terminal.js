@@ -44,13 +44,13 @@ function collectTabCandidates(partial, isPath) {
       if (base.startsWith(lastWord)) candidates.push(base);
     }
     if (!candidates.length) {
-      for (const c of COMMAND_COMPLETION_NAMES) {
-        if (c.startsWith(lastWord)) candidates.push(c);
+      for (const candidate of COMMAND_COMPLETION_NAMES) {
+        if (candidate.startsWith(lastWord)) candidates.push(candidate);
       }
     }
   } else {
-    for (const c of COMMAND_COMPLETION_NAMES) {
-      if (c.startsWith(partial)) candidates.push(c);
+    for (const candidate of COMMAND_COMPLETION_NAMES) {
+      if (candidate.startsWith(partial)) candidates.push(candidate);
     }
     if (!candidates.length) {
       for (const key of vfs.keys()) {

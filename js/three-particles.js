@@ -232,7 +232,7 @@ function initParticles() {
     animFrameId = requestAnimationFrame(frame);
   }
 
-  const R = (() => {
+  const renderer = (() => {
     try {
       const rendererInstance = new THREE.WebGLRenderer({
         canvas, antialias: false, alpha: false, powerPreference: 'high-performance'
@@ -245,15 +245,15 @@ function initParticles() {
       return null;
     }
   })();
-  if (!R) return;
-  R.setPixelRatio(PR);
-  R.setSize(W(), H());
-  R.autoClear = false;
+  if (!renderer) return;
+  renderer.setPixelRatio(PR);
+  renderer.setSize(W(), H());
+  renderer.autoClear = false;
   // Phase-3 telemetry owns the info counters: with autoReset the totals reset
   // on every render() call (a frame does five), so the 1Hz sampler would only
   // ever see the final blit pass. Manual reset once per frame() keeps true
   // per-frame totals for the sampler below.
-  R.info.autoReset = false;
+  renderer.info.autoReset = false;
 
   // Map the shared quality scalar to this system's knobs (hybrid §7: the
   // discrete tier owns the structural knobs, the continuous scalar keeps
@@ -321,7 +321,7 @@ function initParticles() {
     const nextPR = Math.min(rawPR, PR + clampedStep);
     if (Math.abs(nextPR - PR) > PR_QUANTUM) {
       PR = nextPR;
-      R.setPixelRatio(PR);
+      renderer.setPixelRatio(PR);
       onResize();
     }
   }
@@ -654,9 +654,9 @@ void main(){
     const freshPR = readRawPR();
     if (freshPR < PR) {
       PR = freshPR;
-      R.setPixelRatio(PR);
+      renderer.setPixelRatio(PR);
     }
-    R.setSize(W(), H());
+    renderer.setSize(W(), H());
     camMain.aspect = W() / H();
     camMain.updateProjectionMatrix();
     pMat.uniforms.uRez.value.set(W(), H());
@@ -693,10 +693,10 @@ void main(){
     // buffer left untouched). RGBA/FLOAT is the spec-required baseline.
     if (!_fBuf || _fBuf.length < len) _fBuf = new Float32Array(len);
     if (!_pxBuf || _pxBuf.length < len) _pxBuf = new Uint8Array(len);
-    const gl = R.getContext();
-    R.setRenderTarget(postOut);
-    gl.readPixels(0, 0, pw, ph, gl.RGBA, gl.FLOAT, _fBuf);
-    R.setRenderTarget(null);
+    const glContext = renderer.getContext();
+    renderer.setRenderTarget(postOut);
+    glContext.readPixels(0, 0, pw, ph, glContext.RGBA, glContext.FLOAT, _fBuf);
+    renderer.setRenderTarget(null);
     for (let i = 0; i < len; i++) {
       const scaled = _fBuf[i] * 255;
       _pxBuf[i] = scaled < 0 ? 0 : (scaled > 255 ? 255 : scaled);
@@ -812,18 +812,18 @@ void main(){
     // Reset the render counters once per drawn frame (see autoReset note at
     // renderer creation): skipped gate frames keep the last totals, which is
     // exactly what the 1Hz sampler should report.
-    R.info.reset();
+    renderer.info.reset();
 
-    const t = clock.getElapsedTime() - pauseShiftSeconds;
-    currentT = t;
-    const dt = Math.min(t - prevT, 0.05);
-    prevT = t;
+    const elapsed = clock.getElapsedTime() - pauseShiftSeconds;
+    currentT = elapsed;
+    const deltaTime = Math.min(elapsed - prevT, 0.05);
+    prevT = elapsed;
 
-    const kH = 1 - Math.pow(0.94, dt * 60);
-    hP += ((mouse.active ? 1 : 0) - hP) * kH;
+    const kHover = 1 - Math.pow(0.94, deltaTime * 60);
+    hP += ((mouse.active ? 1 : 0) - hP) * kHover;
 
     const period = 4 * (HOLD + BLEND);
-    const phase = t % period;
+    const phase = elapsed % period;
     const slot = Math.floor(phase / (HOLD + BLEND));
     const slotT = phase % (HOLD + BLEND);
     const blend = slotT < HOLD ? 0.0 : (slotT - HOLD) / BLEND;
@@ -831,54 +831,54 @@ void main(){
     const tw = [0, 0, 0, 0];
     tw[slot] = 1 - blend;
     tw[next] += blend;
-    const kM = 1 - Math.pow(0.97, dt * 60);
-    modeW.x += (tw[0] - modeW.x) * kM;
-    modeW.y += (tw[1] - modeW.y) * kM;
-    modeW.z += (tw[2] - modeW.z) * kM;
-    modeW.w += (tw[3] - modeW.w) * kM;
+    const kMode = 1 - Math.pow(0.97, deltaTime * 60);
+    modeW.x += (tw[0] - modeW.x) * kMode;
+    modeW.y += (tw[1] - modeW.y) * kMode;
+    modeW.z += (tw[2] - modeW.z) * kMode;
+    modeW.w += (tw[3] - modeW.w) * kMode;
     [simMat, pMat, trailMat].forEach(m => m.uniforms.uModeW.value.copy(modeW));
 
     const mxw = mouse.x * Math.tan(25 * Math.PI / 180) * 2.8 * 0.36;
     const myw = mouse.y * Math.tan(25 * Math.PI / 180) * 2.8 * 0.36;
 
     simMat.uniforms.uPos.value = ever ? rA.texture : posTex;
-    simMat.uniforms.uTime.value = t;
-    simMat.uniforms.uDt.value = dt;
+    simMat.uniforms.uTime.value = elapsed;
+    simMat.uniforms.uDt.value = deltaTime;
     simMat.uniforms.uHover.value = hP;
     simMat.uniforms.uMouse.value.set(mxw, myw);
     simMat.uniforms.uMouseR.value = 0.18 + hP * 0.04;
-    R.setRenderTarget(rB);
-    R.clear();
-    R.render(simScene, flatCam);
+    renderer.setRenderTarget(rB);
+    renderer.clear();
+    renderer.render(simScene, flatCam);
 
     pMat.uniforms.uPos.value = rB.texture;
-    pMat.uniforms.uTime.value = t;
+    pMat.uniforms.uTime.value = elapsed;
     pMat.uniforms.uHover.value = hP;
     pMat.uniforms.uRainbow.value = uRainbow;
-    R.setRenderTarget(outRT);
-    R.clearColor();
-    R.render(scene, camMain);
+    renderer.setRenderTarget(outRT);
+    renderer.clearColor();
+    renderer.render(scene, camMain);
 
     trailMat.uniforms.uPrev.value = trailA.texture;
     trailMat.uniforms.uParts.value = outRT.texture;
-    trailMat.uniforms.uTime.value = t;
+    trailMat.uniforms.uTime.value = elapsed;
     trailMat.uniforms.uDecay.value = decayOverride ?? (0.8 - hP * 0.04);
-    R.setRenderTarget(trailB);
-    R.clear();
-    R.render(trailScene, flatCam);
+    renderer.setRenderTarget(trailB);
+    renderer.clear();
+    renderer.render(trailScene, flatCam);
 
     postMat.uniforms.uTex.value = trailB.texture;
-    postMat.uniforms.uTime.value = t;
+    postMat.uniforms.uTime.value = elapsed;
     postMat.uniforms.uCA.value = caStrength;
-    R.setRenderTarget(postOut);
-    R.clear();
-    R.render(postScene, flatCam);
+    renderer.setRenderTarget(postOut);
+    renderer.clear();
+    renderer.render(postScene, flatCam);
 
     /* Blit postOut → screen */
     blitMat.uniforms.uTex.value = postOut.texture;
-    R.setRenderTarget(null);
-    R.clear();
-    R.render(blitScene, flatCam);
+    renderer.setRenderTarget(null);
+    renderer.clear();
+    renderer.render(blitScene, flatCam);
 
     /* Feed the hidden 2D canvas so the topo can sample particle density —
        throttled to every topoEvery-th frame and skipped entirely when the
@@ -946,7 +946,7 @@ void main(){
   const perfHudNode = ensurePerfHud();
   function sampleRendererInfo() {
     try {
-      const renderInfo = R.info;
+      const renderInfo = renderer.info;
       if (!renderInfo || !renderInfo.render || !renderInfo.memory) return;
       samplerSnapshot.calls = renderInfo.render.calls;
       samplerSnapshot.triangles = renderInfo.render.triangles;
@@ -1031,7 +1031,7 @@ void main(){
     /* ── Dev API — exposed for dev sidebar (devmode) ──── */
     window.ParticleDev = {
       /* Expose internals for velocity-network and topo wiring */
-      getRenderer() { return R; },
+      getRenderer() { return renderer; },
       getScene() { return scene; },
       getRT() { return rB; },
       getPosTex() { return posTex; },

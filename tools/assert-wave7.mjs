@@ -119,7 +119,7 @@ const INIT_SCRIPT = `window.__snapshotChunks = [];
       instance[methodName] = function wrappedWrite() {
         const writeArgs = Array.prototype.slice.call(arguments);
         const textValue = writeArgs.length > 0 ? String(writeArgs[0]) : '';
-        window.__snapshotChunks.push(methodName === 'writeln' ? textValue + '\\r\\n' : textValue);
+        window.__snapshotChunks.push(methodName === 'writeln' ? \`\${textValue}\\r\\n\` : textValue);
         return original.apply(instance, writeArgs);
       };
     }

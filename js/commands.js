@@ -28,8 +28,8 @@ const pageLoadTime = Date.now();
 
 const ANSI_RESET = '\x1b[0m';
 const ANSI_BOLD = '\x1b[1m';
-function ansiRGB(r, g, b) { return `\x1b[38;2;${r};${g};${b}m`; }
-function ansiBgRGB(r, g, b) { return `\x1b[48;2;${r};${g};${b}m`; }
+function ansiRGB(redChan, greenChan, blueChan) { return `\x1b[38;2;${redChan};${greenChan};${blueChan}m`; }
+function ansiBgRGB(redChan, greenChan, blueChan) { return `\x1b[48;2;${redChan};${greenChan};${blueChan}m`; }
 const SITE_BLUE = ansiRGB(80, 140, 250);
 const SITE_RED = ansiRGB(220, 80, 100);
 const SITE_GREEN = ansiRGB(60, 200, 120);
@@ -117,8 +117,8 @@ const ASCII_ART = [
   "\u001b[38;2;28;32;32m⠀\u001b[0m\u001b[38;2;27;33;35m⠀\u001b[0m\u001b[38;2;27;33;33m⠀\u001b[0m\u001b[38;2;27;35;38m⠀\u001b[0m\u001b[38;2;30;48;73m⠐\u001b[0m\u001b[38;2;29;53;89m⠀\u001b[0m\u001b[38;2;27;52;89m⠀\u001b[0m\u001b[38;2;27;56;94m⠠\u001b[0m\u001b[38;2;24;53;88m⠀\u001b[0m\u001b[38;2;23;50;85m⠀\u001b[0m\u001b[38;2;15;42;72m⠀\u001b[0m\u001b[38;2;13;36;66m⠀\u001b[0m\u001b[38;2;15;36;67m⠀\u001b[0m\u001b[38;2;21;45;80m⠀\u001b[0m\u001b[38;2;27;55;92m⠀\u001b[0m\u001b[38;2;28;55;96m⠂\u001b[0m\u001b[38;2;29;56;97m⠁\u001b[0m\u001b[38;2;29;59;99m⠀\u001b[0m\u001b[38;2;29;59;99m⠁\u001b[0m\u001b[38;2;28;58;98m⠀\u001b[0m\u001b[38;2;28;58;98m⠂\u001b[0m\u001b[38;2;28;60;99m⠀\u001b[0m\u001b[38;2;28;60;99m⠂\u001b[0m\u001b[38;2;32;64;106m⠀\u001b[0m\u001b[38;2;33;66;107m⠄\u001b[0m\u001b[38;2;32;65;108m⠀\u001b[0m\u001b[38;2;34;67;109m⠄\u001b[0m\u001b[38;2;30;63;106m⠂\u001b[0m\u001b[38;2;31;64;107m⠀\u001b[0m\u001b[38;2;36;69;112m⠁\u001b[0m\u001b[38;2;37;69;114m⠀\u001b[0m\u001b[38;2;37;69;115m⡀\u001b[0m\u001b[38;2;39;71;118m⠄\u001b[0m\u001b[38;2;39;71;118m⠀\u001b[0m\u001b[38;2;37;69;116m⠄\u001b[0m\u001b[38;2;37;68;112m⠀\u001b[0m\u001b[38;2;39;71;115m⠠\u001b[0m\u001b[38;2;37;72;117m⠀\u001b[0m\u001b[38;2;43;69;109m⠀\u001b[0m\u001b[38;2;40;57;85m⠀\u001b[0m\u001b[38;2;224;220;237m⣿\u001b[0m\u001b[38;2;247;225;233m⡃\u001b[0m\u001b[38;2;121;49;66m⠈\u001b[0m\u001b[38;2;148;57;74m⡀\u001b[0m\u001b[38;2;144;57;72m⠈\u001b[0m\u001b[38;2;145;57;72m⡀\u001b[0m\u001b[38;2;147;59;74m⢀\u001b[0m\u001b[38;2;144;57;72m⠁\u001b[0m\u001b[38;2;138;56;69m⢀\u001b[0m\u001b[38;2;138;56;69m⠐\u001b[0m\u001b[38;2;127;50;68m⠈\u001b[0m\u001b[38;2;88;38;47m⠀\u001b[0m\u001b[38;2;57;37;42m⠐\u001b[0m\u001b[38;2;236;224;240m⣿\u001b[0m\u001b[38;2;184;192;217m⠁\u001b[0m\u001b[38;2;43;69;109m⠀\u001b[0m\u001b[38;2;30;63;106m⠄\u001b[0m\u001b[38;2;32;63;100m⠀\u001b[0m\u001b[38;2;32;59;102m⠀\u001b[0m\u001b[38;2;31;62;103m⡀\u001b[0m\u001b[38;2;34;64;106m⠀\u001b[0m\u001b[38;2;33;64;106m⠠\u001b[0m\u001b[38;2;36;67;109m⠀\u001b[0m\u001b[38;2;35;66;108m⢀\u001b[0m\u001b[38;2;37;70;112m⠀\u001b[0m\u001b[38;2;36;67;111m⠀\u001b[0m\u001b[38;2;26;51;77m⠀\u001b[0m\u001b[38;2;10;32;58m⠀\u001b[0m\u001b[38;2;39;66;109m⠠\u001b[0m\u001b[38;2;35;64;110m⠀\u001b[0m\u001b[38;2;35;64;107m⠀\u001b[0m\u001b[38;2;34;61;96m⠄\u001b[0m\u001b[38;2;34;62;99m⠀\u001b[0m\u001b[38;2;32;60;103m⠀\u001b[0m\u001b[38;2;31;59;97m⠀\u001b[0m\u001b[38;2;30;59;95m⠈\u001b[0m\u001b[38;2;29;56;91m⠀\u001b[0m\u001b[38;2;29;53;87m⢀\u001b[0m\u001b[38;2;26;51;82m⠀\u001b[0m\u001b[38;2;24;49;78m⠀\u001b[0m\u001b[38;2;22;47;76m⠀\u001b[0m\u001b[38;2;20;43;72m⠀\u001b[0m\u001b[38;2;19;42;71m⠀\u001b[0m\u001b[38;2;20;43;72m⠀\u001b[0m\u001b[38;2;20;43;75m⠀\u001b[0m\u001b[38;2;22;44;81m⠠\u001b[0m\u001b[38;2;23;45;81m⠀\u001b[0m\u001b[38;2;20;43;72m⠀\u001b[0m\u001b[38;2;17;36;66m⠀\u001b[0m\u001b[38;2;11;27;52m⠀\u001b[0m\u001b[38;2;7;15;31m⠀\u001b[0m\u001b[38;2;0;5;20m⠀\u001b[0m\u001b[38;2;29;46;74m⠀\u001b[0m\u001b[38;2;18;40;68m⠀\u001b[0m\u001b[38;2;11;29;55m⠀\u001b[0m\u001b[38;2;8;26;49m⠀\u001b[0m\u001b[38;2;7;26;47m⠀\u001b[0m\u001b[38;2;7;25;49m⠈\u001b[0m\u001b[38;2;9;27;51m⠀\u001b[0m\u001b[38;2;11;29;53m⠀\u001b[0m\u001b[38;2;11;29;53m⠈\u001b[0m\u001b[38;2;12;28;52m⠀\u001b[0m\u001b[38;2;11;27;51m⠀\u001b[0m\u001b[38;2;9;23;47m⠀\u001b[0m\u001b[38;2;6;21;40m⠀\u001b[0m\u001b[38;2;6;20;36m⠀\u001b[0m",
 ];
 
-function colorBlock(r, g, b) {
-  return `${ansiBgRGB(r, g, b)} ${ANSI_RESET}`;
+function colorBlock(redChan, greenChan, blueChan) {
+  return `${ansiBgRGB(redChan, greenChan, blueChan)} ${ANSI_RESET}`;
 }
 
 const vfs = new Map([
@@ -478,24 +478,24 @@ function setPrefetchedLocation(locationValue) {
 }
 
 function uptimeStr() {
-  const s = Math.floor((Date.now() - pageLoadTime) / 1000);
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  return `${d} days, ${h} hours, ${m} minutes`;
+  const totalSeconds = Math.floor((Date.now() - pageLoadTime) / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  return `${days} days, ${hours} hours, ${minutes} minutes`;
 }
 
-function levenshtein(a, b) {
-  const m = a.length, n = b.length;
-  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+function levenshtein(firstString, secondString) {
+  const lenA = firstString.length, lenB = secondString.length;
+  const distanceMatrix = Array.from({ length: lenA + 1 }, () => Array(lenB + 1).fill(0));
+  for (let row = 0; row <= lenA; row++) distanceMatrix[row][0] = row;
+  for (let col = 0; col <= lenB; col++) distanceMatrix[0][col] = col;
+  for (let row = 1; row <= lenA; row++) {
+    for (let col = 1; col <= lenB; col++) {
+      distanceMatrix[row][col] = firstString[row - 1] === secondString[col - 1] ? distanceMatrix[row - 1][col - 1] : 1 + Math.min(distanceMatrix[row - 1][col], distanceMatrix[row][col - 1], distanceMatrix[row - 1][col - 1]);
     }
   }
-  return dp[m][n];
+  return distanceMatrix[lenA][lenB];
 }
 
 function commandCount() {
@@ -535,14 +535,14 @@ function lookupVfsPath(rawPath) {
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
-function visibleLen(s) {
-  return s.replace(ANSI_PATTERN, '').length;
+function visibleLen(value) {
+  return value.replace(ANSI_PATTERN, '').length;
 }
 
 function getBlueRedPhase() {
   const elapsed = (Date.now() - pageLoadTime) / 1000;
-  const t = Math.sin(elapsed * Math.PI / 3);
-  const mix = (t + 1) / 2;
+  const sineWave = Math.sin(elapsed * Math.PI / 3);
+  const mix = (sineWave + 1) / 2;
   return [Math.round(mix * 255), 0, Math.round((1 - mix) * 255)];
 }
 
@@ -560,7 +560,7 @@ function neofetch(term) {
   // Classic neofetch colour palette (two rows of eight blocks) shares the
   // final two info rows, left-aligned at one column so both rows line up.
   const phase = getBlueRedPhase();
-  const bPhase = phase.map(c => Math.min(255, Math.round(c * 1.3)));
+  const bPhase = phase.map(channel => Math.min(255, Math.round(channel * 1.3)));
   const blockColors = [
     [0,0,0],[200,50,50],[50,180,50],[180,180,50],
     phase,
@@ -570,7 +570,7 @@ function neofetch(term) {
     [255,80,255],[80,255,255],[255,255,255],
   ];
   const blockRow = (colors) => colors
-    .map(([r,g,b]) => `${' '.repeat(2)}${colorBlock(r,g,b)}${' '.repeat(2)}`)
+    .map(([redChan,greenChan,blueChan]) => `${' '.repeat(2)}${colorBlock(redChan,greenChan,blueChan)}${' '.repeat(2)}`)
     .join('');
   const blocks1 = blockRow(blockColors.slice(0, 8));
   const blocks2 = blockRow(blockColors.slice(8, 16));
@@ -598,10 +598,10 @@ function neofetch(term) {
   ];
 
   if (SHOW_TERMINAL_ART) {
-    for (let i = 0; i < Math.max(artHeight + 2, infoLines.length + 2); i++) {
-      const line = ASCII_ART[i] || '';
-      const coloredArt = i < artHeight ? line : ' '.repeat(maxArtW);
-      const infoIdx = i - 2;
+    for (let index = 0; index < Math.max(artHeight + 2, infoLines.length + 2); index++) {
+      const line = ASCII_ART[index] || '';
+      const coloredArt = index < artHeight ? line : ' '.repeat(maxArtW);
+      const infoIdx = index - 2;
       let infoPart = '';
       if (infoIdx >= 0 && infoIdx < infoLines.length) {
         const info = infoLines[infoIdx];
@@ -638,7 +638,7 @@ async function getLocation(runSignal) {
   try {
     const pos = await new Promise((res, rej) => {
       if (!navigator.geolocation) { rej(new Error('no geo')); return; }
-      navigator.geolocation.getCurrentPosition(p => res(p), () => rej(new Error('denied')), { timeout: 8000, enableHighAccuracy: false });
+      navigator.geolocation.getCurrentPosition(position => res(position), () => rej(new Error('denied')), { timeout: 8000, enableHighAccuracy: false });
     });
     const geoResp = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`,
@@ -646,13 +646,13 @@ async function getLocation(runSignal) {
     );
     if (!geoResp.ok) throw new Error(`geo HTTP ${geoResp.status}`);
     const geoData = await geoResp.json();
-    const a = geoData.address || {};
+    const address = geoData.address || {};
     return {
       lat: pos.coords.latitude,
       lon: pos.coords.longitude,
-      city: a.city || a.town || a.village || a.county || null,
-      region: a.state || null,
-      country: a.country_code || null,
+      city: address.city || address.town || address.village || address.county || null,
+      region: address.state || null,
+      country: address.country_code || null,
     };
   } catch (locationError) {
     if (isAbortError(locationError)) throw locationError;
@@ -722,9 +722,9 @@ async function weatherCommand(term, args, runSignal) {
     const wResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto`, { signal: combinedTimeoutSignal(runSignal, 10000) });
     if (!wResp.ok) throw new Error(`weather HTTP ${wResp.status}`);
     const wData = await wResp.json();
-    const cw = wData.current_weather;
+    const currentWeather = wData.current_weather;
     const tempUnit = isF ? '°F' : '°C';
-    const temp = isF ? (cw.temperature * 9 / 5 + 32).toFixed(1) : cw.temperature;
+    const temp = isF ? (currentWeather.temperature * 9 / 5 + 32).toFixed(1) : currentWeather.temperature;
     const wmoCodes = {
       0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
       45: 'Foggy', 48: 'Rime fog', 51: 'Light drizzle', 53: 'Moderate drizzle',
@@ -733,15 +733,15 @@ async function weatherCommand(term, args, runSignal) {
       80: 'Slight showers', 81: 'Moderate showers', 82: 'Violent showers',
       95: 'Thunderstorm', 96: 'Thunderstorm w/ slight hail', 99: 'Thunderstorm w/ heavy hail',
     };
-    const cond = wmoCodes[cw.weathercode] || `Code ${cw.weathercode}`;
-    const windKmh = (cw.windspeed * 3.6).toFixed(1);
-    const hi = isF ? (wData.daily.temperature_2m_max[0] * 9/5 + 32).toFixed(1) : wData.daily.temperature_2m_max[0];
-    const lo = isF ? (wData.daily.temperature_2m_min[0] * 9/5 + 32).toFixed(1) : wData.daily.temperature_2m_min[0];
+    const cond = wmoCodes[currentWeather.weathercode] || `Code ${currentWeather.weathercode}`;
+    const windKmh = (currentWeather.windspeed * 3.6).toFixed(1);
+    const highTemp = isF ? (wData.daily.temperature_2m_max[0] * 9/5 + 32).toFixed(1) : wData.daily.temperature_2m_max[0];
+    const lowTemp = isF ? (wData.daily.temperature_2m_min[0] * 9/5 + 32).toFixed(1) : wData.daily.temperature_2m_min[0];
     term.writeln(`${SITE_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━${ANSI_RESET}`);
     term.writeln(`${SITE_BLUE}  ${locStr}${ANSI_RESET}`);
     term.writeln(`${SITE_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━${ANSI_RESET}`);
     term.writeln(`${SITE_WHITE}  ${cond}   ${temp}${tempUnit}${ANSI_RESET}`);
-    term.writeln(`${SITE_MUTED}  H: ${hi}${tempUnit}  L: ${lo}${tempUnit}${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}  H: ${highTemp}${tempUnit}  L: ${lowTemp}${tempUnit}${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}  Wind: ${windKmh} km/h${ANSI_RESET}`);
     term.writeln(`${SITE_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━${ANSI_RESET}`);
   } catch (weatherError) {
@@ -774,16 +774,16 @@ function stripHtml(html) {
 // Unicode bidi/isolate overrides.
 // Range checks (no regex literal) avoid JS-0004 control-char escapes.
 
-function stripAnsi(s) {
-  if (s === null || s === undefined) return '';
-  const str = String(s);
+function stripAnsi(value) {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
   let out = '';
-  for (const ch of str) {
-    const cp = ch.codePointAt(0);
-    const isBad = cp < 0x20
-      ? cp !== 0x0A && cp !== 0x0D && cp !== 0x09
-      : cp === 0x7F || (cp >= 0x202A && cp <= 0x202E) || (cp >= 0x2066 && cp <= 0x2069) || cp === 0xFEFF;
-    if (!isBad) out += ch;
+  for (const char of str) {
+    const codePoint = char.codePointAt(0);
+    const isBad = codePoint < 0x20
+      ? codePoint !== 0x0A && codePoint !== 0x0D && codePoint !== 0x09
+      : codePoint === 0x7F || (codePoint >= 0x202A && codePoint <= 0x202E) || (codePoint >= 0x2066 && codePoint <= 0x2069) || codePoint === 0xFEFF;
+    if (!isBad) out += char;
   }
   return out;
 }
@@ -857,11 +857,11 @@ async function hnCommand(term, args, runSignal) {
       if (!story) throw new Error('empty');
 
       term.writeln(`${ANSI_BOLD}${SITE_WHITE}${stripAnsi(story.title)}${ANSI_RESET}`);
-      const by = stripAnsi(story.by) || 'anonymous';
+      const authorName = stripAnsi(story.by) || 'anonymous';
       const pts = story.score || 0;
       const cmts = story.descendants || 0;
       const ago = story.time ? timeAgo(story.time) : '';
-      term.writeln(`${SITE_MUTED}by ${SITE_GREEN}${by}${SITE_MUTED} | ${pts} points | ${cmts} comments | ${ago}${ANSI_RESET}`);
+      term.writeln(`${SITE_MUTED}by ${SITE_GREEN}${authorName}${SITE_MUTED} | ${pts} points | ${cmts} comments | ${ago}${ANSI_RESET}`);
       if (story.url) {
         term.writeln(`${SITE_BLUE}${stripAnsi(story.url)}${ANSI_RESET}`);
       }
@@ -986,7 +986,7 @@ async function mdCommand(term, args, runSignal) {
       closeBtn.remove();
       document.removeEventListener('keydown', onEsc);
     }
-    function onEsc(e) { if (e.key === 'Escape') closeViewer(); }
+    function onEsc(event) { if (event.key === 'Escape') closeViewer(); }
     closeBtn.addEventListener('click', closeViewer);
     document.body.appendChild(closeBtn);
     term.writeln(`${SITE_GREEN}md viewer opened. Press ✕ or Esc to close${ANSI_RESET}`);
@@ -1042,7 +1042,7 @@ async function runCatCommand(term, args, runSignal) {
       term.writeln(renderedLine);
     }
   } else {
-    catContent.split('\n').forEach(l => term.writeln(`${SITE_WHITE}${l}${ANSI_RESET}`));
+    catContent.split('\n').forEach(line => term.writeln(`${SITE_WHITE}${line}${ANSI_RESET}`));
   }
   return;
 }
@@ -1096,18 +1096,18 @@ async function runCowsayCommand(term, args, runSignal) {
   const words = cowMsg.split(' ');
   const lines = [];
   let cur = '';
-  for (const w of words) {
-    if (cur && cur.length + w.length + 1 > MAX_W) { lines.push(cur); cur = ''; }
-    cur = cur ? cur + ' ' + w : w;
+  for (const word of words) {
+    if (cur && cur.length + word.length + 1 > MAX_W) { lines.push(cur); cur = ''; }
+    cur = cur ? `${cur} ${word}` : word;
   }
   if (cur) lines.push(cur);
   if (!lines.length) lines.push('');
-  const maxW = Math.min(Math.max(...lines.map(l => l.length)), MAX_W);
+  const maxW = Math.min(Math.max(...lines.map(line => line.length)), MAX_W);
   const bar = '\u2500'.repeat(maxW + 2);
   const side = '\u2502';
   term.writeln(` ${SITE_GREEN} ${bar}${ANSI_RESET}`);
-  for (const l of lines) {
-    term.writeln(` ${SITE_GREEN}${side} ${l.padEnd(maxW)} ${side}${ANSI_RESET}`);
+  for (const line of lines) {
+    term.writeln(` ${SITE_GREEN}${side} ${line.padEnd(maxW)} ${side}${ANSI_RESET}`);
   }
   term.writeln(` ${SITE_GREEN} ${bar}${ANSI_RESET}`);
   term.writeln(`${SITE_GREEN}   \\   ^__^${ANSI_RESET}`);
@@ -1231,26 +1231,26 @@ async function runHistoryCommand(term, args, runSignal) {
   if (CMD_HISTORY.length === 0) {
     term.writeln(`${SITE_MUTED}No commands in history${ANSI_RESET}`);
   } else {
-    for (let i = 0; i < CMD_HISTORY.length; i++) {
-      const idx = String(i + 1).padStart(3, ' ');
-      term.writeln(`${SITE_FAINT}${idx}  ${ANSI_RESET}${SITE_WHITE}${stripAnsi(CMD_HISTORY[i])}${ANSI_RESET}`);
+    for (let index = 0; index < CMD_HISTORY.length; index++) {
+      const idx = String(index + 1).padStart(3, ' ');
+      term.writeln(`${SITE_FAINT}${idx}  ${ANSI_RESET}${SITE_WHITE}${stripAnsi(CMD_HISTORY[index])}${ANSI_RESET}`);
     }
   }
   return;
 }
 async function runCrtCommand(term, args, runSignal) {
-  const el = document.getElementById('crt-overlay');
-  if (el) {
-    el.classList.toggle('active');
-    term.writeln(`${SITE_GREEN}crt overlay ${el.classList.contains('active') ? 'enabled' : 'disabled'}${ANSI_RESET}`);
+  const crtOverlay = document.getElementById('crt-overlay');
+  if (crtOverlay) {
+    crtOverlay.classList.toggle('active');
+    term.writeln(`${SITE_GREEN}crt overlay ${crtOverlay.classList.contains('active') ? 'enabled' : 'disabled'}${ANSI_RESET}`);
   }
   return;
 }
 async function runNoiseCommand(term, args, runSignal) {
-  const el = document.getElementById('noise-overlay');
-  if (el) {
-    el.classList.toggle('active');
-    term.writeln(`${SITE_GREEN}noise overlay ${el.classList.contains('active') ? 'enabled' : 'disabled'}${ANSI_RESET}`);
+  const noiseOverlay = document.getElementById('noise-overlay');
+  if (noiseOverlay) {
+    noiseOverlay.classList.toggle('active');
+    term.writeln(`${SITE_GREEN}noise overlay ${noiseOverlay.classList.contains('active') ? 'enabled' : 'disabled'}${ANSI_RESET}`);
   }
   return;
 }

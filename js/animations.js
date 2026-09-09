@@ -423,39 +423,39 @@ function initMagneticText() {
   // Magnetic pull is kept for actions only (buttons/links): non-action
   // headings no longer carry data-magnetic in the markup, and this selector
   // refuses to re-enlarge the set if one ever slips back in.
-  document.querySelectorAll('a[data-magnetic], button[data-magnetic]').forEach(el => {
+  document.querySelectorAll('a[data-magnetic], button[data-magnetic]').forEach(element => {
     let raf = null, targetX = 0, targetY = 0, curX = 0, curY = 0;
     const maxDist = 30;
-    el.addEventListener('mousemove', e => {
+    element.addEventListener('mousemove', hoverEvent => {
       if (!magneticEnabled) return;
-      const rect = el.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      const dx = e.clientX - cx;
-      const dy = e.clientY - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      const deltaX = hoverEvent.clientX - cx;
+      const deltaY = hoverEvent.clientY - cy;
+      const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
       const strength = Math.min(1, dist / 200);
-      const angle = Math.atan2(dy, dx);
+      const angle = Math.atan2(deltaY, deltaX);
       targetX = Math.cos(angle) * maxDist * strength;
       targetY = Math.sin(angle) * maxDist * strength;
-      el.classList.add('magnetic-active');
+      element.classList.add('magnetic-active');
       if (!raf) {
         raf = requestAnimationFrame(function tick() {
           curX += (targetX - curX) * 0.15;
           curY += (targetY - curY) * 0.15;
-          el.style.transform = `translate(${curX.toFixed(1)}px, ${curY.toFixed(1)}px)`;
+          element.style.transform = `translate(${curX.toFixed(1)}px, ${curY.toFixed(1)}px)`;
           if (Math.abs(curX - targetX) > 0.1 || Math.abs(curY - targetY) > 0.1) {
             raf = requestAnimationFrame(tick);
           } else { raf = null; }
         });
       }
     });
-    el.addEventListener('mouseleave', () => {
+    element.addEventListener('mouseleave', () => {
       targetX = 0; targetY = 0;
-      el.classList.remove('magnetic-active');
+      element.classList.remove('magnetic-active');
       if (raf) { cancelAnimationFrame(raf); raf = null; }
       curX = 0; curY = 0;
-      el.style.transform = '';
+      element.style.transform = '';
     });
   });
 }
