@@ -159,7 +159,7 @@ export async function retrieveContext(userQuery, term) {
 // rerankScore >= RAG_KEYWORD_FLOOR. Survivors are numbered [1..N] in
 // reranked order so the model can cite them Perplexity-style.
 export async function retrieveRankedContext(userQuery, term, rankOptions) {
-  const keywordOnly = Boolean(rankOptions && rankOptions.keywordOnly);
+  const keywordOnly = Boolean(rankOptions?.keywordOnly);
   const contextData = await loadContextData();
   if (!contextData.length) return { verdict: `NO_MATCH`, contextText: ``, sourceList: [] };
 

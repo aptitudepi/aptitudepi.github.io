@@ -135,7 +135,7 @@ function executeCommand(input, term) {
   const headToken = (trimmed.split(/\s+/, 1)[0] || 'unknown').toLowerCase();
   // WAVE 10 picker fallback: bare 1/2/3 resolves a pending AI mode choice
   // (the chip bar's Esc path). Anything else falls through to the registry.
-  if (/^[123]$/.test(trimmed)) {
+  if (/^[123]$/u.test(trimmed)) {
     return runForeground(headToken, term, (runSignal) => executeChoiceOrUnknown(trimmed, term, runSignal));
   }
   return runForeground(headToken, term, (runSignal) => executeCommandBody(trimmed, term, runSignal));
@@ -145,7 +145,7 @@ async function executeChoiceOrUnknown(choiceText, term, runSignal) {
   const aiModule = await import('./ai.js');
   if (aiModule.hasPendingAiChoice()) {
     await aiModule.resolveAiModeChoice(choiceText, term, runSignal);
-    return;
+    return undefined;
   }
   return executeSingleCommand(choiceText, term, runSignal);
 }

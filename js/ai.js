@@ -153,8 +153,8 @@ async function loadPipeline(term, loadOptions) {
   if (pipelineLoading) return null;
   pipelineLoading = true;
 
-  const progressHandler = loadOptions && typeof loadOptions.onProgress === `function` ? loadOptions.onProgress : null;
-  const abortSignal = loadOptions && loadOptions.runSignal ? loadOptions.runSignal : null;
+  const progressHandler = typeof loadOptions?.onProgress === `function` ? loadOptions.onProgress : null;
+  const abortSignal = loadOptions?.runSignal ?? null;
 
   try {
     if (term) term.writeln(`\x1b[2mLoading AI module...\x1b[0m`);
@@ -217,7 +217,7 @@ async function loadPipeline(term, loadOptions) {
     return pipeline;
   } catch (loadError) {
     localDownloadCanceller = null;
-    if (isAbortError(loadError) || String(loadError && loadError.message) === `Local download cancelled`) {
+    if (isAbortError(loadError) || String(loadError?.message) === `Local download cancelled`) {
       if (term) term.writeln(`\r\x1b[2mLocal download cancelled — pick a size again or run \`ai-model 0\` for cloud\x1b[0m`);
     } else {
       if (term) term.writeln(`\r\x1b[91mFailed to load local model: ${loadError.message}\x1b[0m`);
@@ -590,7 +590,7 @@ async function showAiSources(rawQuery, term) {
 function isThresholdArgument(tailText) {
   const normalizedTail = String(tailText).trim().toLowerCase();
   if (normalizedTail === `reset` || normalizedTail === `default` || normalizedTail === `clear`) return true;
-  if (!/^\d+(\.\d+)?$/.test(normalizedTail)) return false;
+  if (!/^\d+(\.\d+)?$/u.test(normalizedTail)) return false;
   const parsedValue = Number(normalizedTail);
   return Number.isFinite(parsedValue) && parsedValue >= 0 && parsedValue <= 1;
 }
@@ -682,7 +682,7 @@ function closeAiChipbar() {
 
 function focusTerminalInput(term) {
   try {
-    if (term && typeof term.focus === `function`) term.focus();
+    if (typeof term?.focus === `function`) term.focus();
   } catch (focusError) {
     console.warn(`terminal refocus skipped: ${focusError.message}`);
   }
@@ -781,8 +781,8 @@ function chipbarProgressHandler() {
   const progressNode = document.querySelector(`#${AI_CHIPBAR_ID} .ai-chip-progress`);
   if (!progressNode) return null;
   return (progressEvent) => {
-    const fileLabel = progressEvent && progressEvent.file ? String(progressEvent.file) : `model`;
-    const rawProgress = progressEvent ? Number(progressEvent.progress) : NaN;
+    const fileLabel = progressEvent?.file ? String(progressEvent.file) : `model`;
+    const rawProgress = Number(progressEvent?.progress);
     const percentText = Number.isFinite(rawProgress) ? ` ${Math.round(rawProgress)}%` : ``;
     progressNode.textContent = `Downloading ${fileLabel}${percentText} — cached after first fetch`;
   };
@@ -803,7 +803,7 @@ function renderAiModeChipbar(term, chipOptions) {
   const hostNode = findTerminalHost();
   if (!hostNode || !hostNode.parentNode || typeof document === `undefined`) return;
   closeAiChipbar();
-  const showSizes = Boolean(chipOptions && chipOptions.showSizes);
+  const showSizes = Boolean(chipOptions?.showSizes);
   const barNode = document.createElement(`div`);
   barNode.id = AI_CHIPBAR_ID;
   barNode.setAttribute(`role`, `group`);
