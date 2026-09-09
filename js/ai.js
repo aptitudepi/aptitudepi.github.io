@@ -841,6 +841,20 @@ function renderAiModeChipbar(term, chipOptions) {
   if (firstButton) firstButton.focus();
 }
 
+// Container busy-state for the AI run: the thinking orb (role=status) and
+// its adjacent Downloading/Generating terminal lines carry the state text;
+// aria-busy on the terminal container tells assistive tech the region is
+// being updated. DOM-only — terminal transcript strings are untouched.
+function setTerminalBusy(busyOn) {
+  try {
+    if (typeof document === `undefined`) return;
+    const containerNode = document.getElementById(`terminal-container`);
+    if (containerNode) containerNode.setAttribute(`aria-busy`, busyOn ? `true` : `false`);
+  } catch (busyError) {
+    console.warn(`ai busy state skipped: ${busyError.message}`);
+  }
+}
+
 async function runAiGeneration(targetPrompt, term, runSignal) {
   if (aiGenerationInflight) {
     term.writeln(`\x1b[2mai retry blocked — ai generation already in flight (no parallel cloud request)\x1b[0m`);
@@ -848,6 +862,7 @@ async function runAiGeneration(targetPrompt, term, runSignal) {
   }
   aiGenerationInflight = true;
   const promptSnapshot = String(targetPrompt);
+  setTerminalBusy(true);
   // A generation starting means any held picker prompt was superseded (the
   // choice paths take it before calling here), so sweep leftovers: a later
   // `ai 1|2|3` mode switch must never replay a stale prompt.
@@ -911,6 +926,7 @@ async function runAiGeneration(targetPrompt, term, runSignal) {
     }
   } finally {
     aiGenerationInflight = false;
+    setTerminalBusy(false);
   }
 }
 

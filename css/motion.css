@@ -1,0 +1,255 @@
+/* css/motion.css — WAVE 11 calm visual hierarchy + single motion policy.
+ *
+ * Calm default: ZERO infinite CSS animations. Every always-on cycle below
+ * (text colour cycling, glitch, aura drift, nav clock, glow loops, spinning
+ * borders) is demoted to a static resting state. This file beats the home
+ * stylesheets by prefixing every override with `html`, so no home file needs
+ * restructuring.
+ *
+ * Expressive opt-in: the full ambient set is restored only under
+ *   @media (prefers-reduced-motion: no-preference)
+ *   html[data-motion="on"][data-expressive="full"]
+ * (see js/motion.js — ?expressive=1, localStorage dvxb.expressive, or
+ * window.setExpressive(true)). Reduced motion always wins over the opt-in.
+ *
+ * Kill-switch: `html[data-motion="off"]` (set by js/motion.js on
+ * prefers-reduced-motion, saveData / slow-2g, or manual ?motion=off) freezes
+ * every CSS animation instantly — including mid-session flips, well under a
+ * second. The same blanket applies under prefers-reduced-motion: reduce for
+ * user agents without the JS policy. JS rAF loops (orb, topo, particles,
+ * favicon, resume pulse) park via the onMotionChange subscription instead —
+ * CSS cannot reach them.
+ *
+ * Kept systems (thermal portrait, particle sim, topology field, orb, CRT,
+ * devmode, matrix Easter egg) are canvas/rAF or static by nature; the matrix
+ * overlay stays strictly opt-in (terminal `matrix` command or the konami
+ * gesture) and stops itself when motion flips off mid-session.
+ */
+
+/* ── A. Calm defaults: demote always-on cycling to static ─────────── */
+
+/* RGB-split glitch ran forever on the crumb + terminal title. Now it only
+   answers a hover/focus on the crumb (the title is pointer-events:none, so
+   its glitch lives on through the expressive opt-in only). */
+html .doc-nav-crumb::before,
+html .doc-nav-crumb::after,
+html .terminal-title::before,
+html .terminal-title::after {
+  animation: none;
+  opacity: 0;
+}
+html .doc-nav-crumb:hover::before,
+html .doc-nav-crumb:focus-visible::before {
+  animation: docGlitch1 5s infinite;
+}
+html .doc-nav-crumb:hover::after,
+html .doc-nav-crumb:focus-visible::after {
+  animation: docGlitch2 4.7s infinite;
+}
+
+/* Continuous blue↔red text cycling → static resting ink. */
+html .gradient-text,
+html .section-header h2,
+html .section-divider,
+html .nav-dot.active,
+html #nav-dialog a:hover,
+html #nav-dialog a.active,
+html .spotlight-card,
+html .project-link,
+html .bento-card,
+html .view-more-cta a,
+html .view-more-cta a:hover,
+html .cert-badge,
+html .resume-download a,
+html .resume-download a:hover,
+html .social-link {
+  animation-name: none;
+}
+html #nav-dialog a:hover,
+html #nav-dialog a.active {
+  color: var(--color-text);
+}
+
+/* Glow loops → the resting (0% keyframe) shadow, frozen. */
+html .nav-dot.active {
+  box-shadow: 0 0 12px oklch(0.45 0.31 264 / 0.35);
+}
+html .view-more-cta a,
+html .cert-badge,
+html .resume-download a {
+  box-shadow: 0 0 24px oklch(0.45 0.31 264 / 0.35);
+}
+html .view-more-cta a:hover,
+html .resume-download a:hover {
+  box-shadow: 0 0 40px oklch(0.45 0.31 264 / 0.35);
+}
+
+/* Ambient aura drift → parked (the radial washes stay put, statically). */
+html [data-auras="1"]::before,
+html [data-auras="2"]::before,
+html [data-auras="2"]::after,
+html [data-auras="3"]::before,
+html [data-auras="3"]::after {
+  animation: none;
+}
+
+/* The nav-bar colour clock (--nav-cycle) → frozen at rest blue. Orb tint,
+   thermal flare and topo sync all read the same frozen value, so the whole
+   page holds one static hue instead of drifting. */
+html .doc-nav {
+  animation: none;
+}
+
+/* Spinning conic border on the about frame → static gradient. */
+html .about-image .frame::before {
+  animation: none;
+}
+
+/* Instant jumps while the policy is off: smooth scrolling is motion too. */
+html[data-motion="off"] {
+  scroll-behavior: auto;
+}
+
+/* ── B. Focus + tap equivalents for every hover-only reveal ──────────
+ * Hover glows/lifts now answer keyboard focus (focus-within on the card
+ * when its inner link takes focus, focus-visible on links/badges) and the
+ * .is-tapped class js/animations.js sets from touchstart/focus. Finite
+ * feedback, so it stays available under the kill-switch too. */
+
+html .spotlight-card:focus-within,
+html .spotlight-card.is-tapped {
+  border-color: currentColor;
+}
+html .spotlight-card:focus-within::before,
+html .spotlight-card.is-tapped::before {
+  opacity: 1;
+}
+html .spotlight-card:focus-within::after,
+html .spotlight-card.is-tapped::after {
+  opacity: 0.25;
+}
+html .bento-card:focus-within,
+html .bento-card.is-tapped {
+  border-color: currentColor;
+  box-shadow: 0 0 0 1px currentColor, 0 4px 24px currentColor;
+}
+html .bento-card:focus-within::after,
+html .bento-card.is-tapped::after {
+  opacity: 0.2;
+}
+html .cert-badge:focus-visible {
+  transform: translateY(-3px);
+  border-color: currentColor;
+}
+html .cert-badge:focus-visible::after {
+  opacity: 0.2;
+}
+html .social-link:focus-visible {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  transform: translateY(-2px);
+}
+html .project-link:focus-visible {
+  gap: var(--space-3);
+}
+html .view-more-cta a:focus-visible,
+html .resume-download a:focus-visible {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  box-shadow: 0 0 40px oklch(0.45 0.31 264 / 0.35);
+}
+html .nav-dot:focus-visible {
+  color: var(--color-text-muted);
+  background: color-mix(in oklch, var(--color-primary-dim) 50%, transparent);
+}
+html .bento-card .github-link:focus-visible {
+  color: currentColor;
+}
+
+/* ── C. Kill-switch: freeze every CSS animation, instantly ───────────
+ * Blanket + !important by design: this must win over every present and
+ * future infinite animation the moment the policy flips off mid-session.
+ * Finite transitions are untouched (they complete, they do not cycle).
+ * The loader spinner (.cyber-loader) also parks here — its adjacent text
+ * label (see task 3) carries the loading state instead. */
+
+html[data-motion="off"] *,
+html[data-motion="off"] *::before,
+html[data-motion="off"] *::after {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+  }
+}
+
+/* ── D. Expressive opt-in: restore the ambient set ───────────────────
+ * Only when the OS has no reduced-motion preference AND the policy is on
+ * AND the user explicitly opted in. Every rule mirrors the home-file
+ * declaration it re-enables, so opting out returns to the exact calm
+ * resting states from section A. */
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"][data-expressive="full"] .doc-nav {
+    animation: navCycle 6s ease-in-out infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .doc-nav-crumb::before {
+    animation: docGlitch1 5s infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .doc-nav-crumb::after {
+    animation: docGlitch2 4.7s infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .terminal-title::before {
+    animation: docGlitch1 5s infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .terminal-title::after {
+    animation: docGlitch2 4.7s infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .gradient-text,
+  html[data-motion="on"][data-expressive="full"] .section-header h2 {
+    animation: blueRedDrift 6s ease-in-out infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .section-divider,
+  html[data-motion="on"][data-expressive="full"] #nav-dialog a:hover,
+  html[data-motion="on"][data-expressive="full"] #nav-dialog a.active,
+  html[data-motion="on"][data-expressive="full"] .spotlight-card,
+  html[data-motion="on"][data-expressive="full"] .project-link,
+  html[data-motion="on"][data-expressive="full"] .bento-card,
+  html[data-motion="on"][data-expressive="full"] .social-link {
+    animation: blueRedColor 6s ease-in-out infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .nav-dot.active {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow12 6s ease-in-out infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .view-more-cta a,
+  html[data-motion="on"][data-expressive="full"] .cert-badge,
+  html[data-motion="on"][data-expressive="full"] .resume-download a {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .view-more-cta a:hover,
+  html[data-motion="on"][data-expressive="full"] .resume-download a:hover {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] [data-auras="1"]::before {
+    animation: auraFloat 8s ease-in-out infinite alternate;
+  }
+  html[data-motion="on"][data-expressive="full"] [data-auras="2"]::before {
+    animation: auraFloat 10s ease-in-out infinite alternate;
+  }
+  html[data-motion="on"][data-expressive="full"] [data-auras="2"]::after {
+    animation: auraFloat 12s ease-in-out infinite alternate-reverse;
+  }
+  html[data-motion="on"][data-expressive="full"] [data-auras="3"]::before {
+    animation: auraFloat 9s ease-in-out infinite alternate;
+  }
+  html[data-motion="on"][data-expressive="full"] [data-auras="3"]::after {
+    animation: auraFloat 11s ease-in-out infinite alternate-reverse;
+  }
+  html[data-motion="on"][data-expressive="full"] .about-image .frame::before {
+    animation: spinGradient 4s linear infinite;
+  }
+}

@@ -1,3 +1,5 @@
+import { onMotionChange } from './motion.js';
+
 const canvas = document.getElementById('matrix-rain');
 const ctx = canvas.getContext('2d');
 
@@ -18,6 +20,18 @@ function resize() {
 function dismiss() {
   if (!active) return;
   stopMatrixRain();
+}
+
+// Adjacent readable text for the overlay state (role=status lives on
+// #matrix-status in the markup): the rain is never animation-alone.
+function describeMatrixState(runningNow) {
+  const statusNode = document.getElementById('matrix-status');
+  if (!statusNode) return;
+  if (runningNow) {
+    statusNode.textContent = 'Matrix rain effect running full-screen. Press Escape to exit.';
+  } else {
+    statusNode.textContent = 'Matrix rain effect off.';
+  }
 }
 
 function animate() {
@@ -50,6 +64,8 @@ export function startMatrixRain(onPause, onResume) {
   if (active) return;
   active = true;
   canvas.classList.add('active');
+  canvas.setAttribute('aria-hidden', 'false');
+  describeMatrixState(true);
   pauseParticles = onPause || null;
   resumeParticles = onResume || null;
 
@@ -71,6 +87,8 @@ export function stopMatrixRain() {
   if (!active) return;
   active = false;
   canvas.classList.remove('active');
+  canvas.setAttribute('aria-hidden', 'true');
+  describeMatrixState(false);
   if (animId) cancelAnimationFrame(animId);
   animId = null;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -89,3 +107,10 @@ function onKey(e) {
 export function isMatrixActive() {
   return active;
 }
+
+// Strictly opt-in (terminal `matrix` command or the konami gesture — never
+// auto-started): a mid-session motion-off flip dismisses the overlay instead
+// of raining against the user's reduced-motion / data-saver need.
+onMotionChange((motionOff) => {
+  if (motionOff) dismiss();
+});

@@ -1,8 +1,11 @@
+import { isMotionOK } from './motion.js';
+
 let isAnimatingScroll = false;
 const navStartTime = Date.now();
 
-const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const noAnim = () => prefersReduced || typeof anime === 'undefined';
+// Live gate on the single motion policy (js/motion.js) — read per call, so
+// mid-session flips (and saveData / slow-2g) take effect without a reload.
+const noAnim = () => isMotionOK() === false || typeof anime === 'undefined';
 
 function initNav() {
   initMobileToggle();
@@ -72,7 +75,9 @@ function scrollToSection(id) {
       });
       setTimeout(() => { isAnimatingScroll = false; }, 1300);
     } else {
-      window.scrollTo({ top: y, behavior: 'smooth' });
+      // Instant while the motion policy is off: an explicit smooth scroll
+      // would animate against the user's reduced-motion need.
+      window.scrollTo({ top: y, behavior: 'auto' });
       setTimeout(() => { isAnimatingScroll = false; }, 400);
     }
   };

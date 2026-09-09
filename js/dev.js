@@ -59,9 +59,10 @@ function parseColor(c) {
   return [d[0] / 255, d[1] / 255, d[2] / 255];
 }
 
-/* Reduced-motion query is declared up front: initTopolines consults it when
-   kicking the color-sync loop, so it must exist before first init runs. */
-const reduceMq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+/* The motion policy query lives in js/motion.js: initTopolines consults the
+   live gate when kicking the color-sync loop, and the subscription below
+   parks the loop on a static blue when the policy flips off mid-session. */
+import { isMotionOK, onMotionChange as subscribeMotionChange } from './motion.js';
 
 function initTopolines() {
   log('initTopolines called, retry #', initTopolines._retries);
@@ -105,7 +106,7 @@ function initTopolines() {
   if (topo.setParticleInfluence) topo.setParticleInfluence(1);
   const readyParticleCanvas = window.ParticleDev?.getParticleCanvas?.();
   if (readyParticleCanvas && topo.setParticleTex) topo.setParticleTex(readyParticleCanvas);
-  if (!rafId && !reduceMq?.matches) tickColorSync();
+  if (!rafId && isMotionOK()) tickColorSync();
 }
 initTopolines._retries = 0;
 
@@ -203,21 +204,24 @@ window.TopoDev = {
   },
 };
 
-/* ── Reduced-motion ──────────────────────────── */
+/* ── Motion policy ─────────────────────────── */
 
-function onMotionChange() {
-  if (reduceMq?.matches) {
-    log('prefers-reduced-motion ON → pushing blue');
+function handleMotionPolicy(motionOff) {
+  if (motionOff) {
+    log('motion policy OFF → pushing blue');
     cancelAnimationFrame(rafId);
     rafId = 0;
     topo?.setOptions({ color: '#0000ff' });
   } else {
     lastColor = '';
-    if (!rafId) tickColorSync();
+    // The subscription notifies immediately on attach (before TopoField
+    // exists); only (re)start the loop once there is a field to drive —
+    // initTopolines kicks it for the boot case.
+    if (topo && !rafId) tickColorSync();
   }
 }
 
-reduceMq?.addEventListener('change', onMotionChange);
+subscribeMotionChange(handleMotionPolicy);
 
 /* ── Visibility ──────────────────────────────── */
 

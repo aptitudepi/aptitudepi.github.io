@@ -19,10 +19,7 @@
  * theirs, this module only owns the scalar.
  */
 
-const reduceMq =
-  typeof window !== 'undefined' && window.matchMedia
-    ? window.matchMedia('(prefers-reduced-motion: reduce)')
-    : null;
+import { isMotionOK, onMotionChange } from './motion.js';
 
 /* ── Initial device estimate ───────────────── */
 
@@ -53,7 +50,9 @@ function readRenderer() {
 // Map the assorted device signals to a starting quality in [0, 1]. This is a
 // guess, not a verdict — the live loop corrects it within a second or two.
 function estimate() {
-  if (reduceMq && reduceMq.matches) return 0;
+  // The single motion policy (js/motion.js) owns the reduced-motion +
+  // saveData / slow-2g decision; a motion-off boot starts at the floor.
+  if (!isMotionOK()) return 0;
 
   const r = readRenderer();
   let gpu = 0.55; // unknown GPU → middle of the road
@@ -384,9 +383,9 @@ function tick(ts) {
 
 function start() {
   if (running) return;
-  // Reduced-motion users are pinned at 0 and get no live loop — there is
+  // Motion-off users are pinned at 0 and get no live loop — there is
   // nothing running for it to measure or rebalance.
-  if (reduceMq && reduceMq.matches) {
+  if (!isMotionOK()) {
     setQuality(0);
     return;
   }
@@ -407,15 +406,15 @@ if (typeof document !== 'undefined') {
     if (document.visibilityState === 'hidden') stop();
     else start();
   });
-  reduceMq?.addEventListener('change', () => {
-    if (reduceMq.matches) {
+  onMotionChange((motionOff) => {
+    if (motionOff) {
       stop();
       setQuality(0);
     } else {
       quality = estimate();
       lastNotified = quality;
       // Re-resolve URL/stored pins so a manual choice survives the
-      // reduced-motion round-trip; auto re-applies hint drops on the fresh
+      // motion-off round-trip; auto re-applies hint drops on the fresh
       // estimate. Notifies only when re-pinning (same no-op as before in auto).
       resolveBootOverride();
       start();

@@ -260,6 +260,11 @@ export function initGitHubStats() {
   const host = document.querySelector('[data-github-stats]');
   if (!host) return;
 
+  // Loading state language: the heatmap/radar canvases are never bare —
+  // .gh-heatmap and .gh-radar carry aria-labels and .gh-totals is a live
+  // region — and the container reports busy until the refresh lands.
+  host.setAttribute('aria-busy', 'true');
+
   // Immediate render from cache or baseline fallback
   const cached = readCache();
   const fallbackContrib = generateFallbackContributions();
@@ -283,5 +288,6 @@ export function initGitHubStats() {
     renderRadar(host, finalRadar);
 
     writeCache({ contributions: finalContrib, radar: finalRadar });
+    host.setAttribute('aria-busy', 'false');
   });
 }

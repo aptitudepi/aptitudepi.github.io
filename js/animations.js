@@ -1,18 +1,58 @@
-const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const noAnim = () => prefersReduced || typeof anime === 'undefined';
+import { isMotionOK, onMotionChange } from './motion.js';
+
+// Live gate on the single motion policy (js/motion.js): prefers-reduced-motion,
+// saveData / slow-2g, or a manual override. Never snapshotted — mid-session
+// flips re-settle through the onMotionChange subscription in initAnimations.
+const noAnim = () => isMotionOK() === false || typeof anime === 'undefined';
+
+let resumePulseHandle = null;
+let magneticEnabled = true;
+let animatedBooted = false;
 
 function initAnimations() {
   initStatFlow();
+  initResumePulse();
+  // Fires immediately with the current state, so boot and every mid-session
+  // flip settle through the same path: off parks everything statically, on
+  // boots the animated layers once and resumes them afterwards.
+  onMotionChange((motionOff) => {
+    if (motionOff) {
+      settleMotionState(true);
+      return;
+    }
+    bootAnimatedLayers();
+    settleMotionState(false);
+  });
+}
 
-  if (noAnim()) {
-    document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
-    document.querySelectorAll('.spotlight-card, .bento-card, .cert-badge, .social-link, .section-header, .about-text').forEach(el => {
-      el.style.opacity = '1';
-      el.style.transform = 'none';
-    });
-    return;
+// Parks (motion off) or resumes (motion on) the ambient JS effects. The CSS
+// kill-switch (html[data-motion="off"], see css/motion.css) freezes the
+// declarative cycles instantly; this settles what CSS cannot reach: the
+// resume-button pulse loop, the magnetic headings flag, and every reveal
+// target that an IntersectionObserver has not reached yet.
+function settleMotionState(motionOff) {
+  magneticEnabled = motionOff === false;
+  if (resumePulseHandle && typeof resumePulseHandle.pause === 'function' && typeof resumePulseHandle.play === 'function') {
+    if (motionOff) {
+      resumePulseHandle.pause();
+    } else {
+      resumePulseHandle.play();
+    }
   }
+  if (motionOff) {
+    document.querySelectorAll('.reveal').forEach((revealNode) => {
+      revealNode.classList.add('visible');
+    });
+    document.querySelectorAll('.spotlight-card, .bento-card, .cert-badge, .social-link, .section-header, .about-text').forEach((settleNode) => {
+      settleNode.style.opacity = '1';
+      settleNode.style.transform = 'none';
+    });
+  }
+}
 
+function bootAnimatedLayers() {
+  if (animatedBooted) return;
+  animatedBooted = true;
   initMotionIntegration();
   initScrollProgress();
   initHeroTimeline();
@@ -24,7 +64,6 @@ function initAnimations() {
   initSocialHover();
   initCertHover();
   initProjectLinkHover();
-  initResumePulse();
   initMagneticText();
   initParticleBurst();
 }
@@ -169,45 +208,101 @@ function initRevealObserver() {
 }
 
 function initCardTracking() {
-  const tilt = (nx, ny) => ({ rx: ny * -6, ry: nx * 6 });
+  const tiltFor = (normX, normY) => ({ tiltX: normY * -6, tiltY: normX * 6 });
 
-  document.querySelectorAll('.spotlight-card, .bento-card, .cert-badge').forEach(card => {
-    let gx = 0, gy = 0, tx = 0, ty = 0;
-    let rx = 0, ry = 0, trx = 0, trY = 0;
-    let raf = null;
-    const noTilt = card.classList.contains('bento-card') || card.classList.contains('cert-badge');
+  document.querySelectorAll('.spotlight-card, .bento-card, .cert-badge').forEach((trackedCard) => {
+    let glowX = 0, glowY = 0, targetGlowX = 0, targetGlowY = 0;
+    let tiltX = 0, tiltY = 0, targetTiltX = 0, targetTiltY = 0;
+    let frameHandle = null;
+    const skipTilt = trackedCard.classList.contains('bento-card') || trackedCard.classList.contains('cert-badge');
 
-    const tick = () => {
-      gx += (tx - gx) * 0.18;
-      gy += (ty - gy) * 0.18;
-      rx += (trx - rx) * 0.18;
-      ry += (trY - ry) * 0.18;
-      card.style.setProperty('--gx', gx.toFixed(1));
-      card.style.setProperty('--gy', gy.toFixed(1));
-      if (!noTilt) {
-        card.style.transform = `perspective(900px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateY(-2px)`;
+    const tickTrack = () => {
+      glowX += (targetGlowX - glowX) * 0.18;
+      glowY += (targetGlowY - glowY) * 0.18;
+      tiltX += (targetTiltX - tiltX) * 0.18;
+      tiltY += (targetTiltY - tiltY) * 0.18;
+      trackedCard.style.setProperty('--gx', glowX.toFixed(1));
+      trackedCard.style.setProperty('--gy', glowY.toFixed(1));
+      // Tilt is pointer flourish: parked while the motion policy is off (the
+      // glow position above still updates — it is finite feedback, and the
+      // matching :focus-visible/.is-tapped CSS keeps keyboard and touch
+      // users on the same visual language).
+      if (!skipTilt && isMotionOK()) {
+        trackedCard.style.transform = `perspective(900px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) translateY(-2px)`;
       }
-      const done = Math.abs(gx - tx) < 0.3 && Math.abs(gy - ty) < 0.3 && (noTilt || (Math.abs(rx) < 0.05 && Math.abs(ry) < 0.05));
-      if (done) { raf = null; return; }
-      raf = requestAnimationFrame(tick);
+      const settledGlow = Math.abs(glowX - targetGlowX) < 0.3 && Math.abs(glowY - targetGlowY) < 0.3;
+      const settledTilt = skipTilt || isMotionOK() === false || (Math.abs(tiltX) < 0.05 && Math.abs(tiltY) < 0.05);
+      if (settledGlow && settledTilt) { frameHandle = null; return; }
+      frameHandle = requestAnimationFrame(tickTrack);
     };
 
-    card.addEventListener('mousemove', e => {
-      const rect = card.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      card.style.setProperty('--mx', `${mx}px`);
-      card.style.setProperty('--my', `${my}px`);
-      tx = mx; ty = my;
-      const { rx: rxv, ry: ryv } = tilt((mx / rect.width) * 2 - 1, (my / rect.height) * 2 - 1);
-      trx = rxv; trY = ryv;
-      if (!raf) raf = requestAnimationFrame(tick);
+    const kickTrack = () => {
+      if (!frameHandle) frameHandle = requestAnimationFrame(tickTrack);
+    };
+
+    trackedCard.addEventListener('mousemove', (hoverEvent) => {
+      const cardRect = trackedCard.getBoundingClientRect();
+      const pointerX = hoverEvent.clientX - cardRect.left;
+      const pointerY = hoverEvent.clientY - cardRect.top;
+      trackedCard.style.setProperty('--mx', `${pointerX}px`);
+      trackedCard.style.setProperty('--my', `${pointerY}px`);
+      targetGlowX = pointerX; targetGlowY = pointerY;
+      const tiltPair = tiltFor((pointerX / cardRect.width) * 2 - 1, (pointerY / cardRect.height) * 2 - 1);
+      targetTiltX = tiltPair.tiltX; targetTiltY = tiltPair.tiltY;
+      kickTrack();
     });
 
-    card.addEventListener('mouseleave', () => {
-      tx = -250; ty = -250;
-      trx = 0; trY = 0;
-      if (!raf) raf = requestAnimationFrame(tick);
+    trackedCard.addEventListener('mouseleave', () => {
+      targetGlowX = -250; targetGlowY = -250;
+      targetTiltX = 0; targetTiltY = 0;
+      trackedCard.style.transform = '';
+      trackedCard.classList.remove('is-tapped');
+      kickTrack();
+    });
+
+    // Keyboard + touch equivalents of the hover reveal: focusing a card's
+    // inner link (or tapping the card) centres the glow and raises the same
+    // .is-tapped treatment the CSS :focus-within rules paint.
+    const showCenterGlow = () => {
+      const cardRect = trackedCard.getBoundingClientRect();
+      const centerX = cardRect.width / 2;
+      const centerY = cardRect.height / 2;
+      trackedCard.style.setProperty('--mx', `${centerX}px`);
+      trackedCard.style.setProperty('--my', `${centerY}px`);
+      targetGlowX = centerX; targetGlowY = centerY;
+      targetTiltX = 0; targetTiltY = 0;
+      trackedCard.classList.add('is-tapped');
+      kickTrack();
+    };
+
+    trackedCard.addEventListener('focusin', () => {
+      showCenterGlow();
+    });
+
+    trackedCard.addEventListener('focusout', () => {
+      trackedCard.classList.remove('is-tapped');
+    });
+
+    trackedCard.addEventListener('touchstart', (touchEvent) => {
+      const firstTouch = touchEvent.touches ? touchEvent.touches[0] : null;
+      if (firstTouch) {
+        const cardRect = trackedCard.getBoundingClientRect();
+        const touchX = firstTouch.clientX - cardRect.left;
+        const touchY = firstTouch.clientY - cardRect.top;
+        trackedCard.style.setProperty('--mx', `${touchX}px`);
+        trackedCard.style.setProperty('--my', `${touchY}px`);
+        targetGlowX = touchX; targetGlowY = touchY;
+      } else {
+        showCenterGlow();
+        return;
+      }
+      targetTiltX = 0; targetTiltY = 0;
+      trackedCard.classList.add('is-tapped');
+      kickTrack();
+    }, { passive: true });
+
+    trackedCard.addEventListener('touchend', () => {
+      trackedCard.classList.remove('is-tapped');
     });
   });
 }
@@ -305,9 +400,9 @@ function initProjectLinkHover() {
 }
 
 function initResumePulse() {
-  const btn = document.querySelector('.resume-download a');
-  if (!btn) return;
-  anime.animate(btn, {
+  const resumeButton = document.querySelector('.resume-download a');
+  if (!resumeButton || typeof anime === 'undefined') return;
+  resumePulseHandle = anime.animate(resumeButton, {
     boxShadow: [
       '0 0 24px var(--color-primary-glow)',
       '0 0 40px var(--color-primary-glow)',
@@ -317,13 +412,22 @@ function initResumePulse() {
     loop: true,
     ease: 'inOut(2)',
   });
+  // A motion-off boot still owns the handle so a later mid-session flip to
+  // motion-on can resume the same loop instead of stacking a second one.
+  if (!isMotionOK() && resumePulseHandle && typeof resumePulseHandle.pause === 'function') {
+    resumePulseHandle.pause();
+  }
 }
 
 function initMagneticText() {
-  document.querySelectorAll('[data-magnetic]').forEach(el => {
+  // Magnetic pull is kept for actions only (buttons/links): non-action
+  // headings no longer carry data-magnetic in the markup, and this selector
+  // refuses to re-enlarge the set if one ever slips back in.
+  document.querySelectorAll('a[data-magnetic], button[data-magnetic]').forEach(el => {
     let raf = null, targetX = 0, targetY = 0, curX = 0, curY = 0;
     const maxDist = 30;
     el.addEventListener('mousemove', e => {
+      if (!magneticEnabled) return;
       const rect = el.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
