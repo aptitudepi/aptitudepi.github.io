@@ -224,6 +224,7 @@ html[data-motion="off"] *::after {
   html[data-motion="on"][data-expressive="full"] .gradient-text,
   html[data-motion="on"][data-expressive="full"] .section-header h2 {
     animation: blueRedDrift 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
   }
   html[data-motion="on"][data-expressive="full"] .section-divider,
   html[data-motion="on"][data-expressive="full"] #nav-dialog a:hover,
@@ -282,6 +283,30 @@ html[data-motion="off"] *::after {
   }
   html[data-motion="on"] #contact .section-header h2 {
     animation: blueRedDrift 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+}
+
+/* ── E2. All section titles restore ────────────────────────────
+ * The calm demotion parked every h2 except Contact; restore the main-line
+ * rule (css/base.css .section-header h2, blueRedDrift) for ALL section
+ * titles in the same shared phase. Same gates as section E: static under
+ * reduced-motion (gate + kill-switch + reduce blanket). */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] .section-header h2 {
+    animation: blueRedDrift 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+}
+
+/* ── E3. Mode-pill colorcycle sync ─────────────────────────────
+ * The shell|linux pill by the terminal crumb cycles its text ink on the
+ * same 6s clock + shared phase as the nav/h2 cycles (blueRedColor, the
+ * same keyframes the cards and links use). Resting shell/linux colors
+ * show whenever motion is off. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] #mode-pill {
+    animation: blueRedColor 6s ease-in-out infinite;
     animation-delay: var(--cycle-phase, 0s);
   }
 }
