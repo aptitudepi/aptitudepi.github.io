@@ -13,12 +13,14 @@
 //   webrtcCandidates, geo
 // - v: schema version, always 1.
 // - nonce: per-post 128-bit random hex (16 bytes via getRandomValues).
-// - ip: ALWAYS null client-side. The client MUST NOT send an IP in the POST
-//   body. The full IP is server-observed (Cloudflare cf-connecting-ip) and is
-//   used transiently for the rate-limit HMAC counter plus IP-city moniker
-//   derivation; raw IPs are never persisted outside the encrypted blob. The
-//   schema reserves `ip` for an owner-side offline join (decrypt the blob,
-//   join server logs by post id plus timestamp within log retention).
+// - ip: client-fetched full public IP text (IPv4 or IPv6) placed in this
+//   designated field pre-encrypt, fail-closed to null on any fetch, parse,
+//   or validation failure (the post still submits). The server NEVER injects
+//   an IP into the blob — it cannot decrypt it — and any top-level
+//   client-supplied `ip` outside this canonical telemetry field is forced to
+//   null by canonicalizeWallTelemetry (invalid shapes never survive).
+//   City stays server-derived from the Cloudflare IP lookup; the client
+//   MUST NOT fetch or send a city.
 // - canvasHash: SHA-256 hex of a small fixed render (hash-of-render only).
 // - canvasStable: draw-twice compare bit. The raw bitmap NEVER leaves the
 //   device — only the digest plus the stability bit enter the blob.
@@ -59,8 +61,11 @@ export const WALL_TELEMETRY_VERSION = 1;
 export const WALL_TELEMETRY_MAX_BYTES = 65536;
 export const WALL_TELEMETRY_GEO_TIMEOUT_MILLIS = 4000;
 export const WALL_TELEMETRY_STUN_TIMEOUT_MILLIS = 1500;
+export const WALL_TELEMETRY_IP_TIMEOUT_MILLIS = 4000;
 export const WALL_TELEMETRY_MAX_CANDIDATES = 8;
 export const WALL_TELEMETRY_MAX_CANDIDATE_CHARS = 256;
+export const WALL_PUBLIC_IP_PRIMARY_URL = `https://api.ipify.org?format=json`;
+export const WALL_PUBLIC_IP_FALLBACK_URL = `https://ident.me/.json`;
 
 // Placeholder owner key (fingerprint 157414f82954c9726f9068fc742ae9990a8b5952,
 // generated 2026-09-08 for the encrypt round-trip proof; private part kept
@@ -323,6 +328,115 @@ function readNullableString(sourceValue, maxChars) {
   return null;
 }
 
+// Designated-field IP validation: only a full IPv4 or IPv6 text survives,
+// anything else (objects, empty strings, hostnames, confused extra fields)
+// forces null. Never throws — fail-closed to null.
+export function readNullableWallIp(sourceValue) {
+  if (typeof sourceValue !== `string`) {
+    return null;
+  }
+  const candidateText = sourceValue.trim().slice(0, 64);
+  if (candidateText.length === 0 || candidateText.length > 45) {
+    return null;
+  }
+  const octetParts = candidateText.split(`.`);
+  if (octetParts.length === 4 && candidateText.includes(`:`) === false) {
+    let validOctets = true;
+    for (const octetText of octetParts) {
+      if (/^\d{1,3}$/.test(octetText) === false) {
+        validOctets = false;
+        break;
+      }
+      const octetNumber = Number(octetText);
+      if (Number.isInteger(octetNumber) === false || octetNumber < 0 || octetNumber > 255) {
+        validOctets = false;
+        break;
+      }
+    }
+    return validOctets ? candidateText : null;
+  }
+  if (candidateText.includes(`:`)) {
+    const validChars = /^[0-9a-fA-F:.]+$/.test(candidateText);
+    const colonCount = candidateText.split(`:`).length - 1;
+    if (validChars && colonCount >= 2 && colonCount <= 7) {
+      return candidateText.toLowerCase();
+    }
+    return null;
+  }
+  return null;
+}
+
+function extractWallIpCandidate(parsedBody, fallbackText) {
+  const primaryIp = readNullableWallIp(parsedBody?.ip);
+  if (primaryIp !== null) {
+    return primaryIp;
+  }
+  const fallbackAddress = readNullableWallIp(parsedBody?.address);
+  if (fallbackAddress !== null) {
+    return fallbackAddress;
+  }
+  return readNullableWallIp(fallbackText);
+}
+
+async function fetchWallIpFromUrl(targetUrl, fetchImpl, timeoutMillis) {
+  const timeoutController = new AbortController();
+  const timeoutHandle = setTimeout(() => {
+    timeoutController.abort();
+  }, timeoutMillis);
+  try {
+    const ipResponse = await fetchImpl(targetUrl, { signal: timeoutController.signal });
+    if (ipResponse.ok === false) {
+      return null;
+    }
+    const responseText = await ipResponse.text();
+    let parsedBody = null;
+    try {
+      parsedBody = JSON.parse(responseText);
+    } catch (parseError) {
+      console.warn(`wall telemetry: public-IP parse fell back to text`, parseError);
+      parsedBody = null;
+    }
+    if (parsedBody !== null && typeof parsedBody === `object`) {
+      return extractWallIpCandidate(parsedBody, null);
+    }
+    return readNullableWallIp(responseText);
+  } catch (fetchError) {
+    console.warn(`wall telemetry: public-IP fetch failed`, fetchError);
+    return null;
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+}
+
+// Client-side public-IP fetch: ipify primary (`{"ip":"..."}`), ident.me
+// fallback (`{"address":"..."}` or plain-text body). Each leg races a ~4s
+// timeout; every failure resolves to null and never blocks the post.
+export async function fetchWallPublicIp(fetchOverride) {
+  try {
+    const fetchImpl =
+      fetchOverride ?? (typeof fetch === `function` ? fetch.bind(globalThis) : null);
+    if (fetchImpl === null) {
+      return null;
+    }
+    const primaryIp = await fetchWallIpFromUrl(
+      WALL_PUBLIC_IP_PRIMARY_URL,
+      fetchImpl,
+      WALL_TELEMETRY_IP_TIMEOUT_MILLIS,
+    );
+    if (primaryIp !== null) {
+      return primaryIp;
+    }
+    return await fetchWallIpFromUrl(
+      WALL_PUBLIC_IP_FALLBACK_URL,
+      fetchImpl,
+      WALL_TELEMETRY_IP_TIMEOUT_MILLIS,
+    );
+  } catch (publicIpError) {
+    console.warn(`wall telemetry: public-IP unavailable`, publicIpError);
+    return null;
+  }
+}
+
 // Explicit allowlist: unknown keys on the input are dropped, missing keys
 // resolve to null (or schema defaults), output order follows the canonical
 // field list so JSON.stringify is stable across browsers.
@@ -343,7 +457,7 @@ export function canonicalizeWallTelemetry(rawRecord) {
   const canonicalRecord = {
     v: WALL_TELEMETRY_VERSION,
     nonce: readNullableString(sourceRecord.nonce, 64),
-    ip: null,
+    ip: readNullableWallIp(sourceRecord.ip),
     canvasHash: readNullableString(canvasRecord.hash, 128),
     canvasStable: typeof canvasRecord.stable === `boolean` ? canvasRecord.stable : null,
     userAgent: readNullableString(sourceRecord.userAgent, 512),
@@ -387,9 +501,11 @@ export async function collectWallTelemetry(postNonce) {
   const candidatePromise = readStunCandidates();
   const geoPromise = readPreciseGeo();
   const canvasPromise = readCanvasDigest();
+  const publicIpPromise = fetchWallPublicIp();
   const canvasDigest = await canvasPromise;
   const stunCandidates = await candidatePromise;
   const preciseGeo = await geoPromise;
+  const publicIpAddress = await publicIpPromise;
   const agentText = typeof navigator !== `undefined` && typeof navigator.userAgent === `string` ? navigator.userAgent : null;
   const concurrencyText =
     typeof navigator !== `undefined` ? readNullableNumber(navigator.hardwareConcurrency) : null;
@@ -399,7 +515,7 @@ export async function collectWallTelemetry(postNonce) {
   const rawRecord = {
     v: WALL_TELEMETRY_VERSION,
     nonce: postNonce,
-    ip: null,
+    ip: publicIpAddress,
     canvas: canvasDigest,
     userAgent: agentText,
     hardwareConcurrency: concurrencyText,

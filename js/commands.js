@@ -789,13 +789,19 @@ function stripAnsi(value) {
 }
 
 // WAVE 9a guestbook foundation: moniker display shape (no collection yet).
-// Wave 9b assembles the canonical moniker server-side at POST (city derived
-// from IP, slug plus sanitize server-side, random-handle fallback, never
-// trusts a client-sent moniker field). Until then the existing name field is
-// mapped here: a name already shaped like visitor@city-slug renders as-is,
+// Wave 9b assembles the canonical moniker server-side at POST as
+// visitor-<maskedip>@<city> (IPv4 first two octets e.g. 203.0.xx.xx, IPv6
+// first hextet e.g. 2001:xx, never a full IP; visitor-<maskedip>@handle or
+// visitor@handle fallback when the city is unknown, never trusting a
+// client-sent moniker field). Until then the existing name field is mapped
+// here: a masked moniker or legacy visitor@city-slug renders as-is,
 // anything else renders as visitor@<slug-of-name> (visitor@anonymous empty).
 function formatWallMoniker(displayName) {
   const rawText = String(displayName ?? '').trim().toLowerCase();
+  const maskedShape = /^visitor-[0-9a-z.:]{1,32}@[a-z0-9-]{1,32}$/.test(rawText);
+  if (maskedShape) {
+    return rawText.slice(0, 64);
+  }
   if (rawText.includes('@')) {
     return rawText.slice(0, 48);
   }
@@ -1374,15 +1380,19 @@ async function runWallCommand(term, args, runSignal) {
     // browser to the owner's public key (fail-closed — any throw drops the
     // telemetry blob and the public post still submits). openpgp loads lazily
     // here, after validation, so the initial bundle never carries it.
+    // Disclosure budget: exactly ONE submit-time line covers the public plus
+    // encrypted-to-owner intent and the optional-location rationale. The
+    // telemetry failure path stays silent in-terminal (console.warn only),
+    // so both success and failure cost one line total (max two on failure).
+    term.writeln(`${SITE_MUTED}Entries are public; device signals are encrypted to the owner for abuse prevention (location only with permission; denying still posts).${ANSI_RESET}`);
     let armoredTelemetry = null;
     try {
       const telemetryModule = await import(`./wall-telemetry.js`);
-      term.writeln(`${SITE_MUTED}Precise location is optional (regional abuse prevention only) — the browser may ask permission; denying still posts.${ANSI_RESET}`);
       const telemetryRecord = await telemetryModule.collectWallTelemetry(telemetryModule.newWallNonce());
       const canonicalText = JSON.stringify(telemetryRecord);
       armoredTelemetry = await telemetryModule.encryptWallTelemetry(canonicalText, telemetryModule.wallTelemetryVendorUrl());
     } catch (telemetryError) {
-      term.writeln(`${SITE_FAINT}Continuing without device signals (${stripAnsi(telemetryError.message)}).${ANSI_RESET}`);
+      console.warn(`wall telemetry skipped`, telemetryError);
       armoredTelemetry = null;
     }
     const postResp = await fetch('https://0.supernovadkb.workers.dev/wall', {
@@ -1404,7 +1414,6 @@ async function runWallCommand(term, args, runSignal) {
           term.writeln(`${SITE_MUTED}Browser storage blocked the delete-token backup; keep the token above.${ANSI_RESET}`);
         }
       }
-      term.writeln(`${SITE_MUTED}Note: entries are public; device signals are encrypted to the owner for abuse prevention.${ANSI_RESET}`);
     } else {
       term.writeln(`${SITE_ERR}Failed to post: ${postData.error || 'Unknown error'}${ANSI_RESET}`);
       term.writeln(`${SITE_MUTED}Next: retry \`wall <message>\` or run \`wall\` to read the wall${ANSI_RESET}`);

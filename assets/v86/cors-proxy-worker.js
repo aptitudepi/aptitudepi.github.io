@@ -16,9 +16,12 @@ const CORS_HEADERS = {
 };
 
 // WAVE 9a guestbook foundation: server-side name sanitize plus slug helpers.
-// WAVE 9b: the moniker is assembled server-side at POST (city derived from
-// the Cloudflare IP lookup, slug plus sanitize server-side, random-handle
-// fallback, never trusts a client-sent moniker field).
+// WAVE 9b: the moniker is assembled server-side at POST as
+// visitor-<maskedip>@<city> (IPv4 first two octets e.g. 203.0.xx.xx, IPv6
+// first hextet e.g. 2001:xx, never a full IP; city from the Cloudflare IP
+// lookup slug plus sanitize server-side, visitor-<maskedip>@<random-handle>
+// or visitor@<random-handle> fallback when the city is unknown, never
+// trusting a client-sent moniker/name/ip field).
 // WAVE 9b guestbook private telemetry: owner-eyes-only encrypted blob plus
 // sanitized public copy. Transport is POST {name, message, gpg} where gpg is
 // the browser-encrypted armored blob (or null when client collection failed).
@@ -238,6 +241,44 @@ function sanitizeWallName(rawName) {
   return slugText.slice(0, 40);
 }
 
+// Masked-IP segment for the public moniker: IPv4 keeps the first two
+// octets (203.0.xx.xx), IPv6 keeps the first hextet (2001:xx). Returns null
+// when the observed IP is missing or unparsable, so the moniker falls back
+// to the bare visitor@... shape. A full IP never enters the moniker.
+function maskWallIp(observedIp) {
+  const candidateText = String(observedIp ?? ``).trim().toLowerCase().slice(0, 64);
+  if (candidateText.length === 0) {
+    return null;
+  }
+  const octetParts = candidateText.split(`.`);
+  if (octetParts.length === 4 && candidateText.includes(`:`) === false) {
+    const octetNumbers = [];
+    for (const octetText of octetParts) {
+      if (/^\d{1,3}$/.test(octetText) === false) {
+        return null;
+      }
+      const octetNumber = Number(octetText);
+      if (Number.isInteger(octetNumber) === false || octetNumber < 0 || octetNumber > 255) {
+        return null;
+      }
+      octetNumbers.push(String(octetNumber));
+    }
+    return `${octetNumbers[0]}.${octetNumbers[1]}.xx.xx`;
+  }
+  if (candidateText.includes(`:`)) {
+    if (/^[0-9a-f:.]+$/.test(candidateText) === false) {
+      return null;
+    }
+    const hextetParts = candidateText.split(`:`);
+    const firstHextet = String(hextetParts[0] ?? ``).replace(/[^0-9a-f]/g, ``).slice(0, 4);
+    if (firstHextet.length === 0) {
+      return null;
+    }
+    return `${firstHextet}:xx`;
+  }
+  return null;
+}
+
 async function handleRequest(request, env, ctx) {
   // Block unauthorized origins
   const origin = request.headers.get('Origin');
@@ -400,10 +441,12 @@ async function handleRequest(request, env, ctx) {
         // WAVE 9b guestbook: no AI replies, no approval queue
         // (post-moderation stance), keep-forever (no TTL on the KV put
         // below), no archival job, no email field anywhere. The public copy
-        // is anonymous-by-design: any body.moniker sent by a client is
-        // ignored on purpose and body.name is never persisted — the moniker
-        // is assembled server-side as visitor@city-slug (city from the
-        // Cloudflare IP lookup) with a visitor@random-handle fallback.
+        // is anonymous-by-design: any body.moniker or body.name sent by a
+        // client is ignored on purpose (the moniker is assembled server-side
+        // as visitor-<maskedip>@<city-slug> with a random-handle fallback),
+        // and any top-level body.ip is likewise ignored — the client puts
+        // its fetched IP only inside the encrypted telemetry blob, which
+        // this worker never parses or decrypts.
         const observedIp = request.headers.get('cf-connecting-ip') || '';
         const requestAgent = request.headers.get('user-agent') || '';
         let limitedVisitor = false;
@@ -426,7 +469,11 @@ async function handleRequest(request, env, ctx) {
 
         const cloudCity = request.cf && typeof request.cf.city === 'string' ? request.cf.city : '';
         const citySlug = slugWallSegment(cloudCity);
-        const monikerName = citySlug ? `visitor@${citySlug}`.slice(0, 48) : `visitor@${wallRandomHandle()}`;
+        const maskedIp = maskWallIp(observedIp);
+        const visitorPrefix = maskedIp === null ? `visitor` : `visitor-${maskedIp}`;
+        const monikerName = citySlug
+          ? `${visitorPrefix}@${citySlug}`.slice(0, 64)
+          : `${visitorPrefix}@${wallRandomHandle()}`;
 
         // Post shape: { id, name, message, timestamp }. Stored legacy posts
         // keep their aiReply field until overwritten; clients no longer read
@@ -625,4 +672,4 @@ export default {
   }
 };
 
-export { slugWallSegment, sanitizeWallName };
+export { slugWallSegment, sanitizeWallName, maskWallIp };
