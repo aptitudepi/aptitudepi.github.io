@@ -34,7 +34,9 @@
   .social-link { opacity: 1; }
   .spotlight-card::before, .spotlight-card:hover::before,
   .spotlight-card::after, .spotlight-card:hover::after,
-  .bento-card::after, .bento-card:hover::after { opacity: 0; transition: none; }
+  .bento-card::after, .bento-card:hover::after,
+  .cert-badge::before, .cert-badge:hover::before,
+  .cert-badge::after, .cert-badge:hover::after { opacity: 0; transition: none; }
   .cert-badge:hover, .spotlight-card:hover, .bento-card:hover { transform: none; }
   .about-image .frame { animation: none; }
   .section-header h2 { animation: none; background-size: 100% 100%; }

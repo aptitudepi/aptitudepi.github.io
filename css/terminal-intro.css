@@ -41,17 +41,6 @@
   background-position: center;
 }
 
-.terminal-intro-poster-text {
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  line-height: 1.7;
-  color: var(--color-text-muted);
-}
-
-.terminal-intro-poster.has-frame .terminal-intro-poster-text {
-  opacity: 0;
-}
-
 .terminal-intro-gl {
   position: absolute;
   inset: 0;

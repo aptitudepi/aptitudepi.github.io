@@ -113,10 +113,9 @@
   gap: 8px;
 }
 .guided-button {
-  /* Download-resume button language, terminal-chrome scale: glass fill,
+  /* Pill-button language, terminal-chrome scale: glass fill,
      transparent border resolving to currentColor on hover, pill radius,
-     primary ink, glow-lift hover. Same tokens as .resume-download a
-     (css/components.css), smaller mono metrics for the guided row. */
+     primary ink, glow-lift hover. Smaller mono metrics for the guided row. */
   background: var(--color-glass);
   border: 1px solid transparent;
   color: var(--color-primary);

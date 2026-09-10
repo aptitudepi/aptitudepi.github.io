@@ -18,7 +18,7 @@
  * every CSS animation instantly — including mid-session flips, well under a
  * second. The same blanket applies under prefers-reduced-motion: reduce for
  * user agents without the JS policy. JS rAF loops (orb, topo, particles,
- * favicon, resume pulse) park via the onMotionChange subscription instead —
+ * favicon) park via the onMotionChange subscription instead —
  * CSS cannot reach them.
  *
  * Kept systems (thermal portrait, particle sim, topology field, orb, CRT,
@@ -66,8 +66,6 @@ html .bento-card,
 html .view-more-cta a,
 html .view-more-cta a:hover,
 html .cert-badge,
-html .resume-download a,
-html .resume-download a:hover,
 html .social-link {
   animation-name: none;
 }
@@ -81,12 +79,10 @@ html .nav-dot.active {
   box-shadow: 0 0 12px oklch(0.45 0.31 264 / 0.35);
 }
 html .view-more-cta a,
-html .cert-badge,
-html .resume-download a {
+html .cert-badge {
   box-shadow: 0 0 24px oklch(0.45 0.31 264 / 0.35);
 }
-html .view-more-cta a:hover,
-html .resume-download a:hover {
+html .view-more-cta a:hover {
   box-shadow: 0 0 40px oklch(0.45 0.31 264 / 0.35);
 }
 
@@ -164,8 +160,7 @@ html .social-link:focus-visible {
 html .project-link:focus-visible {
   gap: var(--space-3);
 }
-html .view-more-cta a:focus-visible,
-html .resume-download a:focus-visible {
+html .view-more-cta a:focus-visible {
   border-color: currentColor;
   background: color-mix(in srgb, currentColor 18%, transparent);
   box-shadow: 0 0 40px oklch(0.45 0.31 264 / 0.35);
@@ -239,12 +234,11 @@ html[data-motion="off"] *::after {
     animation: blueRedColor 6s ease-in-out infinite, blueRedGlow12 6s ease-in-out infinite;
   }
   html[data-motion="on"][data-expressive="full"] .view-more-cta a,
-  html[data-motion="on"][data-expressive="full"] .cert-badge,
-  html[data-motion="on"][data-expressive="full"] .resume-download a {
+  html[data-motion="on"][data-expressive="full"] .cert-badge {
     animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
   }
-  html[data-motion="on"][data-expressive="full"] .view-more-cta a:hover,
-  html[data-motion="on"][data-expressive="full"] .resume-download a:hover {
+  html[data-motion="on"][data-expressive="full"] .view-more-cta a:hover {
     animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
   }
   html[data-motion="on"][data-expressive="full"] [data-auras="1"]::before {
@@ -325,6 +319,10 @@ html[data-motion="off"] *::after {
   html[data-motion="on"] .spotlight-card,
   html[data-motion="on"] .bento-card {
     animation: blueRedColor 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] .cert-badge {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
     animation-delay: var(--cycle-phase, 0s);
   }
   html[data-motion="on"] .project-link {
