@@ -699,10 +699,13 @@ function mountNavOrb() {
   const group = canvas.closest('a');
 
   const cycleColor = () => {
-    // Under the motion policy the bar clock is parked, so both mark and
-    // wordmark hold rest blue instead of a moving hue.
-    if (!isMotionOK() || !bar) return CYCLE_STATIC;
-    return getComputedStyle(bar).getPropertyValue('--nav-cycle').trim() || CYCLE_STATIC;
+    // Scoped logo clock (motion.css section G): the bar stays parked for
+    // calm, while the wordmark link carries its own navCycle clock so the
+    // mark + hover wordmark cycle without reviving the global wave.
+    if (!isMotionOK()) return CYCLE_STATIC;
+    const cycleSource = group || bar;
+    if (!cycleSource) return CYCLE_STATIC;
+    return getComputedStyle(cycleSource).getPropertyValue('--nav-cycle').trim() || CYCLE_STATIC;
   };
 
   const orb = attachOrb(canvas, 'solving', {

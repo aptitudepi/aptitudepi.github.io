@@ -143,12 +143,18 @@ html .bento-card:focus-within::after,
 html .bento-card.is-tapped::after {
   opacity: 0.2;
 }
-html .cert-badge:focus-visible {
-  transform: translateY(-3px);
+html .cert-badge:focus-visible,
+html .cert-badge.is-tapped {
+  transform: translateY(-2px);
   border-color: currentColor;
 }
-html .cert-badge:focus-visible::after {
-  opacity: 0.2;
+html .cert-badge:focus-visible::before,
+html .cert-badge.is-tapped::before {
+  opacity: 1;
+}
+html .cert-badge:focus-visible::after,
+html .cert-badge.is-tapped::after {
+  opacity: 0.25;
 }
 html .social-link:focus-visible {
   border-color: currentColor;
@@ -298,6 +304,35 @@ html[data-motion="off"] *::after {
   }
   html[data-motion="on"] .project-link {
     animation: blueRedColor 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] .view-more-cta a {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] .view-more-cta a:hover,
+  html[data-motion="on"] .view-more-cta a:focus-visible {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+}
+
+/* ── G. Scoped logo/wordmark colorcycle ────────────────────
+ * Diagnosis: the visual-calm wave parked the global clock via
+ *   html .doc-nav { animation: none; }  (motion.css section A)
+ * so --nav-cycle froze at rest blue and js/orb.js held CYCLE_STATIC for
+ * both the mark and the hover wordmark. Main ran
+ *   .doc-nav { animation: navCycle 6s ease-in-out infinite; }
+ * with .doc-nav-home:hover { color: var(--nav-cycle); } + orb tint from
+ * the live clock (ambient mark, hover wordmark).
+ * Restore scoped: the bar stays parked (calm holds for topo/thermal),
+ * while the wordmark link carries its own navCycle clock. js/orb.js reads
+ * the link first (group || bar) so the lattice + hover paint stay locked
+ * to the same scoped ink. Gated like sections E/F: static when motion is
+ * off (gate + kill-switch + reduce blanket). */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] .doc-nav-home {
+    animation: navCycle 6s ease-in-out infinite;
     animation-delay: var(--cycle-phase, 0s);
   }
 }
