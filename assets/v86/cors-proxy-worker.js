@@ -44,7 +44,7 @@ const CORS_HEADERS = {
 // anywhere. Delete tokens are random 128-bit values returned once at submit;
 // the server stores ONLY a salted SHA-256 hash beside the public record and
 // verifies deletes without decrypting the blob.
-const WALL_OWNER_KEY_FINGERPRINT = `157414f82954c9726f9068fc742ae9990a8b5952`;
+const WALL_OWNER_KEY_FINGERPRINT = `7301fa8f5d533ef7940695fcdfc72721be0bdde2`;
 const WALL_POSTS_MAX = 50;
 const WALL_MESSAGE_MAX = 280;
 const WALL_LINK_MAX = 2;

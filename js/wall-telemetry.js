@@ -78,27 +78,23 @@ export const WALL_PUBLIC_IP_PRIMARY_URL = `https://api.ipify.org?format=json`;
 // field and the coarse `geo` field, so no second geo request ever fires.
 export const WALL_PUBLIC_IP_FALLBACK_URL = `https://ident.me/json`;
 
-// Placeholder owner key (fingerprint 157414f82954c9726f9068fc742ae9990a8b5952,
-// generated 2026-09-08 for the encrypt round-trip proof; private part kept
-// out of the repo). The site owner MUST generate a dedicated keypair offline,
-// replace this block with the real armored public key, and keep the private
-// key local-only (see tools/wall-admin.mjs).
+// Owner key: Devkumar Banerjee <supernovadkb@gmail.com> (assets/gpg.asc).
+// Primary fingerprint 7301fa8f5d533ef7940695fcdfc72721be0bdde2 (ed25519,
+// no expiry); encryption subkey cv25519 [E]. The private key is never
+// committed (see tools/wall-admin.mjs).
 export const WALL_OWNER_PUBLIC_KEY_ARMOR = `-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: SKS 1.1.6
+Comment: Hostname: pgp.mit.edu
 
-xjMEaqBsLxYJKwYBBAHaRw8BAQdAFkRutMXYE0Q5rJ+XxX6zLK7PhJBJW2fQ
-QtesBjebV4nNK2R2eGIuaW8gZ3Vlc3Rib29rIHRlbGVtZXRyeSA8b3duZXJA
-ZHZ4Yi5pbz7CwBMEExYKAIUFgmqgbC8DCwkHCRB0KumZCotZUkUUAAAAAAAc
-ACBzYWx0QG5vdGF0aW9ucy5vcGVucGdwanMub3JnvLoSI4DObn2wgPxyRWw2
-5M74dP8J3G+DYy/ll4UiqjcFFQoIDgwEFgACAQIZAQKbAwIeARYhBBV0FPgp
-VMlyb5Bo/HQq6ZkKi1lSAADFOwEAxdmGzPN+FCsWBstSAKhNi+Har4wnRGRE
-wxOfiOFqlwQA/iLAXgqqa+wNXwzrAGWh5Ml2DR0mzHYL6K2A6bMNQLkBzjgE
-aqBsLxIKKwYBBAGXVQEFAQEHQGlnzKwiNukufREEe7gOF/+CoGRTQ5LhDI6S
-LlclZ8UjAwEIB8K+BBgWCgBwBYJqoGwvCRB0KumZCotZUkUUAAAAAAAcACBz
-YWx0QG5vdGF0aW9ucy5vcGVucGdwanMub3JnG4ukL2J2RaX4xtsuF34qgcE0
-h794ecmTF+DmD50Dre0CmwwWIQQVdBT4KVTJcm+QaPx0KumZCotZUgAAy4cA
-/icdcXOZvVKyaJSRRwDDaUi6C6gHOvxC1qwdoF7zIsC1AQDwgQKhzAArEwem
-bQRtL50Jb0+hoBeIr9OEKd0fNc8XAw==
-=qZ+X
+mDMEY82JmBYJKwYBBAHaRw8BAQdA0c0T9Bzf0AfAEXmq1/5UhV+F7a14DsURVpJ/qCgTqIC0
+KkRldmt1bWFyIEJhbmVyamVlIDxzdXBlcm5vdmFka2JAZ21haWwuY29tPoiQBBMWCAA4FiEE
+cwH6j11TPveUBpX838cnIb4L3eIFAmPNiZgCGyMFCwkIBwIGFQoJCAsCBBYCAwECHgECF4AA
+CgkQ38cnIb4L3eKpBwEA0P/uVlNbuyBQC8VF4S7jUb62VfkJ8u2j9Gk82X9oJzcA/39Z4Vgp
+0JtNv2vR2n9gAlPIp9yFReXpVAPXnvmcmgADuDgEY82JmBIKKwYBBAGXVQEFAQEHQJviL/2g
+XbNBtcrtAfRy8FOB6UPC/Z6YsWWDobq8/JB6AwEIB4h4BBgWCAAgFiEEcwH6j11TPveUBpX8
+38cnIb4L3eIFAmPNiZgCGwwACgkQ38cnIb4L3eL61gEAi4wxg13h5woxLw7N0GnWihFnKEsJ
+wiCtASW41lwxNhIA+wcnwPthrChxN2bMKYuybg4Pxl0x7L/FxjSmg1HeVV0M
+=BAT7
 -----END PGP PUBLIC KEY BLOCK-----`;
 
 const WALL_TELEMETRY_FIELD_ORDER = [

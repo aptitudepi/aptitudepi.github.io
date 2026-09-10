@@ -43,6 +43,12 @@ const HEIGHT = 240; // CSS px height for the sparse-noise fallback mode
 // before the nav bar mounts). Kept as a dim neutral so the field still flares.
 const CYCLE_FALLBACK = [205, 214, 244];
 
+// Resting-brightness gain for the ANSI portrait. The decoded true colors
+// carry deep shadows (~20-60) that read muddy on the dark terminal pane; a
+// 1.10 lift keeps every hue intact (uniform per-channel scale) while each
+// channel clamps at 255 so near-white highlights cannot blow out.
+const PORTRAIT_BRIGHTNESS_GAIN = 1.1;
+
 function getPalette() {
   const dark = document.documentElement.dataset.theme === "dark";
   // base: quiet glyph ink. hot: filled live from --nav-cycle each frame; the
@@ -248,9 +254,12 @@ export function initThermalAscii(canvas, options = {}) {
             const cellInfo = rowCells[c] || { glyph: ' ', r: 0, g: 0, b: 0 };
             const i = r * COLS + c;
             glyphs[i] = cellInfo.glyph;
-            baseColors[i * 3] = cellInfo.r;
-            baseColors[i * 3 + 1] = cellInfo.g;
-            baseColors[i * 3 + 2] = cellInfo.b;
+            const gainedRed = Math.min(255, cellInfo.r * PORTRAIT_BRIGHTNESS_GAIN);
+            const gainedGreen = Math.min(255, cellInfo.g * PORTRAIT_BRIGHTNESS_GAIN);
+            const gainedBlue = Math.min(255, cellInfo.b * PORTRAIT_BRIGHTNESS_GAIN);
+            baseColors[i * 3] = gainedRed;
+            baseColors[i * 3 + 1] = gainedGreen;
+            baseColors[i * 3 + 2] = gainedBlue;
             field[i] = cellInfo.glyph === ' ' ? 0 : 1;
           }
         }
