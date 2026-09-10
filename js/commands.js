@@ -41,6 +41,20 @@ const SITE_OK = ansiRGB(60, 200, 120);
 const SITE_ERR = ansiRGB(220, 80, 100);
 const SITE_LABEL = ansiRGB(80, 140, 250);
 
+// Dynamic terminal host identity: the shell resolves the visitor's own
+// public IP (v4 preferred, v6 fallback) and publishes it here. Every
+// host-named surface (prompt, neofetch header, hostname, uname) reads the
+// getter at render time, so snapshots (network-blocked) deterministically
+// keep the dvxb.io fallback while live sessions show the real IP.
+const TERMINAL_HOST_FALLBACK = 'dvxb.io';
+let terminalHost = TERMINAL_HOST_FALLBACK;
+function getTerminalHost() { return terminalHost; }
+function setTerminalHost(nextHost) {
+  if (typeof nextHost === 'string' && nextHost.trim().length > 0) {
+    terminalHost = nextHost.trim();
+  }
+}
+
 // WAVE 13 shared boot script: the static establishing-shot lines. Each entry
 // carries { text, fill } where fill reuses the palette constants above. The
 // live boot path (js/shell.js bootSequence) and the 3D intro texture painter
@@ -546,6 +560,20 @@ function getBlueRedPhase() {
   return [Math.round(mix * 255), 0, Math.round((1 - mix) * 255)];
 }
 
+// Phase-sampled info-label ink for the neofetch/about rows. Same 6s
+// blue-red clock as the nav/h2 colorcycle (shared --cycle-phase delay on
+// the CSS side), sampled once per render since terminal bytes are static.
+// Each channel is floored at 120 so every label holds >=4.9:1 contrast on
+// the near-black terminal at every point of the sweep; values keep their
+// existing static colors.
+function infoLabelColor() {
+  const phaseChannels = getBlueRedPhase();
+  const redChan = Math.max(120, phaseChannels[0]);
+  const greenChan = Math.max(120, phaseChannels[1]);
+  const blueChan = Math.max(120, phaseChannels[2]);
+  return ansiRGB(redChan, greenChan, blueChan);
+}
+
 // The ASCII portrait duplicated the thermal column, so it is hidden by
 // default (the info block, color blocks and every command still work).
 // Set to `true` to restore the classic terminal portrait in neofetch/boot.
@@ -581,7 +609,7 @@ function neofetch(term) {
   const blockCol = Math.max(visibleLen(tryText), visibleLen(helpHintText)) + 3;
 
   const infoLines = [
-    { label: '', value: `${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET}` },
+    { label: '', value: `${ANSI_BOLD}${SITE_WHITE}db@${getTerminalHost()}${ANSI_RESET}` },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
     { label: 'Name', value: `Devkumar Banerjee` },
     { label: 'Education', value: `BS CS, Texas A&M (2029)` },
@@ -597,6 +625,11 @@ function neofetch(term) {
     { label: '', value: `${helpHintText}${' '.repeat(blockCol - visibleLen(helpHintText))}${blocks2}` },
   ];
 
+  // The info labels share one phase-sampled ink per render (see
+  // infoLabelColor): same clock as the nav/h2 colorcycle, floored for
+  // contrast. Values stay static-colored by design.
+  const labelInk = infoLabelColor();
+
   if (SHOW_TERMINAL_ART) {
     for (let index = 0; index < Math.max(artHeight + 2, infoLines.length + 2); index++) {
       const line = ASCII_ART[index] || '';
@@ -605,7 +638,7 @@ function neofetch(term) {
       let infoPart = '';
       if (infoIdx >= 0 && infoIdx < infoLines.length) {
         const info = infoLines[infoIdx];
-        infoPart = `${' '.repeat(gap)}${info.label ? `${SITE_LABEL}${info.label}${ANSI_RESET}: ` : ''}${info.value}`;
+        infoPart = `${' '.repeat(gap)}${info.label ? `${labelInk}${info.label}${ANSI_RESET}: ` : ''}${info.value}`;
       }
       term.writeln(coloredArt + infoPart);
     }
@@ -613,9 +646,9 @@ function neofetch(term) {
     // Portrait hidden — a blank spacer separates the boot log from the banner,
     // then the compact info block follows.
     term.writeln('');
-    term.writeln(`${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET}`);
+    term.writeln(`${ANSI_BOLD}${SITE_WHITE}db@${getTerminalHost()}${ANSI_RESET}`);
     for (const info of infoLines.slice(1)) {
-      term.writeln(`${info.label ? `${SITE_LABEL}${info.label}${ANSI_RESET}: ` : ''}${info.value}`);
+      term.writeln(`${info.label ? `${labelInk}${info.label}${ANSI_RESET}: ` : ''}${info.value}`);
     }
   }
 
@@ -1014,7 +1047,7 @@ async function runWhoamiCommand(term, args, runSignal) {
   return;
 }
 async function runHostnameCommand(term, args, runSignal) {
-  term.writeln(`${SITE_CYAN}dvxb.io${ANSI_RESET}`);
+  term.writeln(`${SITE_CYAN}${getTerminalHost()}${ANSI_RESET}`);
   return;
 }
 async function runDateCommand(term, args, runSignal) {
@@ -1027,7 +1060,7 @@ async function runUptimeCommand(term, args, runSignal) {
 }
 async function runUnameCommand(term, args, runSignal) {
   if (args.includes('-a')) {
-    term.writeln(`${SITE_WHITE}Linux dvxb.io 7.x-LTS #1 dvxb v2 x86_64 GNU/Linux${ANSI_RESET}`);
+    term.writeln(`${SITE_WHITE}Linux ${getTerminalHost()} 7.x-LTS #1 dvxb v2 x86_64 GNU/Linux${ANSI_RESET}`);
   } else {
     term.writeln(`${SITE_WHITE}Linux${ANSI_RESET}`);
   }
@@ -2540,7 +2573,7 @@ export {
   ASCII_ART, vfs, RESUME, CMD_HISTORY, SHOW_TERMINAL_ART, neofetch, uptimeStr,
   ansiRGB, stripAnsi, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE,
   SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS,
-  BOOT_SCRIPT,
+  BOOT_SCRIPT, TERMINAL_HOST_FALLBACK, getTerminalHost, setTerminalHost,
   COMMAND_REGISTRY, resolveCommand, suggestCommand, tokenizeCommandLine,
   COMMAND_COMPLETION_NAMES, TOOL_ALLOWLIST_NAMES, TOOL_ALLOWLIST_BARE_ONLY,
   NEOFETCH_TRY_COMMANDS, isAiCommandName, renderMan, setPrefetchedLocation,

@@ -4,6 +4,7 @@ import {
   neofetch, SITE_GREEN, SITE_WHITE, SITE_CYAN, SITE_BLUE, SITE_MUTED, SITE_OK,
   SITE_ERR, SITE_FAINT, ANSI_RESET, resolveCommand, suggestCommand,
   tokenizeCommandLine, setPrefetchedLocation, recordCommandOutput, BOOT_SCRIPT,
+  TERMINAL_HOST_FALLBACK, getTerminalHost, setTerminalHost,
 } from './commands.js';
 
 let asyncCPU = null;
@@ -89,10 +90,119 @@ function getGPU() {
   return 'Unknown';
 }
 
+// ── Dynamic host identity (visitor public IP) ─────────────────────
+// v4/v6-aware resolution for the terminal prompt and host-named output:
+// ipify legs first, ident.me 4./6. legs next, tnedi.me fallback. Each leg
+// races a short timeout; every failure resolves null and the prompt keeps
+// the dvxb.io fallback (fail-closed). Resolved once per page session and
+// cached on the module promise, so later prompts and commands read the
+// same host without refetching. Full IP in the prompt by design; only the
+// guestbook moniker is masked (see formatWallMoniker in commands.js).
+const HOST_FETCH_TIMEOUT_MILLIS = 4000;
+const HOST_IP_JSON_ENDPOINTS = [
+  'https://api.ipify.org?format=json',
+  'https://api64.ipify.org?format=json',
+  'https://api6.ipify.org?format=json',
+];
+const HOST_IP_TEXT_ENDPOINTS = [
+  'https://4.ident.me/',
+  'https://6.ident.me/',
+  'https://tnedi.me/',
+];
+
+function readIPv4Candidate(rawValue) {
+  const candidateText = String(rawValue ?? '').trim();
+  const quadMatch = candidateText.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/u);
+  if (quadMatch === null) return null;
+  const octetList = quadMatch.slice(1).map((octetText) => Number(octetText));
+  const octetsValid = octetList.every((octetValue) => Number.isInteger(octetValue) && octetValue >= 0 && octetValue <= 255);
+  return octetsValid ? candidateText : null;
+}
+
+function readIPv6Candidate(rawValue) {
+  const candidateText = String(rawValue ?? '').trim();
+  if (candidateText.includes(':') === false) return null;
+  const colonTotal = (candidateText.match(/:/gu) ?? []).length;
+  if (colonTotal < 2) return null;
+  if (/^[0-9a-fA-F:.]+$/u.test(candidateText) === false) return null;
+  return candidateText;
+}
+
+async function fetchHostCandidate(endpointUrl, expectJson) {
+  try {
+    const hostResp = await fetch(endpointUrl, { signal: combinedTimeoutSignal(null, HOST_FETCH_TIMEOUT_MILLIS) });
+    if (hostResp.ok === false) return null;
+    if (expectJson) {
+      const hostPayload = await hostResp.json();
+      return typeof hostPayload.ip === 'string' ? hostPayload.ip.trim() : null;
+    }
+    return (await hostResp.text()).trim();
+  } catch (hostError) {
+    console.warn(`host identity leg skipped (${endpointUrl}): ${hostError.message}`);
+    return null;
+  }
+}
+
+let hostFetchPromise = null;
+function fetchTerminalHost() {
+  if (hostFetchPromise !== null) return hostFetchPromise;
+  hostFetchPromise = (async () => {
+    try {
+      const jsonLegs = HOST_IP_JSON_ENDPOINTS.map((endpointUrl) => fetchHostCandidate(endpointUrl, true));
+      const textLegs = HOST_IP_TEXT_ENDPOINTS.map((endpointUrl) => fetchHostCandidate(endpointUrl, false));
+      const legResults = await Promise.all([...jsonLegs, ...textLegs]);
+      const ipv4Hits = [];
+      const ipv6Hits = [];
+      for (const legResult of legResults) {
+        const ipv4Text = readIPv4Candidate(legResult);
+        if (ipv4Text !== null) {
+          ipv4Hits.push(ipv4Text);
+          continue;
+        }
+        const ipv6Text = readIPv6Candidate(legResult);
+        if (ipv6Text !== null) ipv6Hits.push(ipv6Text);
+      }
+      if (ipv4Hits.length > 0) return ipv4Hits[0];
+      if (ipv6Hits.length > 0) return ipv6Hits[0];
+      return null;
+    } catch (resolveError) {
+      console.warn(`host identity unavailable: ${resolveError.message}`);
+      return null;
+    }
+  })();
+  return hostFetchPromise;
+}
+
+// Window-title sync: the chrome title and the tab title track the resolved
+// host once known. Static markup keeps the dvxb.io fallback so first paint
+// and blocked-network snapshots stay byte-identical.
+function syncHostChrome(resolvedHost) {
+  try {
+    if (typeof document === 'undefined') return;
+    const chromeTitle = document.querySelector('.terminal-title');
+    const titleText = `db@${resolvedHost} — fish 3.7`;
+    if (chromeTitle) {
+      chromeTitle.textContent = titleText;
+      chromeTitle.setAttribute('data-text', titleText);
+    }
+    document.title = titleText;
+  } catch (chromeError) {
+    console.warn(`host chrome sync skipped: ${chromeError.message}`);
+  }
+}
+
+fetchTerminalHost()
+  .then((resolvedHost) => {
+    if (resolvedHost === null || resolvedHost === TERMINAL_HOST_FALLBACK) return;
+    setTerminalHost(resolvedHost);
+    syncHostChrome(resolvedHost);
+  })
+  .catch((applyError) => { console.warn(`host identity apply skipped: ${applyError.message}`); });
+
 let BOOT_MSGS = null;
 
 function writePrompt(term) {
-  term.write(`\r\n${SITE_GREEN}db${ANSI_RESET}${SITE_WHITE}@${ANSI_RESET}${SITE_CYAN}dvxb.io${ANSI_RESET}${SITE_MUTED} ${ANSI_RESET}${SITE_BLUE}~${ANSI_RESET}${SITE_MUTED}❯ ${ANSI_RESET}`);
+  term.write(`\r\n${SITE_GREEN}db${ANSI_RESET}${SITE_WHITE}@${ANSI_RESET}${SITE_CYAN}${getTerminalHost()}${ANSI_RESET}${SITE_MUTED} ${ANSI_RESET}${SITE_BLUE}~${ANSI_RESET}${SITE_MUTED}❯ ${ANSI_RESET}`);
 }
 
 // The foreground runner owns every post-completion prompt: shell registers
@@ -107,7 +217,7 @@ function bootSequence(term, onDone) {
     // shared BOOT_SCRIPT constant so the transcript and the 3D intro texture
     // painter read the same source. Order and colors are unchanged.
     const dynamicLines = [
-      { text: `[    0.000000] Booting dvxb.io...`, color: SITE_FAINT },
+      { text: `[    0.000000] Booting ${getTerminalHost()}...`, color: SITE_FAINT },
       { text: `[    0.004201] CPU: ${cpu} Genuine`, color: SITE_FAINT },
       { text: `[    0.008503] GPU: ${getGPU()}`, color: SITE_FAINT },
       { text: `[  OK  ] System clock: ${new Date().toLocaleTimeString()}`, color: SITE_OK },
