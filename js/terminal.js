@@ -241,7 +241,7 @@ function submitBufferLine() {
 function cleanPastedLine(rawLine) {
   const trimmedLine = String(rawLine).replace(/^\s+/, '').replace(/\s+$/, '');
   const promptPatterns = [
-    /^db@dvxb\.io.*❯\s*/,
+    /^db@\S+.*❯\s*/u,
     /^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+:[^#$]*[#$]\s*/,
     /^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+\s+[#$]\s*/,
     /^\$[ \t]+/,
@@ -429,6 +429,8 @@ function handleInput(data) {
 }
 
 function createTerminal(container) {
+  placeModePillByCrumb();
+  setMode(mode);
   term = new window.Terminal({
     cursorBlink: true,
     cursorStyle: 'block',
@@ -518,6 +520,22 @@ function createTerminal(container) {
   return term;
 }
 
+// The mode pill reads shell|linux by the dvxb.io/terminal crumb (not by
+// the resume/man/cv links). Markup order is another surface's ownership,
+// so the pill is reparented here at runtime instead of moved in HTML.
+function placeModePillByCrumb() {
+  if (typeof document === 'undefined') return;
+  try {
+    const crumbNode = document.querySelector('.doc-crumb');
+    const modePill = document.getElementById('mode-pill');
+    if (!crumbNode || !modePill) return;
+    if (modePill.previousElementSibling === crumbNode) return;
+    crumbNode.insertAdjacentElement('afterend', modePill);
+  } catch (placeError) {
+    console.warn(`mode pill placement skipped: ${placeError.message}`);
+  }
+}
+
 function startBoot() {
   bootSequence(term, () => { bootDone = true; });
 }
@@ -535,9 +553,10 @@ function setMode(nextMode) {
     const pillLabel = nextMode === 'v86' ? 'linux' : 'shell';
     modePill.textContent = pillLabel;
     modePill.dataset.mode = pillLabel;
-    // The crumb (dvxb.io/terminal) already covers the shell identity, so the
-    // pill only appears as a linux indicator; hidden in shell mode.
-    modePill.hidden = nextMode !== 'v86';
+    // The pill always reads shell|linux (never hidden): it sits by the
+    // dvxb.io/terminal crumb as the shell indicator, flipping to linux
+    // inside the VM. Its colorcycle sync lives in css/motion.css.
+    modePill.hidden = false;
   }
   const exitButton = document.getElementById('exit-vm-button');
   if (exitButton) exitButton.hidden = nextMode !== 'v86';
