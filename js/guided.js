@@ -79,6 +79,52 @@ function runGuidedCommand(commandLine, intentText) {
   return true;
 }
 
+function revealAiPicker() {
+  // The first-run mode picker renders as a chip bar below the terminal,
+  // which can sit below the fold on short viewports: bring it into view
+  // (nearest-only, instant) so a guided click visibly continues somewhere.
+  // Focusing is already handled by the picker itself (first chip takes
+  // focus); this only covers the scroll position.
+  window.setTimeout(() => {
+    const chipbarNode = document.getElementById('ai-mode-chipbar');
+    if (chipbarNode && typeof chipbarNode.scrollIntoView === 'function') {
+      chipbarNode.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+    }
+  }, 150);
+}
+
+function submitGuidedAsk() {
+  const promptText = guidedAiInput.value.trim();
+  if (!promptText) {
+    // An empty Ask-AI click used to be a silent no-op (dead-button feel):
+    // focus the question box and narrate what to do next, matching the
+    // gated-pick narration style. The hint line only prints when the shell
+    // is live so it can never interleave with the boot transcript.
+    guidedAiInput.focus();
+    const activeTerm = getTerm();
+    if (activeTerm && isBootDone() && getMode() === 'local') {
+      activeTerm.writeln(`${SITE_MUTED}Type your question in the Ask box first, then Ask AI.${ANSI_RESET}`);
+    }
+    return;
+  }
+  // The AI mode (quick/local/controls) is picked once via ai.js; a dynamic
+  // import keeps guided.js out of the static ai.js graph (commands.js loads
+  // ai.js dynamically too, so no new static edge or cycle either way).
+  import('./ai.js').then((aiModule) => {
+    const modeChosen = typeof aiModule.getSavedAiMode === 'function'
+      && aiModule.getSavedAiMode() !== null;
+    // First-run submissions open the mode picker, which stashes the prompt
+    // and clears nothing: keep the question text in the box so Esc (which
+    // removes the chip bar) leaves a one-click resume instead of forcing a
+    // retype. Once a mode exists the prompt streams immediately, so clear.
+    if (modeChosen) guidedAiInput.value = '';
+    runGuidedCommand(`ai ${promptText}`, 'Asking the portfolio AI assistant');
+    if (!modeChosen) revealAiPicker();
+  }).catch((importError) => {
+    console.warn(`guided ask-ai skipped: ${importError.message}`);
+  });
+}
+
 function buildGuidedPanel() {
   guidedPanel = document.getElementById('guided-panel');
   if (!guidedPanel) return;
@@ -87,41 +133,42 @@ function buildGuidedPanel() {
   introLine.className = 'guided-intro';
   introLine.textContent = 'Guided mode — pick what to do; the exact command is shown before it runs.';
   guidedPanel.appendChild(introLine);
+  // Single consistent group: the Ask-AI submit button sits in the same row
+  // as Run Linux and the other actions (previously a detached second row),
+  // sharing one form so Enter in the question box submits identically.
+  const askForm = document.createElement('form');
+  askForm.className = 'guided-form';
+  askForm.setAttribute('aria-label', 'Guided actions');
   const buttonRow = document.createElement('div');
   buttonRow.className = 'guided-buttons';
   for (const guidedAction of GUIDED_ACTIONS) {
-    if (guidedAction.command === null) continue;
+    const isAskAction = guidedAction.command === null;
     const actionButton = document.createElement('button');
-    actionButton.type = 'button';
+    actionButton.type = isAskAction ? 'submit' : 'button';
     actionButton.className = 'guided-button';
     actionButton.textContent = guidedAction.label;
-    actionButton.addEventListener('click', () => {
-      runGuidedCommand(guidedAction.command, guidedAction.intent);
-    });
+    if (!isAskAction) {
+      actionButton.addEventListener('click', () => {
+        runGuidedCommand(guidedAction.command, guidedAction.intent);
+      });
+    }
     buttonRow.appendChild(actionButton);
   }
-  guidedPanel.appendChild(buttonRow);
-  const aiRow = document.createElement('form');
+  askForm.appendChild(buttonRow);
+  const aiRow = document.createElement('div');
   aiRow.className = 'guided-ai-row';
   guidedAiInput = document.createElement('input');
   guidedAiInput.type = 'text';
   guidedAiInput.className = 'guided-ai-input';
   guidedAiInput.placeholder = 'Ask AI anything…';
   guidedAiInput.setAttribute('aria-label', 'Ask the portfolio AI assistant');
-  const aiButton = document.createElement('button');
-  aiButton.type = 'submit';
-  aiButton.className = 'guided-button guided-ai-button';
-  aiButton.textContent = 'Ask AI';
   aiRow.appendChild(guidedAiInput);
-  aiRow.appendChild(aiButton);
-  aiRow.addEventListener('submit', (submitEvent) => {
+  askForm.appendChild(aiRow);
+  askForm.addEventListener('submit', (submitEvent) => {
     submitEvent.preventDefault();
-    const promptText = guidedAiInput.value.trim();
-    if (!promptText) return;
-    guidedAiInput.value = '';
-    runGuidedCommand(`ai ${promptText}`, 'Asking the portfolio AI assistant');
+    submitGuidedAsk();
   });
-  guidedPanel.appendChild(aiRow);
+  guidedPanel.appendChild(askForm);
 }
 
 function buildModeToggle() {
