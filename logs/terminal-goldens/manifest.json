@@ -1,7 +1,7 @@
 {
   "version": 1,
   "tool": "tools/snapshot-terminal.mjs",
-  "commit": "02f56b65a8a08a80bdb187abbc747e03987d732c",
+  "commit": "480340bf24e8a20ca8b1bab021aa7a976e22ed60",
   "origin": "http://127.0.0.1:8901/",
   "viewport": {
     "width": 1280,
@@ -17,8 +17,8 @@
     {
       "command": "(boot)",
       "file": "boot.ans",
-      "sha256": "acae34717ca881e59c766de6d9c1f8ce3a3bd9cce056a53451ce1dddb32106f8",
-      "bytes": 3053,
+      "sha256": "c58463348e184f15b1cd2cc1faf31cef4cf7835743c21045e7b8a772262e434e",
+      "bytes": 3047,
       "prompts": 1
     },
     {
@@ -52,8 +52,8 @@
     {
       "command": "neofetch",
       "file": "neofetch.ans",
-      "sha256": "c682ba6d752e6424a45c13dd6e615e5b4b9c986cfa56cbd459588bda329b4ab8",
-      "bytes": 2123,
+      "sha256": "d158bddda1668273a081b04dfd34f9ab705f0b0a06f545d4cb558fefc5f61df6",
+      "bytes": 2117,
       "prompts": 1
     },
     {

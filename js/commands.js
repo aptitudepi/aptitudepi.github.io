@@ -578,7 +578,7 @@ function neofetch(term) {
   // block sequences start together, a few spaces past the longer text.
   const tryText = `${ANSI_BOLD}${SITE_WHITE}Try:${ANSI_RESET} ${NEOFETCH_TRY_COMMANDS.join(' · ')}`;
   const helpHintText = `${SITE_MUTED}type${ANSI_RESET} \`${SITE_WHITE}help${ANSI_RESET}\` ${SITE_MUTED}for the full command list${ANSI_RESET}`;
-  const blockCol = Math.max(visibleLen(tryText), visibleLen(helpHintText)) + 6;
+  const blockCol = Math.max(visibleLen(tryText), visibleLen(helpHintText)) + 3;
 
   const infoLines = [
     { label: '', value: `${ANSI_BOLD}${SITE_WHITE}db@dvxb.io${ANSI_RESET}` },
