@@ -276,8 +276,10 @@ function setExpressive(expressiveOn) {
 }
 
 // One-shot audit for the calm-default guarantee: every element whose computed
-// style still runs an infinite CSS animation. Static default (and the
-// mid-session off state) must report zero entries.
+// style still runs an infinite CSS animation. The static default reports
+// zero entries outside the contact-section wave (css/motion.css section E,
+// the single scoped exception); the mid-session off state must report zero
+// entries outright.
 function auditRunningAnimations(sampleLimit) {
   const parsedLimit = Number(sampleLimit);
   const cappedLimit = Number.isFinite(parsedLimit) ? Math.max(1, Math.min(50, parsedLimit)) : 10;

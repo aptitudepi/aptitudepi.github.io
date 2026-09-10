@@ -1,10 +1,11 @@
 /* css/motion.css — WAVE 11 calm visual hierarchy + single motion policy.
  *
- * Calm default: ZERO infinite CSS animations. Every always-on cycle below
- * (text colour cycling, glitch, aura drift, nav clock, glow loops, spinning
- * borders) is demoted to a static resting state. This file beats the home
- * stylesheets by prefixing every override with `html`, so no home file needs
- * restructuring.
+ * Calm default: no site-wide infinite CSS animations. Every always-on
+ * cycle below (text colour cycling, glitch, aura drift, nav clock, glow
+ * loops, spinning borders) is demoted to a static resting state, with one
+ * scoped exception: the contact-section wave (section E — social links +
+ * Contact heading only). This file beats the home stylesheets by prefixing
+ * every override with `html`, so no home file needs restructuring.
  *
  * Expressive opt-in: the full ambient set is restored only under
  *   @media (prefers-reduced-motion: no-preference)
@@ -27,6 +28,11 @@
  */
 
 /* ── A. Calm defaults: demote always-on cycling to static ─────────── */
+/* Site-wide the continuous blue↔red cycling parks at a static resting ink
+ * (the contact-section wave in section E is the single scoped exception).
+ * Every rule here is beaten by an `html[data-motion="on"] #contact …`
+ * restore while the policy is on, and by the section-C kill-switch plus
+ * the reduced-motion blanket whenever motion is off. */
 
 /* RGB-split glitch ran forever on the crumb + terminal title. Now it only
    answers a hover/focus on the crumb (the title is pointer-events:none, so
@@ -251,5 +257,38 @@ html[data-motion="off"] *::after {
   }
   html[data-motion="on"][data-expressive="full"] .about-image .frame::before {
     animation: spinGradient 4s linear infinite;
+  }
+}
+
+/* ── E. Contact-scoped color cycling ─────────────────────────────
+ * The calm demotion parked the blue↔red wave site-wide; the contact
+ * section keeps a tasteful scoped-down version: the social links cycle
+ * text color as one right-to-left wave (staggered negative delays, the
+ * historical contact rhythm) and the Contact heading drifts its gradient.
+ * Only while the policy is on AND the OS voices no reduced-motion
+ * preference. The section-A resting states, the data-motion="off"
+ * kill-switch (!important) and the prefers-reduced-motion: reduce blanket
+ * all still park it, so reduced-motion stays fully calm. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] #contact .social-link {
+    animation: blueRedColor 6s ease-in-out infinite;
+  }
+  html[data-motion="on"] #contact .social-link:nth-child(1) {
+    animation-delay: -4.8s;
+  }
+  html[data-motion="on"] #contact .social-link:nth-child(2) {
+    animation-delay: -3.6s;
+  }
+  html[data-motion="on"] #contact .social-link:nth-child(3) {
+    animation-delay: -2.4s;
+  }
+  html[data-motion="on"] #contact .social-link:nth-child(4) {
+    animation-delay: -1.2s;
+  }
+  html[data-motion="on"] #contact .social-link:nth-child(5) {
+    animation-delay: 0s;
+  }
+  html[data-motion="on"] #contact .section-header h2 {
+    animation: blueRedDrift 6s ease-in-out infinite;
   }
 }
