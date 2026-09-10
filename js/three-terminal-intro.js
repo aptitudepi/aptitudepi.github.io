@@ -505,8 +505,36 @@ async function constructIntroGraphics(firstBootEcho) {
   armIdleDimTimer();
 }
 
+// Scroll the hero terminal into view before focusing it: the intro beat
+// sits a full viewport below the hero, so focusing xterm alone leaves the
+// visitor staring at the poster (a "static pane"). Smooth-scroll only while
+// the motion policy is on; instant when it is off.
+function scrollHeroTerminalIntoView() {
+  try {
+    const heroTarget = document.getElementById(`hero-target`);
+    if (heroTarget && typeof heroTarget.scrollIntoView === `function`) {
+      const scrollBehavior = isMotionOK() ? `smooth` : `auto`;
+      heroTarget.scrollIntoView({ behavior: scrollBehavior, block: `start` });
+      return true;
+    }
+    return false;
+  } catch (scrollError) {
+    console.warn(`[terminal-intro] hero scroll skipped: ${scrollError.message}`);
+    return false;
+  }
+}
+
 function focusRealTerminal() {
   try {
+    scrollHeroTerminalIntoView();
+    // Focus the xterm helper textarea directly with preventScroll: the
+    // programmatic scroll above stays the only movement, so the inner
+    // terminal scrollers never jump underneath the page scroll.
+    const helperArea = document.querySelector(`#terminal-container textarea`);
+    if (helperArea && typeof helperArea.focus === `function`) {
+      helperArea.focus({ preventScroll: true });
+      return true;
+    }
     const waveSeven = window.__wave7;
     if (waveSeven && typeof waveSeven.getTerm === `function`) {
       const liveTerm = waveSeven.getTerm();
@@ -514,11 +542,6 @@ function focusRealTerminal() {
         liveTerm.focus();
         return true;
       }
-    }
-    const fallbackArea = document.querySelector(`#terminal-container textarea`);
-    if (fallbackArea && typeof fallbackArea.focus === `function`) {
-      fallbackArea.focus({ preventScroll: true });
-      return true;
     }
   } catch (focusError) {
     console.warn(`[terminal-intro] terminal focus skipped: ${focusError.message}`);
