@@ -306,6 +306,37 @@ function stripAnsi(s) {
   return out;
 }
 
+// Streaming newline guard: xterm only returns the carriage on `\r\n` (the
+// terminal is created without convertEol) while model tokens carry lone
+// `\n`. Writing tokens raw staircases every continuation line — each starts
+// where the previous ended, wrapping mid-word at term.cols — while
+// writeln-based buffered output never does. Every streamed write goes
+// through the writer below so per-token streaming renders byte-identically
+// to a one-shot write of the same text. A trailing `\r` is held across
+// chunks so a `\r\n` pair split across tokens never doubles.
+function createStreamWriter(targetTerm) {
+  let heldReturn = false;
+  function normalizeChunk(rawChunk) {
+    const carriedChunk = heldReturn ? `\r${rawChunk}` : rawChunk;
+    heldReturn = false;
+    const cleanedChunk = stripAnsi(carriedChunk);
+    const unifiedChunk = cleanedChunk.split(`\r\n`).join(`\n`);
+    const expandedChunk = unifiedChunk.split(`\n`).join(`\r\n`);
+    if (expandedChunk.endsWith(`\r`)) {
+      heldReturn = true;
+      return expandedChunk.slice(0, -1);
+    }
+    return expandedChunk;
+  }
+  function writeStreamChunk(rawChunk) {
+    const normalizedChunk = normalizeChunk(rawChunk);
+    if (normalizedChunk !== ``) {
+      targetTerm.write(normalizedChunk);
+    }
+  }
+  return writeStreamChunk;
+}
+
 async function streamGroq(prompt, context, term, runSignal) {
   const workerUrl = 'https://0.supernovadkb.workers.dev/ai';
   
@@ -319,9 +350,10 @@ async function streamGroq(prompt, context, term, runSignal) {
   let hold = '';
   const OPEN = '\n<think>\n';
   const CLOSE = '\n</think>\n';
+  const writeStreamChunk = createStreamWriter(term);
 
   function emitText(text) {
-    const str = hold + text;
+    const str = `${hold}${text}`;
     hold = '';
     let cursor = 0;
     while (cursor < str.length) {
@@ -335,21 +367,21 @@ async function streamGroq(prompt, context, term, runSignal) {
             const emit = tail.slice(0, tail.length - k);
             if (emit) {
               fullResponse += emit;
-              term.write(stripAnsi(emit));
+              writeStreamChunk(emit);
             }
             hold = tail.slice(tail.length - k);
             return;
           }
           if (tail) {
             fullResponse += tail;
-            term.write(stripAnsi(tail));
+            writeStreamChunk(tail);
           }
           return;
         }
         const before = str.slice(cursor, start);
         if (before) {
           fullResponse += before;
-          term.write(stripAnsi(before));
+          writeStreamChunk(before);
         }
         inThink = true;
         cursor = start + OPEN.length;
@@ -441,11 +473,12 @@ async function streamLocal(pipelineHandle, prompt, context, term, runSignal) {
   term.write(`\x1b[1mAI:\x1b[0m `);
 
   let fullResponse = '';
+  const writeStreamChunk = createStreamWriter(term);
   const streamer = new TextStreamer(pipelineHandle.tokenizer, {
     skip_prompt: true,
-    callback_function: (text) => {
-      fullResponse += text;
-      term.write(stripAnsi(text));
+    callback_function: (streamText) => {
+      fullResponse += streamText;
+      writeStreamChunk(streamText);
     }
   });
 
@@ -1041,4 +1074,4 @@ async function switchModel(id, term) {
   term.writeln(`\x1b[2mNext \`ai\` call will load this model\x1b[0m`);
 }
 
-export { generateOutput, showModelSelector, switchModel, MODELS, getLastFailedPrompt, clearLastFailedPrompt, isAiGenerationInflight, getSavedAiMode, hasPendingAiChoice, resolveAiModeChoice, requestLocalDownloadCancel };
+export { generateOutput, showModelSelector, switchModel, MODELS, getLastFailedPrompt, clearLastFailedPrompt, isAiGenerationInflight, getSavedAiMode, hasPendingAiChoice, resolveAiModeChoice, requestLocalDownloadCancel, createStreamWriter };
