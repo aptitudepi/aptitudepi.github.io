@@ -59,7 +59,7 @@ function initMobileToggle() {
   });
 }
 
-const sectionIds = ['hero-target', 'about', 'projects', 'certifications', 'resume', 'contact'];
+const sectionIds = ['hero-target', 'about', 'projects', 'certifications', 'contact'];
 
 function scrollToSection(id) {
   const target = document.getElementById(id);
