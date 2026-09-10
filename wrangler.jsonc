@@ -7,13 +7,17 @@
   // telemetry:<post-id>.asc and the salted delete-token hashes at
   // wall:deltoken:<post-id>. Local dev: run `wrangler dev --persist` so the
   // binding works against local persisted state instead of erroring with no KV.
-  // TELEMETRY R2 bucket (BLOCKED 2026-09-08): `wrangler r2 bucket create
-  // telemetry` fails with API 10042 until R2 is enabled in the Cloudflare
-  // dashboard. Once enabled, create the bucket and add:
-  //   "r2_buckets": [{ "binding": "TELEMETRY", "bucket_name": "telemetry" }]
-  // The worker already prefers env.TELEMETRY when bound (contentType
-  // application/pgp-encrypted, private no-store, postId/createdAt/fpHash
-  // customMetadata, write via ctx.waitUntil) and falls back to WALL_KV.
+  // TELEMETRY R2 bucket (live since 2026-09-09 via dashboard binding;
+  // local config mirrors it). The worker prefers env.TELEMETRY when bound
+  // (contentType application/pgp-encrypted, private no-store,
+  // postId/createdAt/fpHash customMetadata, write via ctx.waitUntil) and
+  // falls back to WALL_KV.
+  "r2_buckets": [
+    {
+      "binding": "TELEMETRY",
+      "bucket_name": "telemetry"
+    }
+  ],
   "kv_namespaces": [
     {
       "binding": "WALL_KV",
