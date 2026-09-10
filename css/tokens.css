@@ -38,6 +38,11 @@
   --ease-in-expo: cubic-bezier(0.7, 0, 0.84, 0);
   --transition-interactive: 200ms var(--ease-out-expo);
   --shadow-glow-blue: 0 0 24px var(--color-primary-glow);
+  /* Shared colorcycle phase: every synchronized cycling animation references
+     this delay (same keyframe period + same delay = same phase). Shift it
+     once here and the whole page stays in step; elements mounted later than
+     first paint start late and drift, so only static-DOM chrome uses it. */
+  --cycle-phase: 0s;
   --color-glass: oklch(0.09 0.008 260 / 0.20);
   --color-glass-hover: oklch(0.14 0.012 260 / 0.32);
   --color-glass-border: oklch(0.2 0.02 260 / 0.35);

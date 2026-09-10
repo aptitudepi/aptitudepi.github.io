@@ -262,9 +262,9 @@ html[data-motion="off"] *::after {
 
 /* ── E. Contact-scoped color cycling ─────────────────────────────
  * The calm demotion parked the blue↔red wave site-wide; the contact
- * section keeps a tasteful scoped-down version: the social links cycle
- * text color as one right-to-left wave (staggered negative delays, the
- * historical contact rhythm) and the Contact heading drifts its gradient.
+ * section keeps a tasteful scoped-down version: the social links and the
+ * Contact heading cycle in the SAME phase (shared --cycle-phase delay, one
+ * 6s period — synchronized, not the old staggered right-to-left wave).
  * Only while the policy is on AND the OS voices no reduced-motion
  * preference. The section-A resting states, the data-motion="off"
  * kill-switch (!important) and the prefers-reduced-motion: reduce blanket
@@ -272,23 +272,32 @@ html[data-motion="off"] *::after {
 @media (prefers-reduced-motion: no-preference) {
   html[data-motion="on"] #contact .social-link {
     animation: blueRedColor 6s ease-in-out infinite;
-  }
-  html[data-motion="on"] #contact .social-link:nth-child(1) {
-    animation-delay: -4.8s;
-  }
-  html[data-motion="on"] #contact .social-link:nth-child(2) {
-    animation-delay: -3.6s;
-  }
-  html[data-motion="on"] #contact .social-link:nth-child(3) {
-    animation-delay: -2.4s;
-  }
-  html[data-motion="on"] #contact .social-link:nth-child(4) {
-    animation-delay: -1.2s;
-  }
-  html[data-motion="on"] #contact .social-link:nth-child(5) {
-    animation-delay: 0s;
+    animation-delay: var(--cycle-phase, 0s);
   }
   html[data-motion="on"] #contact .section-header h2 {
     animation: blueRedDrift 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+}
+
+/* ── F. Synchronized project-card colorcycle ─────────────────────
+ * Same contract as section E, extended to the project cards: the card's
+ * animated `color` drives the tag ink (color: inherit), the hover edge
+ * (border-color: currentColor) and the cursor backlight (::after radial in
+ * currentColor), while headings/body keep their explicit resting colors —
+ * so hover never shows the old parked-white edge/glow. The View-Project
+ * links cycle their own text with the same period + phase. One shared
+ * period (6s) + one shared delay (var(--cycle-phase)) keeps cards, links,
+ * contact buttons and the contact title in step without rave-y staggering.
+ * Static whenever motion is off (gate + kill-switch + reduce blanket). */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] .spotlight-card,
+  html[data-motion="on"] .bento-card {
+    animation: blueRedColor 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] .project-link {
+    animation: blueRedColor 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
   }
 }
