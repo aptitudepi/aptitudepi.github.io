@@ -10,15 +10,15 @@ let bootDone = false;
 let v86InputHandler = null;
 let v86ExitBuffer = '';
 
-// WAVE 7 inline suggestions: a DOM dropdown plus fish-style ghost text.
-// Both are pure DOM overlays so the deterministic xterm golden snapshots
-// stay byte-exact. Sources are the command registry, VFS paths and history.
-let suggestionBox = null;
-let suggestionBoxOpen = false;
-let suggestionItems = [];
-let suggestionIndex = -1;
+// WAVE 7 inline suggestions, ghost-only: fish-style ghost text is a pure DOM
+// overlay so the deterministic xterm golden snapshots stay byte-exact.
+// Sources are the command registry, VFS paths and history. Tab (or the
+// Right-arrow / Ctrl+F keys) accepts the ghost, Esc dismisses it (and exits
+// history search), typing refreshes it. There is deliberately no dropdown
+// listbox: Ctrl+R cycles history matches through the same ghost instead of
+// rendering a list.
 let suggestionMode = 'complete';
-let suppressAutoBox = false;
+let historyMatchIndex = -1;
 let ghostNode = null;
 let ghostRemainder = '';
 let ghostKind = 'token';
@@ -111,97 +111,18 @@ function collectAllCandidates() {
   return mergedCandidates.slice(0, 12);
 }
 
-function candidateSourceTag(candidate) {
-  if (candidate.kind === 'history') return 'history';
-  if (COMMAND_COMPLETION_NAMES.includes(candidate.label.trim())) return 'cmd';
-  return 'file';
-}
-
-function ensureSuggestionBox() {
-  if (suggestionBox) return suggestionBox;
-  const hostNode = document.getElementById('terminal-container');
-  if (!hostNode) return null;
-  suggestionBox = document.createElement('div');
-  suggestionBox.id = 'terminal-suggestions';
-  suggestionBox.setAttribute('role', 'listbox');
-  suggestionBox.setAttribute('aria-label', 'Command suggestions');
-  suggestionBox.hidden = true;
-  hostNode.appendChild(suggestionBox);
-  return suggestionBox;
-}
-
-function openSuggestionBox() {
-  const boxNode = ensureSuggestionBox();
-  if (!boxNode) return;
-  suggestionBoxOpen = true;
-  boxNode.hidden = false;
-}
-
-function hideSuggestionBox() {
-  suggestionBoxOpen = false;
-  suggestionIndex = -1;
-  if (suggestionBox) suggestionBox.hidden = true;
-}
-
 function hideSuggestions() {
-  hideSuggestionBox();
   suggestionMode = 'complete';
+  historyMatchIndex = -1;
   ghostRemainder = '';
   ghostFullLine = '';
   renderGhostText();
 }
 
 function closeSuggestions() {
-  const wasOpen = suggestionBoxOpen || suggestionMode === 'history';
+  const hadGhost = ghostRemainder.length > 0 || suggestionMode === 'history';
   hideSuggestions();
-  return wasOpen;
-}
-
-function renderSuggestionBox(candidates) {
-  const boxNode = ensureSuggestionBox();
-  if (!boxNode) return;
-  boxNode.textContent = '';
-  suggestionItems = candidates;
-  if (suggestionIndex >= candidates.length) suggestionIndex = candidates.length - 1;
-  const modeHeader = document.createElement('div');
-  modeHeader.className = 'suggest-header';
-  modeHeader.textContent = suggestionMode === 'history' ? '(reverse-i-search) history' : 'suggestions';
-  boxNode.appendChild(modeHeader);
-  candidates.forEach((candidate, candidateIndex) => {
-    const itemButton = document.createElement('button');
-    itemButton.type = 'button';
-    itemButton.className = 'suggest-item';
-    itemButton.setAttribute('role', 'option');
-    if (candidateIndex === suggestionIndex) {
-      itemButton.classList.add('active');
-      itemButton.setAttribute('aria-selected', 'true');
-    }
-    const labelSpan = document.createElement('span');
-    labelSpan.className = 'suggest-label';
-    labelSpan.textContent = candidate.label;
-    const tagSpan = document.createElement('span');
-    tagSpan.className = 'suggest-tag';
-    tagSpan.textContent = candidateSourceTag(candidate);
-    itemButton.appendChild(labelSpan);
-    itemButton.appendChild(tagSpan);
-    itemButton.addEventListener('mousedown', (pressEvent) => {
-      pressEvent.preventDefault();
-      acceptCandidate(candidate);
-      if (term) term.focus();
-      refreshSuggestions();
-    });
-    itemButton.addEventListener('mousemove', () => {
-      if (suggestionIndex !== candidateIndex) {
-        suggestionIndex = candidateIndex;
-        renderSuggestionBox(suggestionItems);
-      }
-    });
-    boxNode.appendChild(itemButton);
-  });
-  const footerHint = document.createElement('div');
-  footerHint.className = 'suggest-footer';
-  footerHint.textContent = 'Tab accept · ↑↓ navigate · Enter run · Esc close';
-  boxNode.appendChild(footerHint);
+  return hadGhost;
 }
 
 function measureCellSize() {
@@ -230,6 +151,7 @@ function renderGhostText() {
   const ghostElement = ensureGhostNode();
   if (!ghostElement) return;
   if (!ghostRemainder || mode !== 'local' || bootDone === false) {
+    ghostElement.textContent = '';
     ghostElement.style.display = 'none';
     return;
   }
@@ -241,38 +163,32 @@ function renderGhostText() {
   ghostElement.style.top = `${8 + activeBuffer.cursorY * cellSize.height}px`;
 }
 
+function showCandidateAsGhost(topCandidate) {
+  if (topCandidate.kind === 'history') {
+    ghostKind = 'history';
+    ghostFullLine = topCandidate.label;
+    ghostRemainder = topCandidate.label.slice(inputBuffer.length);
+  } else {
+    ghostKind = 'token';
+    ghostFullLine = '';
+    ghostRemainder = topCandidate.label.slice(lastCompleteBase.length);
+  }
+}
+
 function refreshSuggestions() {
   if (!term || bootDone === false || mode !== 'local' || isForegroundBusy()) {
     hideSuggestions();
     return;
   }
+  historyMatchIndex = -1;
   const candidates = collectAllCandidates();
   if (candidates.length > 0) {
-    const topCandidate = candidates[suggestionIndex >= 0 && suggestionIndex < candidates.length ? suggestionIndex : 0];
-    if (topCandidate.kind === 'history') {
-      ghostKind = 'history';
-      ghostFullLine = topCandidate.label;
-      ghostRemainder = topCandidate.label.slice(inputBuffer.length);
-    } else {
-      ghostKind = 'token';
-      ghostFullLine = '';
-      ghostRemainder = topCandidate.label.slice(lastCompleteBase.length);
-    }
+    showCandidateAsGhost(candidates[0]);
   } else {
     ghostRemainder = '';
     ghostFullLine = '';
   }
   renderGhostText();
-  if (suggestionBoxOpen) {
-    if (candidates.length === 0) {
-      hideSuggestionBox();
-    } else {
-      renderSuggestionBox(candidates);
-    }
-  } else if (!suppressAutoBox && candidates.length > 0 && candidates.length <= 8 && inputBuffer.trim()) {
-    openSuggestionBox();
-    renderSuggestionBox(candidates);
-  }
 }
 
 function acceptGhostText() {
@@ -316,7 +232,6 @@ function submitBufferLine() {
     CMD_HISTORY.idx = -1;
   }
   inputBuffer = '';
-  suppressAutoBox = false;
   hideSuggestions();
   if (bootDone) executeCommand(commandLine, term);
 }
@@ -362,17 +277,17 @@ function handlePaste(pastedText) {
 function openHistorySearch() {
   if (!bootDone || isForegroundBusy() || mode !== 'local') return;
   suggestionMode = 'history';
-  suggestionIndex = -1;
-  openSuggestionBox();
+  historyMatchIndex = -1;
   refreshSuggestions();
 }
 
 function handleTabCompletion(activeTerm) {
   if (!bootDone || isForegroundBusy() || mode !== 'local') return;
-  if (suggestionBoxOpen && suggestionItems.length > 0) {
-    const pickIndex = suggestionIndex < 0 ? 0 : suggestionIndex;
-    acceptCandidate(suggestionItems[pickIndex]);
-    refreshSuggestions();
+  // IDE-style: Tab accepts the visible ghost first; with no ghost it
+  // completes the single best match (or the shared token prefix) and the
+  // ghost confirms what changed. There is no list to pick from.
+  if (ghostRemainder) {
+    acceptGhostText();
     return;
   }
   if (!inputBuffer.trim()) return;
@@ -403,26 +318,19 @@ function handleTabCompletion(activeTerm) {
       }
     }
   }
-  openSuggestionBox();
   refreshSuggestions();
 }
 
-function moveSuggestionHighlight(step) {
-  const candidates = suggestionItems.length > 0 ? suggestionItems : collectAllCandidates();
+// Ctrl+R history search cycles matches through the ghost: Up/Down step
+// through history candidates, Tab (or →) accepts into the buffer, Esc
+// exits back to plain completion. No listbox is ever rendered.
+function cycleHistoryMatch(step) {
+  const candidates = collectAllCandidates();
   if (candidates.length === 0) return;
-  if (!suggestionBoxOpen) openSuggestionBox();
-  suggestionIndex = suggestionIndex < 0 ? 0 : (suggestionIndex + step + candidates.length) % candidates.length;
-  renderSuggestionBox(candidates);
-  const highlighted = candidates[suggestionIndex];
-  if (highlighted.kind === 'history') {
-    ghostKind = 'history';
-    ghostFullLine = highlighted.label;
-    ghostRemainder = highlighted.label.slice(inputBuffer.length);
-  } else {
-    ghostKind = 'token';
-    ghostFullLine = '';
-    ghostRemainder = highlighted.label.slice(lastCompleteBase.length);
-  }
+  historyMatchIndex = historyMatchIndex < 0
+    ? 0
+    : (historyMatchIndex + step + candidates.length) % candidates.length;
+  showCandidateAsGhost(candidates[historyMatchIndex]);
   renderGhostText();
 }
 
@@ -443,10 +351,7 @@ function handleInput(data) {
     if (acceptGhostText()) return;
   }
   if (data === '\x1b') {
-    if (closeSuggestions()) {
-      suppressAutoBox = true;
-      return;
-    }
+    if (closeSuggestions()) return;
   }
   if (data === '\x1b[C') {
     if (acceptGhostText()) return;
@@ -456,7 +361,7 @@ function handleInput(data) {
 
   if (data === '\x1b[A') {
     if (!bootDone || isForegroundBusy()) return;
-    if (suggestionBoxOpen) { moveSuggestionHighlight(-1); return; }
+    if (suggestionMode === 'history') { cycleHistoryMatch(-1); return; }
     if (CMD_HISTORY.idx < CMD_HISTORY.length - 1) {
       CMD_HISTORY.idx++;
       const entry = CMD_HISTORY[CMD_HISTORY.length - 1 - CMD_HISTORY.idx];
@@ -471,7 +376,7 @@ function handleInput(data) {
 
   if (data === '\x1b[B') {
     if (!bootDone || isForegroundBusy()) return;
-    if (suggestionBoxOpen) { moveSuggestionHighlight(1); return; }
+    if (suggestionMode === 'history') { cycleHistoryMatch(1); return; }
     if (CMD_HISTORY.idx >= 0) {
       CMD_HISTORY.idx--;
       if (CMD_HISTORY.idx >= 0) {
@@ -491,7 +396,6 @@ function handleInput(data) {
 
   if (looksLikePaste(data)) {
     if (!bootDone || isForegroundBusy()) return;
-    suppressAutoBox = false;
     handlePaste(data);
     refreshSuggestions();
     return;
@@ -504,7 +408,6 @@ function handleInput(data) {
       if (inputBuffer.length > 0) {
         inputBuffer = inputBuffer.slice(0, -1);
         term.write('\b \b');
-        suppressAutoBox = false;
       }
     } else if (char === '\x03') {
       if (isForegroundBusy()) {
@@ -520,7 +423,6 @@ function handleInput(data) {
     } else if (char >= ' ') {
       inputBuffer = `${inputBuffer}${char}`;
       term.write(char);
-      suppressAutoBox = false;
     }
   }
   refreshSuggestions();
@@ -633,6 +535,9 @@ function setMode(nextMode) {
     const pillLabel = nextMode === 'v86' ? 'linux' : 'shell';
     modePill.textContent = pillLabel;
     modePill.dataset.mode = pillLabel;
+    // The crumb (dvxb.io/terminal) already covers the shell identity, so the
+    // pill only appears as a linux indicator; hidden in shell mode.
+    modePill.hidden = nextMode !== 'v86';
   }
   const exitButton = document.getElementById('exit-vm-button');
   if (exitButton) exitButton.hidden = nextMode !== 'v86';

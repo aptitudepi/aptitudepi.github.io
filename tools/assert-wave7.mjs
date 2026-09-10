@@ -265,7 +265,8 @@ async function runBrowserAsserts() {
     check(pillBefore === 'shell' && pillLinux === 'linux' && pillAfter === 'shell', `MODE pill shell→linux→shell (${pillBefore}/${pillLinux}/${pillAfter})`);
     check(exitVisible && exitHidden, 'Exit Linux button shows only in linux mode');
 
-    // Ghost suggestion appears and Right-arrow accepts it.
+    // Ghost-only suggestions: fish-style ghost text appears, Tab accepts
+    // it IDE-style, and no dropdown listbox is ever rendered.
     sliceStart = await chunkLength();
     await terminalLocator.click();
     await page.keyboard.press('Escape');
@@ -276,30 +277,30 @@ async function runBrowserAsserts() {
     }, null, { timeout: 5000 });
     const ghostText = await page.$eval('#terminal-ghost', (ghostNode) => ghostNode.textContent);
     check(ghostText === 'ther', `fish-style ghost completes 'wea' (${ghostText})`);
-    const boxVisible = await page.evaluate(() => {
-      const boxNode = document.getElementById('terminal-suggestions');
-      return boxNode && !boxNode.hidden;
-    });
-    check(boxVisible, 'live suggestion dropdown appears while typing');
-    await page.keyboard.press('ArrowRight');
+    const dropdownGone = await page.evaluate(() => document.getElementById('terminal-suggestions') === null);
+    check(dropdownGone, 'no suggestion dropdown is rendered (ghost only)');
+    await page.keyboard.press('Tab');
     await page.keyboard.press('Escape');
     const weatherSliceStart = await chunkLength();
     await page.keyboard.press('Enter');
     const weatherSlice = await waitQuiet(weatherSliceStart, 20000);
-    check(weatherSlice.includes('Could not determine location'), 'ghost-accepted buffer runs as `weather`');
+    check(weatherSlice.includes('Could not determine location'), 'Tab-accepted buffer runs as `weather`');
 
-    // Ctrl+R opens reverse-history search; Esc cancels.
+    // Ctrl+R cycles history matches through the ghost; Esc exits the mode.
     await terminalLocator.click();
     await page.keyboard.press('Control+r');
     await page.waitForFunction(() => {
-      const boxNode = document.getElementById('terminal-suggestions');
-      return boxNode && !boxNode.hidden && boxNode.textContent.includes('reverse-i-search');
+      const ghostNode = document.getElementById('terminal-ghost');
+      return ghostNode && ghostNode.style.display !== 'none' && ghostNode.textContent.length > 0;
     }, null, { timeout: 5000 });
-    check(true, 'Ctrl+R opens reverse-history search');
+    check(true, 'Ctrl+R shows the history match as ghost text');
     await page.keyboard.press('Escape');
     await sleepMillis(200);
-    const historyBoxHidden = await page.evaluate(() => document.getElementById('terminal-suggestions').hidden);
-    check(historyBoxHidden, 'Esc closes history search');
+    const historyGhostHidden = await page.evaluate(() => {
+      const ghostNode = document.getElementById('terminal-ghost');
+      return !ghostNode || ghostNode.style.display === 'none' || ghostNode.textContent.length === 0;
+    });
+    check(historyGhostHidden, 'Esc exits history search and clears the ghost');
 
     // Paste auto-clean: a docs-style prompt prefix is stripped.
     const pasteSliceStart = await chunkLength();
