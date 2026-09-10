@@ -62,6 +62,7 @@ function buildTrailFrag(w, h) {
   return `precision highp float;
 uniform sampler2D uPrev,uParts;
 uniform float uTime,uDecay;
+uniform vec3 uHeat;
 uniform vec4 uModeW;
 ${CURL}
 void main(){
@@ -72,7 +73,8 @@ void main(){
   vec2 src=clamp(uv-vel,.001,.999);
   vec4 prev=texture2D(uPrev,src)*uDecay;
   vec4 parts=texture2D(uParts,uv);
-  gl_FragColor=max(prev,parts*1.25);
+  vec4 combined=max(prev,parts*1.25);
+  gl_FragColor=vec4(combined.rgb*uHeat,combined.a);
 }`;
 }
 
@@ -187,6 +189,15 @@ function initParticles() {
   // modulates decay with hover (`decayOverride ?? (0.8 - hP * 0.04)`).
   // setTrailDecay(number) pins; setTrailDecay(null) restores auto.
   let decayOverride = null;
+  // Heat-trail colorcycle sync (UI batch): mirrors js/dev.js topo sync —
+  // read --nav-cycle, lerp toward it at 0.25 saturation, push to the trail
+  // uHeat multiplier. Base is white (not topo glass #C9B8E8) so the
+  // additive pipeline keeps brightness; the saturation + read pattern match
+  // topo exactly. Piggbacks frame(), no new loop. Static when motion is off.
+  const HEAT_SYNC_SATURATION = 0.25;
+  const HEAT_SYNC_CADENCE = 30;
+  const HEAT_STATIC_TINT = [0.75, 0.75, 1];
+  let lastHeatCycle = ``;
   // Manual pins (dev sidebar): a setCount/setCA/setScanline/setVignette/
   // setParticleSize call pins that knob and the auto ladder stops touching
   // it; clearManualPins() releases every pin back to auto. The devtools panel
@@ -543,7 +554,7 @@ void main(){
   const trailMat = new THREE.ShaderMaterial({
     uniforms: {
       uPrev: { value: trailA.texture }, uParts: { value: outRT.texture },
-      uTime: { value: 0 }, uDecay: { value: 0.8 }, uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
+      uTime: { value: 0 }, uDecay: { value: 0.8 }, uHeat: { value: new THREE.Vector3(1, 1, 1) }, uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
     },
     vertexShader: 'void main(){gl_Position=vec4(position,1.);}',
     fragmentShader: buildTrailFrag(iW, iH)
@@ -732,6 +743,51 @@ void main(){
     return influence > 0.001;
   }
 
+  function parseHeatRGB(colorText) {
+    try {
+      const heatColor = new THREE.Color(colorText);
+      return [heatColor.r, heatColor.g, heatColor.b];
+    } catch (parseError) {
+      console.warn(`[particles] heat color parse skipped: ${parseError.message}`);
+      return null;
+    }
+  }
+
+  function readScopedCycleColor() {
+    try {
+      const scopedNode = document.querySelector(`.doc-nav-home`) || document.querySelector(`.doc-nav`);
+      if (!scopedNode) return ``;
+      return getComputedStyle(scopedNode).getPropertyValue(`--nav-cycle`).trim();
+    } catch (cycleReadError) {
+      console.warn(`[particles] heat cycle read skipped: ${cycleReadError.message}`);
+      return ``;
+    }
+  }
+
+  // One heat-sync step: lerp white toward --nav-cycle at 0.25 (same
+  // saturation + read pattern as js/dev.js runColorSyncStep, white base to
+  // preserve additive brightness). Called from frame() on the existing tick,
+  // throttled by HEAT_SYNC_CADENCE — no new loop. Static tint when motion
+  // is off or the clock is unreadable.
+  function stepHeatTintSync() {
+    if (!trailMat) return;
+    if (!isMotionOK()) {
+      trailMat.uniforms.uHeat.value.set(HEAT_STATIC_TINT[0], HEAT_STATIC_TINT[1], HEAT_STATIC_TINT[2]);
+      lastHeatCycle = `static`;
+      return;
+    }
+    const cycleColorText = readScopedCycleColor();
+    if (!cycleColorText || cycleColorText === lastHeatCycle) return;
+    const navRGB = parseHeatRGB(cycleColorText);
+    if (!navRGB) return;
+    const mixRatio = HEAT_SYNC_SATURATION;
+    const heatRed = 1 + (navRGB[0] - 1) * mixRatio;
+    const heatGreen = 1 + (navRGB[1] - 1) * mixRatio;
+    const heatBlue = 1 + (navRGB[2] - 1) * mixRatio;
+    trailMat.uniforms.uHeat.value.set(heatRed, heatGreen, heatBlue);
+    lastHeatCycle = cycleColorText;
+  }
+
   const clock = new THREE.Clock();
   let prevT = 0, ever = false;
 
@@ -863,6 +919,7 @@ void main(){
     trailMat.uniforms.uParts.value = outRT.texture;
     trailMat.uniforms.uTime.value = elapsed;
     trailMat.uniforms.uDecay.value = decayOverride ?? (0.8 - hP * 0.04);
+    if (frameCount % HEAT_SYNC_CADENCE === 0) stepHeatTintSync();
     renderer.setRenderTarget(trailB);
     renderer.clear();
     renderer.render(trailScene, flatCam);
