@@ -137,8 +137,32 @@
 .guided-ai-row {
   display: flex;
   gap: 8px;
+  margin-top: 0;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: max-height 250ms var(--ease-out-expo), opacity 200ms var(--ease-out-expo), transform 250ms var(--ease-out-expo), margin-top 250ms var(--ease-out-expo);
+}
+.guided-ai-row.is-open {
+  max-height: 48px;
+  opacity: 1;
+  transform: none;
   margin-top: 8px;
 }
+.guided-ai-row[hidden] { display: none; }
+/* ── Guided Ask-AI dropdown reveal (transitions.dev menu-dropdown language) ──
+ * Hidden by default; reveals only when Ask AI is clicked. Easing/tokens are
+ * the repo's own: 200–250ms var(--ease-out-expo) (same family as the View
+ * Transitions 350ms var(--ease-out-expo) in css/base.css and
+ * var(--transition-interactive) 200ms), terminal-chrome glass surface kept
+ * from the guided row. No skill markdown files exist in-repo — the contract
+ * is menu-dropdown/panel-reveal: slide + fade, instant when reduced-motion.
+ * Blur values unchanged. */
+@media (prefers-reduced-motion: reduce) {
+  .guided-ai-row { transition: none; transform: none; }
+}
+html[data-motion="off"] .guided-ai-row { transition: none; transform: none; }
 .guided-ai-input {
   flex: 1;
   min-width: 0;

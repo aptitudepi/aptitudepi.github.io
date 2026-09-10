@@ -24,6 +24,11 @@ const GUIDED_ACTIONS = [
 let guidedPanel = null;
 let guidedToggle = null;
 let guidedAiInput = null;
+let guidedAiRow = null;
+let guidedAskButton = null;
+
+const GUIDED_AI_ROW_ID = `guided-ai-row`;
+const GUIDED_DROPDOWN_CLOSE_MILLIS = 260;
 
 function readStoredMode() {
   try {
@@ -93,6 +98,56 @@ function revealAiPicker() {
   }, 150);
 }
 
+function isAiRowOpen() {
+  return Boolean(guidedAiRow) && guidedAiRow.hidden === false && guidedAiRow.classList.contains(`is-open`);
+}
+
+function isDropdownMotionAllowed() {
+  try {
+    const reduceMatcher = window.matchMedia(`(prefers-reduced-motion: reduce)`);
+    if (reduceMatcher.matches) return false;
+  } catch (matcherError) {
+    console.warn(`guided dropdown motion check skipped: ${matcherError.message}`);
+  }
+  try {
+    if (document.documentElement.dataset.motion === `off`) return false;
+  } catch (datasetError) {
+    console.warn(`guided dropdown motion dataset skipped: ${datasetError.message}`);
+  }
+  return true;
+}
+
+function setAiRowOpen(openRequested) {
+  if (!guidedAiRow) return;
+  if (openRequested) {
+    guidedAiRow.hidden = false;
+    // Double rAF so the display flip commits before .is-open starts the
+    // menu-dropdown slide/fade (transitions.dev language, terminal-chrome
+    // tokens in css/wave7.css). Without it the open transition never runs.
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (guidedAiRow) guidedAiRow.classList.add(`is-open`);
+      });
+    });
+    if (guidedAskButton) guidedAskButton.setAttribute(`aria-expanded`, `true`);
+    if (guidedAiInput) guidedAiInput.focus();
+    return;
+  }
+  guidedAiRow.classList.remove(`is-open`);
+  if (guidedAskButton) guidedAskButton.setAttribute(`aria-expanded`, `false`);
+  const rowNode = guidedAiRow;
+  const askButtonNode = guidedAskButton;
+  if (isDropdownMotionAllowed()) {
+    window.setTimeout(() => {
+      if (rowNode && rowNode.classList.contains(`is-open`) === false) rowNode.hidden = true;
+      if (askButtonNode) askButtonNode.focus();
+    }, GUIDED_DROPDOWN_CLOSE_MILLIS);
+  } else {
+    guidedAiRow.hidden = true;
+    if (guidedAskButton) guidedAskButton.focus();
+  }
+}
+
 function submitGuidedAsk() {
   const promptText = guidedAiInput.value.trim();
   if (!promptText) {
@@ -147,6 +202,11 @@ function buildGuidedPanel() {
     actionButton.type = isAskAction ? 'submit' : 'button';
     actionButton.className = 'guided-button';
     actionButton.textContent = guidedAction.label;
+    if (isAskAction) {
+      guidedAskButton = actionButton;
+      guidedAskButton.setAttribute(`aria-expanded`, `false`);
+      guidedAskButton.setAttribute(`aria-controls`, GUIDED_AI_ROW_ID);
+    }
     if (!isAskAction) {
       actionButton.addEventListener('click', () => {
         runGuidedCommand(guidedAction.command, guidedAction.intent);
@@ -157,15 +217,32 @@ function buildGuidedPanel() {
   askForm.appendChild(buttonRow);
   const aiRow = document.createElement('div');
   aiRow.className = 'guided-ai-row';
+  aiRow.id = GUIDED_AI_ROW_ID;
+  // Ask-AI panel is hidden by default; it reveals only when Ask AI is
+  // clicked (dropdown reveal in css/wave7.css), Esc closes with focus
+  // returning to the Ask AI button.
+  aiRow.hidden = true;
+  guidedAiRow = aiRow;
   guidedAiInput = document.createElement('input');
   guidedAiInput.type = 'text';
   guidedAiInput.className = 'guided-ai-input';
   guidedAiInput.placeholder = 'Ask AI anything…';
   guidedAiInput.setAttribute('aria-label', 'Ask the portfolio AI assistant');
+  guidedAiInput.addEventListener(`keydown`, (keyboardEvent) => {
+    if (keyboardEvent.key === `Escape`) {
+      keyboardEvent.preventDefault();
+      keyboardEvent.stopPropagation();
+      setAiRowOpen(false);
+    }
+  });
   aiRow.appendChild(guidedAiInput);
   askForm.appendChild(aiRow);
   askForm.addEventListener('submit', (submitEvent) => {
     submitEvent.preventDefault();
+    if (isAiRowOpen() === false) {
+      setAiRowOpen(true);
+      return;
+    }
     submitGuidedAsk();
   });
   guidedPanel.appendChild(askForm);
