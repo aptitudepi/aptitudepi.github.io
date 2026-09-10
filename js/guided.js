@@ -57,10 +57,20 @@ function applyMode(nextMode) {
 
 // Narrated echo: intent line, then the raw command line, then the real
 // output. A guided run of `ls links` differs from typing it only by these
-// two narration lines.
+// two narration lines. Gated states never fail silently: a pre-boot or
+// Linux-mode click narrates why it did not run (first-time visitors land
+// in Guided mode and click fast, so a dead button reads as "AI is broken").
 function runGuidedCommand(commandLine, intentText) {
   const activeTerm = getTerm();
-  if (!activeTerm || !isBootDone() || getMode() !== 'local') return false;
+  if (!activeTerm) return false;
+  if (!isBootDone()) {
+    activeTerm.writeln(`${SITE_MUTED}Terminal is still booting — your pick did not run. Retry in a moment.${ANSI_RESET}`);
+    return false;
+  }
+  if (getMode() !== 'local') {
+    activeTerm.writeln(`${SITE_MUTED}Exit Linux first (Exit Linux button), then retry your pick.${ANSI_RESET}`);
+    return false;
+  }
   const lineTokens = String(commandLine).trim().split(/\s+/);
   if (!resolveCommand(lineTokens[0] ?? '')) return false;
   activeTerm.writeln(`${SITE_MUTED}◈ ${intentText}${ANSI_RESET}`);
