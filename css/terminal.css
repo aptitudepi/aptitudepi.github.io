@@ -167,6 +167,9 @@
   margin: 8px 8px 12px;
   padding: 8px 10px;
   background: var(--color-glass);
+  /* Calm frost: 8px, matching the palette dialog (see wave7.css). */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-terminal-border);
   border-radius: 8px;
   font-family: var(--font-mono);

@@ -185,7 +185,7 @@
         <a href="/cv">cv</a>
         <a href="/man/">man</a>
       </nav>
-      <span id="mode-pill" data-mode="shell" title="Terminal mode: shell or linux">shell</span>
+      <span id="mode-pill" data-mode="shell" title="Terminal mode: shell or linux" hidden>shell</span>
       <button class="explore-button" type="button" data-open-palette>Explore <kbd>⌘K</kbd></button>
       <span class="terminal-clock" id="headerClock"></span>
     </nav>
@@ -431,6 +431,7 @@
   </div>
   <div id="palette-list" role="listbox" aria-label="Matching commands"></div>
   <div id="palette-examples" aria-live="polite"></div>
+  <div id="palette-footer" aria-hidden="true"><span>↑↓ navigate</span><span>Enter run</span><span>Esc close</span></div>
   <p id="palette-hint" hidden></p>
 </dialog>
 

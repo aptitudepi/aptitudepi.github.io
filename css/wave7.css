@@ -59,6 +59,7 @@
   border-color: rgba(60, 200, 120, 0.6);
   color: #7fe0a8;
 }
+#mode-pill[hidden] { display: none; }
 
 /* ── Explore buttons ── */
 .explore-button {
@@ -112,18 +113,26 @@
   gap: 8px;
 }
 .guided-button {
-  background: rgba(120, 140, 250, 0.12);
-  border: 1px solid var(--color-glass-border);
-  color: var(--color-text);
+  /* Download-resume button language, terminal-chrome scale: glass fill,
+     transparent border resolving to currentColor on hover, pill radius,
+     primary ink, glow-lift hover. Same tokens as .resume-download a
+     (css/components.css), smaller mono metrics for the guided row. */
+  background: var(--color-glass);
+  border: 1px solid transparent;
+  color: var(--color-primary);
   font: inherit;
   font-size: 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-full);
   padding: 6px 14px;
   cursor: pointer;
+  transition: all var(--transition-interactive);
 }
 .guided-button:hover,
 .guided-button:focus-visible {
-  border-color: var(--color-text);
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  box-shadow: 0 0 24px var(--color-primary-glow);
+  transform: translateY(-1px);
 }
 .guided-ai-row {
   display: flex;
@@ -142,12 +151,20 @@
   padding: 6px 10px;
 }
 
-/* ── Command palette dialog ── */
+/* ── Command palette dialog (Cloudflare-dashboard command-menu language) ──
+ * Narrow centered modal parked near the top of the viewport over a dimmed
+ * backdrop; arrow keys move the highlight, Enter runs, Esc exits (behavior
+ * in js/palette.js is unchanged — this restyle is positioning + surface).
+ * Calm blur: 8px frost on the dialog (see BLUR note in the palette task),
+ * well under main's 20px dialog blur. */
 #command-palette {
-  width: min(560px, 92vw);
+  width: min(480px, 92vw);
   max-height: 70vh;
+  margin: 10vh auto auto;
   padding: 0;
-  background: rgba(12, 14, 22, 0.97);
+  background: rgba(12, 14, 22, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-glass-border);
   border-radius: 12px;
   color: var(--color-text);
@@ -232,65 +249,21 @@
   color: #f0c060;
 }
 #palette-hint[hidden] { display: none; }
-
-/* ── Inline suggestions (dropdown + ghost) ── */
-#terminal-container { position: relative; }
-#terminal-suggestions {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  z-index: 5;
-  min-width: 220px;
-  max-width: min(420px, 90%);
-  max-height: 45%;
-  overflow-y: auto;
-  background: rgba(12, 14, 22, 0.96);
-  border: 1px solid var(--color-glass-border);
-  border-radius: 8px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 4px;
-}
-#terminal-suggestions[hidden] { display: none; }
-.suggest-header {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-text-faint);
-  padding: 4px 8px;
-}
-.suggest-item {
+#palette-footer {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  width: 100%;
-  box-sizing: border-box;
-  background: transparent;
-  border: 0;
-  border-radius: 6px;
-  color: var(--color-text);
-  font: inherit;
-  text-align: left;
-  padding: 4px 8px;
-  cursor: pointer;
-}
-.suggest-item.active { background: rgba(120, 140, 250, 0.22); }
-.suggest-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.suggest-tag {
-  flex: none;
-  font-size: 10px;
+  gap: 14px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--color-terminal-border);
+  font-size: 11px;
   color: var(--color-text-faint);
 }
-.suggest-footer {
-  font-size: 10px;
-  color: var(--color-text-faint);
-  padding: 4px 8px;
-}
+
+/* ── Inline ghost suggestion (fish-style, IDE Tab-accept) ──
+ * Ghost text only — the dropdown listbox was removed (ghost accept on Tab,
+ * dismiss on Esc/typing, history cycling via Ctrl+R). The ghost is a pure
+ * DOM overlay anchored to the xterm cursor cell, so golden transcripts
+ * stay byte-exact. */
+#terminal-container { position: relative; }
 #terminal-ghost {
   position: absolute;
   z-index: 4;
