@@ -19,8 +19,10 @@
 //   an IP into the blob — it cannot decrypt it — and any top-level
 //   client-supplied `ip` outside this canonical telemetry field is forced to
 //   null by canonicalizeWallTelemetry (invalid shapes never survive).
-//   City stays server-derived from the Cloudflare IP lookup; the client
-//   MUST NOT fetch or send a city.
+//   Coarse city/postal/lat-long/tz travel in the `geo` field, parsed from
+//   the SAME ident.me/json IP-chain response (no second request on the
+//   fallback leg). The server still derives its own IP-city from the
+//   Cloudflare lookup for the public moniker and never trusts client geo.
 // - canvasHash: SHA-256 hex of a small fixed render (hash-of-render only).
 // - canvasStable: draw-twice compare bit. The raw bitmap NEVER leaves the
 //   device — only the digest plus the stability bit enter the blob.
@@ -33,14 +35,17 @@
 // - webrtcCandidates: STUN-derived (stun.l.google.com:19302) srflx candidate
 //   strings, best-effort with a short timeout, truncated to at most 8 entries
 //   of at most 256 chars each; empty array on any failure.
-// - geo: precise {latitude, longitude, accuracy} ONLY via the browser
-//   permission prompt at POST time. Callers MUST print an inline rationale
-//   immediately before calling collectWallTelemetry (see runWallCommand in
-//   js/commands.js). Denial or timeout resolves to null silently and never
-//   blocks the post — the server falls back to IP-city for the moniker.
+// - geo: coarse city-level {latitude, longitude, accuracy, city, postal,
+//   timezone} parsed ONLY from the ident.me/json IP-chain response already
+//   fetched for the `ip` field (no precise GPS, no permission prompt, no
+//   extra request on the fallback leg). latitude/longitude must be finite
+//   and in range or the whole field resolves to null; accuracy is null for
+//   coarse geo (kept so precise-vs-coarse stays distinguishable). Null geo
+//   never blocks the post — the server falls back to IP-city for the
+//   moniker.
 //
 // EXCLUDED always: font enumeration, passwords or credentials, microphone or
-// camera capture, wallet or financial data, covert precise GPS, and message
+// camera capture, wallet or financial data, precise GPS, and message
 // PII beyond the moderated public post.
 //
 // Transport: POST {name, message, gpg} where gpg is the armored blob (or null
@@ -59,13 +64,19 @@
 
 export const WALL_TELEMETRY_VERSION = 1;
 export const WALL_TELEMETRY_MAX_BYTES = 65536;
+// Retained for import-surface stability; precise-GPS collection was removed
+// (geo is coarse ident.me/json only, no permission prompt), so nothing reads
+// this timeout on the submit path anymore.
 export const WALL_TELEMETRY_GEO_TIMEOUT_MILLIS = 4000;
 export const WALL_TELEMETRY_STUN_TIMEOUT_MILLIS = 1500;
 export const WALL_TELEMETRY_IP_TIMEOUT_MILLIS = 4000;
 export const WALL_TELEMETRY_MAX_CANDIDATES = 8;
 export const WALL_TELEMETRY_MAX_CANDIDATE_CHARS = 256;
 export const WALL_PUBLIC_IP_PRIMARY_URL = `https://api.ipify.org?format=json`;
-export const WALL_PUBLIC_IP_FALLBACK_URL = `https://ident.me/.json`;
+// Full ident.me document (ip + city + postal + latitude + longitude + tz +
+// asn/aso/country): the IP chain reuses this ONE response for both the `ip`
+// field and the coarse `geo` field, so no second geo request ever fires.
+export const WALL_PUBLIC_IP_FALLBACK_URL = `https://ident.me/json`;
 
 // Placeholder owner key (fingerprint 157414f82954c9726f9068fc742ae9990a8b5952,
 // generated 2026-09-08 for the encrypt round-trip proof; private part kept
@@ -199,51 +210,117 @@ function readGpuStrings() {
   }
 }
 
-function readPreciseGeo() {
-  return new Promise((resolveGeo) => {
-    try {
-      const geoAgent = navigator.geolocation;
-      if (geoAgent === undefined || typeof geoAgent.getCurrentPosition !== `function`) {
-        resolveGeo(null);
-        return;
-      }
-      let settledGeo = false;
-      const geoTimer = setTimeout(() => {
-        if (settledGeo === false) {
-          settledGeo = true;
-          resolveGeo(null);
-        }
-      }, WALL_TELEMETRY_GEO_TIMEOUT_MILLIS);
-      geoAgent.getCurrentPosition(
-        (geoPosition) => {
-          if (settledGeo) {
-            return;
-          }
-          settledGeo = true;
-          clearTimeout(geoTimer);
-          const geoCoords = geoPosition.coords;
-          resolveGeo({
-            latitude: Number(geoCoords.latitude),
-            longitude: Number(geoCoords.longitude),
-            accuracy: Number(geoCoords.accuracy),
-          });
-        },
-        (geoDenial) => {
-          if (settledGeo) {
-            return;
-          }
-          settledGeo = true;
-          clearTimeout(geoTimer);
-          console.warn(`wall telemetry: precise geo unavailable`, geoDenial);
-          resolveGeo(null);
-        },
-        { timeout: WALL_TELEMETRY_GEO_TIMEOUT_MILLIS, maximumAge: 60000 },
-      );
-    } catch (geoFatal) {
-      console.warn(`wall telemetry: geo probe failed`, geoFatal);
-      resolveGeo(null);
+// Coarse-coordinate gate for ident.me/json geo: finite numbers in range
+// survive (string numerics tolerated), everything else is null. Never
+// throws — fail-closed to null.
+function readIdentMeCoordinate(sourceValue, minBound, maxBound) {
+  let numericValue = NaN;
+  if (typeof sourceValue === `number`) {
+    numericValue = sourceValue;
+  } else if (typeof sourceValue === `string` && sourceValue.trim() !== ``) {
+    numericValue = Number(sourceValue);
+  }
+  if (Number.isFinite(numericValue) === false || numericValue < minBound || numericValue > maxBound) {
+    return null;
+  }
+  return numericValue;
+}
+
+// Coarse geo from an ident.me/json document ({ip, city, postal, latitude,
+// longitude, tz, ...}): city-level only, accuracy null (coarse marker).
+// Missing or out-of-range coordinates resolve the whole field to null.
+function extractIdentMeGeo(parsedBody) {
+  if (parsedBody === null || typeof parsedBody !== `object`) {
+    return null;
+  }
+  const latitudeValue = readIdentMeCoordinate(parsedBody.latitude, -90, 90);
+  const longitudeValue = readIdentMeCoordinate(parsedBody.longitude, -180, 180);
+  if (latitudeValue === null || longitudeValue === null) {
+    return null;
+  }
+  const timezoneValue = parsedBody.tz ?? parsedBody.timezone;
+  return {
+    latitude: latitudeValue,
+    longitude: longitudeValue,
+    accuracy: null,
+    city: readNullableString(parsedBody.city, 64),
+    postal: readNullableString(parsedBody.postal, 32),
+    timezone: readNullableString(timezoneValue, 64),
+  };
+}
+
+// Single ident.me/json document fetch, parsed to an object or null. Never
+// throws — every failure (network, HTTP, parse) is fail-closed null.
+async function fetchIdentMeDocument(fetchImpl) {
+  const timeoutController = new AbortController();
+  const timeoutHandle = setTimeout(() => {
+    timeoutController.abort();
+  }, WALL_TELEMETRY_IP_TIMEOUT_MILLIS);
+  try {
+    const identResponse = await fetchImpl(WALL_PUBLIC_IP_FALLBACK_URL, { signal: timeoutController.signal });
+    if (identResponse.ok === false) {
+      return null;
     }
-  });
+    const responseText = await identResponse.text();
+    try {
+      const parsedBody = JSON.parse(responseText);
+      if (parsedBody !== null && typeof parsedBody === `object`) {
+        return parsedBody;
+      }
+      return null;
+    } catch (parseError) {
+      console.warn(`wall telemetry: ident.me parse fell back to null`, parseError);
+      return null;
+    }
+  } catch (fetchError) {
+    console.warn(`wall telemetry: ident.me fetch failed`, fetchError);
+    return null;
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+}
+
+async function fetchIdentMeGeo(fetchImpl) {
+  const identDocument = await fetchIdentMeDocument(fetchImpl);
+  return extractIdentMeGeo(identDocument);
+}
+
+// Fallback leg: ONE ident.me/json response supplies both the IP and the
+// coarse geo (reused, never fetched twice). Fail-closed nulls throughout.
+async function fetchIdentMeIpAndGeo(fetchImpl) {
+  const identDocument = await fetchIdentMeDocument(fetchImpl);
+  if (identDocument === null) {
+    return { ip: null, geo: null };
+  }
+  return { ip: extractWallIpCandidate(identDocument, null), geo: extractIdentMeGeo(identDocument) };
+}
+
+// Combined IP + coarse-geo fetch for the submit path: ipify primary for the
+// IP plus a best-effort ident.me/json read for geo; when the primary leg
+// fails, the single ident.me/json fallback body supplies BOTH. Every
+// failure resolves to null fields and never blocks the post — the server
+// falls back to IP-city for the moniker.
+export async function fetchWallIpAndGeo(fetchOverride) {
+  try {
+    const fetchImpl =
+      fetchOverride ?? (typeof fetch === `function` ? fetch.bind(globalThis) : null);
+    if (fetchImpl === null) {
+      return { ip: null, geo: null };
+    }
+    const primaryIp = await fetchWallIpFromUrl(
+      WALL_PUBLIC_IP_PRIMARY_URL,
+      fetchImpl,
+      WALL_TELEMETRY_IP_TIMEOUT_MILLIS,
+    );
+    if (primaryIp !== null) {
+      const coarseGeo = await fetchIdentMeGeo(fetchImpl);
+      return { ip: primaryIp, geo: coarseGeo };
+    }
+    return await fetchIdentMeIpAndGeo(fetchImpl);
+  } catch (publicIpError) {
+    console.warn(`wall telemetry: public-IP unavailable`, publicIpError);
+    return { ip: null, geo: null };
+  }
 }
 
 function readStunCandidates() {
@@ -409,8 +486,11 @@ async function fetchWallIpFromUrl(targetUrl, fetchImpl, timeoutMillis) {
 }
 
 // Client-side public-IP fetch: ipify primary (`{"ip":"..."}`), ident.me
-// fallback (`{"address":"..."}` or plain-text body). Each leg races a ~4s
-// timeout; every failure resolves to null and never blocks the post.
+// full-document fallback (`{"ip","city","postal","latitude","longitude",
+// "tz",...}` or plain-text body). Each leg races a ~4s timeout; every
+// failure resolves to null and never blocks the post. Prefer
+// fetchWallIpAndGeo on the submit path so the fallback body is reused for
+// coarse geo instead of fetched twice.
 export async function fetchWallPublicIp(fetchOverride) {
   try {
     const fetchImpl =
@@ -435,6 +515,29 @@ export async function fetchWallPublicIp(fetchOverride) {
     console.warn(`wall telemetry: public-IP unavailable`, publicIpError);
     return null;
   }
+}
+
+// Coarse-geo gate: latitude/longitude must be finite and in range (string
+// numerics tolerated); city, postal and timezone are capped nullable
+// strings; accuracy is null for ident.me coarse geo. Anything else resolves
+// to null — fail-closed, the post still submits.
+function readCanonicalGeo(geoRecord) {
+  if (geoRecord === null || typeof geoRecord !== `object`) {
+    return null;
+  }
+  const latitudeValue = readIdentMeCoordinate(geoRecord.latitude, -90, 90);
+  const longitudeValue = readIdentMeCoordinate(geoRecord.longitude, -180, 180);
+  if (latitudeValue === null || longitudeValue === null) {
+    return null;
+  }
+  return {
+    latitude: latitudeValue,
+    longitude: longitudeValue,
+    accuracy: readNullableNumber(geoRecord.accuracy),
+    city: readNullableString(geoRecord.city, 64),
+    postal: readNullableString(geoRecord.postal, 32),
+    timezone: readNullableString(geoRecord.timezone, 64),
+  };
 }
 
 // Explicit allowlist: unknown keys on the input are dropped, missing keys
@@ -468,17 +571,7 @@ export function canonicalizeWallTelemetry(rawRecord) {
     timezone: readNullableString(sourceRecord.timezone, 64),
     devicePixelRatio: readNullableNumber(sourceRecord.devicePixelRatio),
     webrtcCandidates: cleanCandidates,
-    geo:
-      typeof geoRecord.latitude === `number` &&
-      typeof geoRecord.longitude === `number` &&
-      Number.isFinite(geoRecord.latitude) &&
-      Number.isFinite(geoRecord.longitude)
-        ? {
-            latitude: geoRecord.latitude,
-            longitude: geoRecord.longitude,
-            accuracy: readNullableNumber(geoRecord.accuracy),
-          }
-        : null,
+    geo: readCanonicalGeo(geoRecord),
   };
   const orderedRecord = {};
   for (const fieldName of WALL_TELEMETRY_FIELD_ORDER) {
@@ -499,13 +592,13 @@ export async function collectWallTelemetry(postNonce) {
     }
   })();
   const candidatePromise = readStunCandidates();
-  const geoPromise = readPreciseGeo();
+  const ipGeoPromise = fetchWallIpAndGeo();
   const canvasPromise = readCanvasDigest();
-  const publicIpPromise = fetchWallPublicIp();
   const canvasDigest = await canvasPromise;
   const stunCandidates = await candidatePromise;
-  const preciseGeo = await geoPromise;
-  const publicIpAddress = await publicIpPromise;
+  const ipGeoResult = await ipGeoPromise;
+  const publicIpAddress = ipGeoResult.ip;
+  const coarseGeo = ipGeoResult.geo;
   const agentText = typeof navigator !== `undefined` && typeof navigator.userAgent === `string` ? navigator.userAgent : null;
   const concurrencyText =
     typeof navigator !== `undefined` ? readNullableNumber(navigator.hardwareConcurrency) : null;
@@ -525,7 +618,7 @@ export async function collectWallTelemetry(postNonce) {
     timezone: timezoneName,
     devicePixelRatio: pixelText,
     webrtcCandidates: stunCandidates,
-    geo: preciseGeo,
+    geo: coarseGeo,
   };
   return canonicalizeWallTelemetry(rawRecord);
 }

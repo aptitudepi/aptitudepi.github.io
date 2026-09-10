@@ -1381,10 +1381,10 @@ async function runWallCommand(term, args, runSignal) {
     // telemetry blob and the public post still submits). openpgp loads lazily
     // here, after validation, so the initial bundle never carries it.
     // Disclosure budget: exactly ONE submit-time line covers the public plus
-    // encrypted-to-owner intent and the optional-location rationale. The
+    // encrypted-to-owner intent and the coarse-geo note. The
     // telemetry failure path stays silent in-terminal (console.warn only),
     // so both success and failure cost one line total (max two on failure).
-    term.writeln(`${SITE_MUTED}Entries are public; device signals are encrypted to the owner for abuse prevention (location only with permission; denying still posts).${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Entries are public; device signals are encrypted to the owner for abuse prevention (coarse city-level geo only; posts submit regardless).${ANSI_RESET}`);
     let armoredTelemetry = null;
     try {
       const telemetryModule = await import(`./wall-telemetry.js`);
