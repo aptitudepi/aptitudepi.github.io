@@ -356,6 +356,7 @@
   margin: 0 auto;
 }
 .cert-badge {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -366,11 +367,25 @@
   background: var(--color-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  transition: all 250ms var(--ease-out-expo);
+  transition: border-color 300ms var(--ease-out-expo), transform 300ms var(--ease-out-expo);
   cursor: pointer;
   overflow: hidden;
   opacity: 0;
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
+}
+.cert-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-primary-dim) 0%, transparent 70%);
+  transform: translate(calc(var(--mx, 0) - 150px), calc(var(--my, 0) - 150px));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms;
 }
 .cert-badge::after {
   content: '';
@@ -388,9 +403,10 @@
   transition: opacity 400ms;
   will-change: translate;
 }
-.cert-badge:hover { transform: translateY(-3px); border-color: currentColor; }
-.cert-badge:hover::after { opacity: 0.2; }
-.cert-badge img { width: 72px; height: 72px; border-radius: var(--radius-sm); transition: transform 250ms var(--ease-out-expo); }
+.cert-badge:hover { transform: translateY(-2px); border-color: currentColor; }
+.cert-badge:hover::before { opacity: 1; }
+.cert-badge:hover::after { opacity: 0.25; }
+.cert-badge img { width: 72px; height: 72px; border-radius: var(--radius-sm); transition: transform 300ms var(--ease-out-expo); }
 .cert-badge:hover img { transform: scale(1.08); }
 .cert-badge.hubspot img { width: 84px; height: auto; }
 .cert-badge .cert-name { font-size: 0.625rem; color: var(--color-text-faint); text-align: center; line-height: 1.3; }
