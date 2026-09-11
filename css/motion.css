@@ -65,6 +65,8 @@ html .project-link,
 html .bento-card,
 html .view-more-cta a,
 html .view-more-cta a:hover,
+html .guided-button,
+html .guided-button:hover,
 html .cert-badge,
 html .social-link {
   animation-name: none;
@@ -79,10 +81,12 @@ html .nav-dot.active {
   box-shadow: 0 0 12px oklch(0.45 0.31 264 / 0.35);
 }
 html .view-more-cta a,
+html .guided-button,
 html .cert-badge {
   box-shadow: 0 0 24px oklch(0.45 0.31 264 / 0.35);
 }
-html .view-more-cta a:hover {
+html .view-more-cta a:hover,
+html .guided-button:hover {
   box-shadow: 0 0 40px oklch(0.45 0.31 264 / 0.35);
 }
 
@@ -165,6 +169,11 @@ html .view-more-cta a:focus-visible {
   background: color-mix(in srgb, currentColor 18%, transparent);
   box-shadow: 0 0 40px oklch(0.45 0.31 264 / 0.35);
 }
+html .guided-button:focus-visible {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  box-shadow: 0 0 40px oklch(0.45 0.31 264 / 0.35);
+}
 html .nav-dot:focus-visible {
   color: var(--color-text-muted);
   background: color-mix(in oklch, var(--color-primary-dim) 50%, transparent);
@@ -234,11 +243,13 @@ html[data-motion="off"] *::after {
     animation: blueRedColor 6s ease-in-out infinite, blueRedGlow12 6s ease-in-out infinite;
   }
   html[data-motion="on"][data-expressive="full"] .view-more-cta a,
+  html[data-motion="on"][data-expressive="full"] .guided-button,
   html[data-motion="on"][data-expressive="full"] .cert-badge {
     animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
     animation-delay: var(--cycle-phase, 0s);
   }
-  html[data-motion="on"][data-expressive="full"] .view-more-cta a:hover {
+  html[data-motion="on"][data-expressive="full"] .view-more-cta a:hover,
+  html[data-motion="on"][data-expressive="full"] .guided-button:hover {
     animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
   }
   html[data-motion="on"][data-expressive="full"] [data-auras="1"]::before {
@@ -333,8 +344,17 @@ html[data-motion="off"] *::after {
     animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
     animation-delay: var(--cycle-phase, 0s);
   }
+  html[data-motion="on"] .guided-button {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
   html[data-motion="on"] .view-more-cta a:hover,
   html[data-motion="on"] .view-more-cta a:focus-visible {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] .guided-button:hover,
+  html[data-motion="on"] .guided-button:focus-visible {
     animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
     animation-delay: var(--cycle-phase, 0s);
   }

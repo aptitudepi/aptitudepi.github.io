@@ -113,25 +113,29 @@
   gap: 8px;
 }
 .guided-button {
-  /* Pill-button language, terminal-chrome scale: glass fill,
-     transparent border resolving to currentColor on hover, pill radius,
-     primary ink, glow-lift hover. Smaller mono metrics for the guided row. */
+  /* View-more language at terminal-chrome scale: hairline border resting,
+     pill radius, muted ink, blue↔red text + glow colorcycle in the shared
+     phase (motion.css parks it to the resting shadow when calm, same as
+     .view-more-cta a). Smaller mono metrics for the guided row; the guided
+     run path (js/guided.js) is untouched, so guided≡typed holds. */
   background: var(--color-glass);
-  border: 1px solid transparent;
-  color: var(--color-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
   font: inherit;
   font-size: 12px;
   border-radius: var(--radius-full);
   padding: 6px 14px;
   cursor: pointer;
   transition: all var(--transition-interactive);
+  animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
 .guided-button:hover,
 .guided-button:focus-visible {
   border-color: currentColor;
+  color: currentColor;
   background: color-mix(in srgb, currentColor 18%, transparent);
-  box-shadow: 0 0 24px var(--color-primary-glow);
-  transform: translateY(-1px);
+  box-shadow: 0 0 40px var(--color-primary-glow);
+  animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
 }
 .guided-ai-row {
   display: flex;
