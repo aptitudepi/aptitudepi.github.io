@@ -50,9 +50,16 @@ const TERMINAL_HOST_FALLBACK = 'dvxb.io';
 let terminalHost = TERMINAL_HOST_FALLBACK;
 function getTerminalHost() { return terminalHost; }
 function setTerminalHost(nextHost) {
-  if (typeof nextHost === 'string' && nextHost.trim().length > 0) {
-    terminalHost = nextHost.trim();
-  }
+  if (typeof nextHost !== 'string') return;
+  const trimmedHost = nextHost.trim();
+  if (trimmedHost.length === 0) return;
+  // Fail closed on anything a city slug could never be: inner whitespace
+  // (a raw "New York") or placeholder literals ("null"/"undefined") that
+  // would otherwise paint verbatim into the prompt, title and neofetch.
+  if (/\s/u.test(trimmedHost)) return;
+  const loweredHost = trimmedHost.toLowerCase();
+  if (loweredHost === 'null' || loweredHost === 'undefined' || loweredHost === 'none') return;
+  terminalHost = trimmedHost;
 }
 
 // WAVE 13 shared boot script: the static establishing-shot lines. Each entry

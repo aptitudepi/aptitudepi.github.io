@@ -21,7 +21,7 @@ let asyncCPU = null;
         asyncCPU = s;
       }
     }
-  } catch (_) {}
+  } catch (_) { asyncCPU = null; }
   fetch('https://ipapi.co/json/', { signal: combinedTimeoutSignal(null, 8000) })
     .then((locationResp) => {
       if (!locationResp.ok) throw new Error(`HTTP ${locationResp.status}`);
@@ -118,7 +118,12 @@ function slugifyCityName(rawCity) {
   const asciiText = foldedText.replace(/[^a-z0-9-]+/gu, '');
   const collapsedText = asciiText.replace(/-{2,}/gu, '-').replace(/^-+|-+$/gu, '');
   if (collapsedText.length === 0) return null;
-  return collapsedText.slice(0, TERMINAL_CITY_SLUG_MAX_CHARS);
+  // The length cap can strand a separator at the cut edge: re-trim so a
+  // capped slug never ends on a dangling hyphen.
+  const cappedText = collapsedText.slice(0, TERMINAL_CITY_SLUG_MAX_CHARS);
+  const cleanText = cappedText.replace(/^-+|-+$/gu, '');
+  if (cleanText.length === 0) return null;
+  return cleanText;
 }
 
 // Identity read from one ident.me/json document ({city, ip, ...}):
@@ -217,6 +222,7 @@ function syncHostChrome(resolvedCity, visitorIp) {
 
 fetchTerminalIdentity()
   .then((resolvedIdentity) => {
+    if (resolvedIdentity === null || typeof resolvedIdentity !== 'object') return;
     const resolvedCity = resolvedIdentity.citySlug;
     if (resolvedCity === null || resolvedCity === TERMINAL_HOST_FALLBACK) return;
     setTerminalHost(resolvedCity);
