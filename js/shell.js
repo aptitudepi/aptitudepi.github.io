@@ -90,13 +90,16 @@ function getGPU() {
   return 'Unknown';
 }
 
-// ── Dynamic host identity (visitor city slug) ─────────────────────
-// Privacy-first resolution for the terminal prompt and host-named output:
-// the ident.me/json document supplies the geo city, reused from that SAME
-// response (no second geo request). Fallback order: ident.me city, then the
+// ── Dynamic host identity (visitor city slug + full IP title) ─────
+// Privacy-tuned resolution for the terminal prompt and host-named output:
+// the ident.me/json document supplies the geo city AND the full IP, both
+// read from that SAME response (no second request). The prompt, neofetch
+// header, hostname, uname and boot line show only db@<city-slug> (no IP on
+// screen/recordings); the window chrome title shows
+// `db@<city> — fish 3.7 (<IP>)`, falling back to the bare city title when
+// the IP is unknown. Fallback order: ident.me city, then the
 // server-derived ipapi.co prefetch city when already landed client-side,
-// then the dvxb.io fallback (fail-closed). The full visitor IP never reaches
-// the prompt, so screen shares and recordings leak nothing. Resolved once
+// then the dvxb.io fallback (fail-closed). Resolved once
 // per page session and cached on the module promise, so later prompts and
 // commands read the same host without refetching.
 const HOST_FETCH_TIMEOUT_MILLIS = 4000;
@@ -118,26 +121,41 @@ function slugifyCityName(rawCity) {
   return collapsedText.slice(0, TERMINAL_CITY_SLUG_MAX_CHARS);
 }
 
-// City read from one ident.me/json document ({city, ...}): slug or null.
-// Never throws — unknown shapes resolve to null.
-function readIdentCityField(parsedBody) {
-  if (parsedBody === null || typeof parsedBody !== 'object') return null;
+// Identity read from one ident.me/json document ({city, ip, ...}):
+// { citySlug, visitorIp }, each null when unusable. The city feeds the
+// prompt; the full IP feeds only the window title. Never throws —
+// unknown shapes resolve to nulls.
+function readIdentIdentity(parsedBody) {
+  if (parsedBody === null || typeof parsedBody !== 'object') return { citySlug: null, visitorIp: null };
   const cityValue = parsedBody.city;
-  if (typeof cityValue !== 'string') return null;
-  return slugifyCityName(cityValue);
+  const addressValue = parsedBody.ip;
+  return { citySlug: typeof cityValue === 'string' ? slugifyCityName(cityValue) : null, visitorIp: readIdentIpField(addressValue) };
 }
 
-// Single ident.me/json fetch, parsed to a city slug or null. Never throws:
-// every failure (network, HTTP, parse) is fail-closed null.
-async function fetchIdentCitySlug() {
+// Full-IP read from one ident.me/json document: trimmed dotted/colon
+// text or null. Rejects blanks, inner whitespace and non-address text so
+// the title never renders empty parens or junk. Never throws.
+function readIdentIpField(rawAddress) {
+  if (typeof rawAddress !== 'string') return null;
+  const trimmedAddress = rawAddress.trim();
+  if (trimmedAddress.length === 0) return null;
+  if (/\s/u.test(trimmedAddress)) return null;
+  const looksLikeAddress = trimmedAddress.includes('.') || trimmedAddress.includes(':');
+  return looksLikeAddress ? trimmedAddress : null;
+}
+
+// Single ident.me/json fetch, parsed to { citySlug, visitorIp } from that
+// SAME response (no second request). Never throws: every failure
+// (network, HTTP, parse) is fail-closed nulls.
+async function fetchIdentIdentity() {
   try {
-    const cityResp = await fetch(HOST_IDENT_JSON_ENDPOINT, { signal: combinedTimeoutSignal(null, HOST_FETCH_TIMEOUT_MILLIS) });
-    if (cityResp.ok === false) return null;
-    const cityPayload = await cityResp.json();
-    return readIdentCityField(cityPayload);
-  } catch (cityError) {
-    console.warn(`host identity leg skipped (${HOST_IDENT_JSON_ENDPOINT}): ${cityError.message}`);
-    return null;
+    const identResp = await fetch(HOST_IDENT_JSON_ENDPOINT, { signal: combinedTimeoutSignal(null, HOST_FETCH_TIMEOUT_MILLIS) });
+    if (identResp.ok === false) return { citySlug: null, visitorIp: null };
+    const identPayload = await identResp.json();
+    return readIdentIdentity(identPayload);
+  } catch (identError) {
+    console.warn(`host identity leg skipped (${HOST_IDENT_JSON_ENDPOINT}): ${identError.message}`);
+    return { citySlug: null, visitorIp: null };
   }
 }
 
@@ -152,30 +170,41 @@ function readPrefetchedCitySlug() {
   }
 }
 
-let terminalCityPromise = null;
-function fetchTerminalCity() {
-  if (terminalCityPromise !== null) return terminalCityPromise;
-  terminalCityPromise = (async () => {
+let terminalIdentityPromise = null;
+function fetchTerminalIdentity() {
+  if (terminalIdentityPromise !== null) return terminalIdentityPromise;
+  terminalIdentityPromise = (async () => {
     try {
-      const identCity = await fetchIdentCitySlug();
-      if (identCity !== null) return identCity;
-      return readPrefetchedCitySlug();
+      const identIdentity = await fetchIdentIdentity();
+      if (identIdentity.citySlug !== null) return identIdentity;
+      return { citySlug: readPrefetchedCitySlug(), visitorIp: null };
     } catch (resolveError) {
       console.warn(`host identity unavailable: ${resolveError.message}`);
-      return null;
+      return { citySlug: null, visitorIp: null };
     }
   })();
-  return terminalCityPromise;
+  return terminalIdentityPromise;
+}
+
+// Window-title builder: `db@<city> — fish 3.7 (<IP>)` with an em dash
+// when the full IP is known, plain `db@<city> — fish 3.7` otherwise
+// (never empty parens, never "null"). The prompt itself stays city-only.
+function buildChromeTitle(resolvedCity, visitorIp) {
+  const baseTitle = `db@${resolvedCity} — fish 3.7`;
+  const trimmedIp = typeof visitorIp === 'string' ? visitorIp.trim() : '';
+  if (trimmedIp.length === 0) return baseTitle;
+  return `${baseTitle} (${trimmedIp})`;
 }
 
 // Window-title sync: the chrome title and the tab title track the resolved
-// city once known. Static markup keeps the dvxb.io fallback so first paint
-// and blocked-network snapshots stay byte-identical.
-function syncHostChrome(resolvedCity) {
+// city plus the fetched full IP once known. Static markup keeps the
+// dvxb.io fallback so first paint and blocked-network snapshots stay
+// byte-identical.
+function syncHostChrome(resolvedCity, visitorIp) {
   try {
     if (typeof document === 'undefined') return;
     const chromeTitle = document.querySelector('.terminal-title');
-    const titleText = `db@${resolvedCity} — fish 3.7`;
+    const titleText = buildChromeTitle(resolvedCity, visitorIp);
     if (chromeTitle) {
       chromeTitle.textContent = titleText;
       chromeTitle.setAttribute('data-text', titleText);
@@ -186,11 +215,12 @@ function syncHostChrome(resolvedCity) {
   }
 }
 
-fetchTerminalCity()
-  .then((resolvedCity) => {
+fetchTerminalIdentity()
+  .then((resolvedIdentity) => {
+    const resolvedCity = resolvedIdentity.citySlug;
     if (resolvedCity === null || resolvedCity === TERMINAL_HOST_FALLBACK) return;
     setTerminalHost(resolvedCity);
-    syncHostChrome(resolvedCity);
+    syncHostChrome(resolvedCity, resolvedIdentity.visitorIp);
   })
   .catch((applyError) => { console.warn(`host identity apply skipped: ${applyError.message}`); });
 
