@@ -4,7 +4,7 @@ import {
   neofetch, SITE_GREEN, SITE_WHITE, SITE_CYAN, SITE_BLUE, SITE_MUTED, SITE_OK,
   SITE_ERR, SITE_FAINT, ANSI_RESET, resolveCommand, suggestCommand,
   tokenizeCommandLine, setPrefetchedLocation, recordCommandOutput, BOOT_SCRIPT,
-  TERMINAL_HOST_FALLBACK, getTerminalHost, setTerminalHost,
+  TERMINAL_HOST_FALLBACK, getTerminalHost, setTerminalHost, getPrefetchedCity,
 } from './commands.js';
 
 let asyncCPU = null;
@@ -90,97 +90,92 @@ function getGPU() {
   return 'Unknown';
 }
 
-// ── Dynamic host identity (visitor public IP) ─────────────────────
-// v4/v6-aware resolution for the terminal prompt and host-named output:
-// ipify legs first, ident.me 4./6. legs next, tnedi.me fallback. Each leg
-// races a short timeout; every failure resolves null and the prompt keeps
-// the dvxb.io fallback (fail-closed). Resolved once per page session and
-// cached on the module promise, so later prompts and commands read the
-// same host without refetching. Full IP in the prompt by design; only the
-// guestbook moniker is masked (see formatWallMoniker in commands.js).
+// ── Dynamic host identity (visitor city slug) ─────────────────────
+// Privacy-first resolution for the terminal prompt and host-named output:
+// the ident.me/json document supplies the geo city, reused from that SAME
+// response (no second geo request). Fallback order: ident.me city, then the
+// server-derived ipapi.co prefetch city when already landed client-side,
+// then the dvxb.io fallback (fail-closed). The full visitor IP never reaches
+// the prompt, so screen shares and recordings leak nothing. Resolved once
+// per page session and cached on the module promise, so later prompts and
+// commands read the same host without refetching.
 const HOST_FETCH_TIMEOUT_MILLIS = 4000;
-const HOST_IP_JSON_ENDPOINTS = [
-  'https://api.ipify.org?format=json',
-  'https://api64.ipify.org?format=json',
-  'https://api6.ipify.org?format=json',
-];
-const HOST_IP_TEXT_ENDPOINTS = [
-  'https://4.ident.me/',
-  'https://6.ident.me/',
-  'https://tnedi.me/',
-];
+const HOST_IDENT_JSON_ENDPOINT = 'https://ident.me/json';
+const TERMINAL_CITY_SLUG_MAX_CHARS = 32;
 
-function readIPv4Candidate(rawValue) {
-  const candidateText = String(rawValue ?? '').trim();
-  const quadMatch = candidateText.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/u);
-  if (quadMatch === null) return null;
-  const octetList = quadMatch.slice(1).map((octetText) => Number(octetText));
-  const octetsValid = octetList.every((octetValue) => Number.isInteger(octetValue) && octetValue >= 0 && octetValue <= 255);
-  return octetsValid ? candidateText : null;
+// Slugify a geo city for the prompt: lowercase, spaces to hyphens,
+// ASCII-only (NFKD folds accents), collapsed dashes, capped length.
+// Returns null when nothing usable survives (fail-closed to fallback).
+function slugifyCityName(rawCity) {
+  const sourceText = String(rawCity ?? '').trim();
+  if (sourceText.length === 0) return null;
+  const loweredText = sourceText.toLowerCase();
+  const hyphenText = loweredText.replace(/[\s_]+/gu, '-');
+  const foldedText = hyphenText.normalize('NFKD');
+  const asciiText = foldedText.replace(/[^a-z0-9-]+/gu, '');
+  const collapsedText = asciiText.replace(/-{2,}/gu, '-').replace(/^-+|-+$/gu, '');
+  if (collapsedText.length === 0) return null;
+  return collapsedText.slice(0, TERMINAL_CITY_SLUG_MAX_CHARS);
 }
 
-function readIPv6Candidate(rawValue) {
-  const candidateText = String(rawValue ?? '').trim();
-  if (candidateText.includes(':') === false) return null;
-  const colonTotal = (candidateText.match(/:/gu) ?? []).length;
-  if (colonTotal < 2) return null;
-  if (/^[0-9a-fA-F:.]+$/u.test(candidateText) === false) return null;
-  return candidateText;
+// City read from one ident.me/json document ({city, ...}): slug or null.
+// Never throws — unknown shapes resolve to null.
+function readIdentCityField(parsedBody) {
+  if (parsedBody === null || typeof parsedBody !== 'object') return null;
+  const cityValue = parsedBody.city;
+  if (typeof cityValue !== 'string') return null;
+  return slugifyCityName(cityValue);
 }
 
-async function fetchHostCandidate(endpointUrl, expectJson) {
+// Single ident.me/json fetch, parsed to a city slug or null. Never throws:
+// every failure (network, HTTP, parse) is fail-closed null.
+async function fetchIdentCitySlug() {
   try {
-    const hostResp = await fetch(endpointUrl, { signal: combinedTimeoutSignal(null, HOST_FETCH_TIMEOUT_MILLIS) });
-    if (hostResp.ok === false) return null;
-    if (expectJson) {
-      const hostPayload = await hostResp.json();
-      return typeof hostPayload.ip === 'string' ? hostPayload.ip.trim() : null;
-    }
-    return (await hostResp.text()).trim();
-  } catch (hostError) {
-    console.warn(`host identity leg skipped (${endpointUrl}): ${hostError.message}`);
+    const cityResp = await fetch(HOST_IDENT_JSON_ENDPOINT, { signal: combinedTimeoutSignal(null, HOST_FETCH_TIMEOUT_MILLIS) });
+    if (cityResp.ok === false) return null;
+    const cityPayload = await cityResp.json();
+    return readIdentCityField(cityPayload);
+  } catch (cityError) {
+    console.warn(`host identity leg skipped (${HOST_IDENT_JSON_ENDPOINT}): ${cityError.message}`);
     return null;
   }
 }
 
-let hostFetchPromise = null;
-function fetchTerminalHost() {
-  if (hostFetchPromise !== null) return hostFetchPromise;
-  hostFetchPromise = (async () => {
+// Server-derived fallback: the ipapi.co prefetch city when it has already
+// landed client-side, slugified the same way. Null when unavailable.
+function readPrefetchedCitySlug() {
+  try {
+    return slugifyCityName(getPrefetchedCity());
+  } catch (prefetchError) {
+    console.warn(`host identity prefetch skipped: ${prefetchError.message}`);
+    return null;
+  }
+}
+
+let terminalCityPromise = null;
+function fetchTerminalCity() {
+  if (terminalCityPromise !== null) return terminalCityPromise;
+  terminalCityPromise = (async () => {
     try {
-      const jsonLegs = HOST_IP_JSON_ENDPOINTS.map((endpointUrl) => fetchHostCandidate(endpointUrl, true));
-      const textLegs = HOST_IP_TEXT_ENDPOINTS.map((endpointUrl) => fetchHostCandidate(endpointUrl, false));
-      const legResults = await Promise.all([...jsonLegs, ...textLegs]);
-      const ipv4Hits = [];
-      const ipv6Hits = [];
-      for (const legResult of legResults) {
-        const ipv4Text = readIPv4Candidate(legResult);
-        if (ipv4Text !== null) {
-          ipv4Hits.push(ipv4Text);
-          continue;
-        }
-        const ipv6Text = readIPv6Candidate(legResult);
-        if (ipv6Text !== null) ipv6Hits.push(ipv6Text);
-      }
-      if (ipv4Hits.length > 0) return ipv4Hits[0];
-      if (ipv6Hits.length > 0) return ipv6Hits[0];
-      return null;
+      const identCity = await fetchIdentCitySlug();
+      if (identCity !== null) return identCity;
+      return readPrefetchedCitySlug();
     } catch (resolveError) {
       console.warn(`host identity unavailable: ${resolveError.message}`);
       return null;
     }
   })();
-  return hostFetchPromise;
+  return terminalCityPromise;
 }
 
 // Window-title sync: the chrome title and the tab title track the resolved
-// host once known. Static markup keeps the dvxb.io fallback so first paint
+// city once known. Static markup keeps the dvxb.io fallback so first paint
 // and blocked-network snapshots stay byte-identical.
-function syncHostChrome(resolvedHost) {
+function syncHostChrome(resolvedCity) {
   try {
     if (typeof document === 'undefined') return;
     const chromeTitle = document.querySelector('.terminal-title');
-    const titleText = `db@${resolvedHost} — fish 3.7`;
+    const titleText = `db@${resolvedCity} — fish 3.7`;
     if (chromeTitle) {
       chromeTitle.textContent = titleText;
       chromeTitle.setAttribute('data-text', titleText);
@@ -191,11 +186,11 @@ function syncHostChrome(resolvedHost) {
   }
 }
 
-fetchTerminalHost()
-  .then((resolvedHost) => {
-    if (resolvedHost === null || resolvedHost === TERMINAL_HOST_FALLBACK) return;
-    setTerminalHost(resolvedHost);
-    syncHostChrome(resolvedHost);
+fetchTerminalCity()
+  .then((resolvedCity) => {
+    if (resolvedCity === null || resolvedCity === TERMINAL_HOST_FALLBACK) return;
+    setTerminalHost(resolvedCity);
+    syncHostChrome(resolvedCity);
   })
   .catch((applyError) => { console.warn(`host identity apply skipped: ${applyError.message}`); });
 

@@ -41,11 +41,11 @@ const SITE_OK = ansiRGB(60, 200, 120);
 const SITE_ERR = ansiRGB(220, 80, 100);
 const SITE_LABEL = ansiRGB(80, 140, 250);
 
-// Dynamic terminal host identity: the shell resolves the visitor's own
-// public IP (v4 preferred, v6 fallback) and publishes it here. Every
-// host-named surface (prompt, neofetch header, hostname, uname) reads the
-// getter at render time, so snapshots (network-blocked) deterministically
-// keep the dvxb.io fallback while live sessions show the real IP.
+// Dynamic terminal host identity: the shell resolves the visitor's
+// geolocation city slug (never the raw visitor IP) and publishes it here.
+// Every host-named surface (prompt, neofetch header, hostname, uname) reads
+// the getter at render time, so snapshots (network-blocked) deterministically
+// keep the dvxb.io fallback while live sessions show db@<city-slug>.
 const TERMINAL_HOST_FALLBACK = 'dvxb.io';
 let terminalHost = TERMINAL_HOST_FALLBACK;
 function getTerminalHost() { return terminalHost; }
@@ -489,6 +489,23 @@ let _prefetchedLocation = null;
 
 function setPrefetchedLocation(locationValue) {
   _prefetchedLocation = locationValue;
+}
+
+// Server-derived city for the terminal identity fallback chain: the ipapi.co
+// prefetch (fired at shell boot) carries a geo-IP city. Returns the raw city
+// string or null when the prefetch has not landed yet. Never throws.
+function getPrefetchedCity() {
+  try {
+    const prefetchedValue = _prefetchedLocation;
+    if (prefetchedValue === null || typeof prefetchedValue !== 'object') return null;
+    const cityValue = prefetchedValue.city;
+    if (typeof cityValue !== 'string') return null;
+    const trimmedCity = cityValue.trim();
+    return trimmedCity.length > 0 ? trimmedCity : null;
+  } catch (prefetchError) {
+    console.warn(`prefetched city read skipped: ${prefetchError.message}`);
+    return null;
+  }
 }
 
 function uptimeStr() {
@@ -2577,6 +2594,7 @@ export {
   COMMAND_REGISTRY, resolveCommand, suggestCommand, tokenizeCommandLine,
   COMMAND_COMPLETION_NAMES, TOOL_ALLOWLIST_NAMES, TOOL_ALLOWLIST_BARE_ONLY,
   NEOFETCH_TRY_COMMANDS, isAiCommandName, renderMan, setPrefetchedLocation,
+  getPrefetchedCity,
   commandCount, helpText, recordCommandOutput, readLastCommandOutput,
   formatWallMoniker,
 };
