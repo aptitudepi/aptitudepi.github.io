@@ -1,9 +1,9 @@
 /* css/terminal-intro.css — WAVE 13 establishing-shot beat after the hero.
  *
- * Object + single Enter button only: no headline, no nav dot. The static
- * poster paints first (LCP untouched, three never in the critical path);
+ * Object + single Enter button only: no headline, no nav dot. The sized
+ * stage paints first (LCP untouched, three never in the critical path);
  * the WebGL canvas overlays it only while the solved frame is live, and
- * every exit (handoff, dim, fallback) lands back on the poster.
+ * every exit (handoff, dim, fallback) lands back on the static stage.
  * Phosphor-flash crossfade budget: <=200ms (see FLASH_MILLIS).
  */
 
@@ -28,17 +28,6 @@
     radial-gradient(120% 90% at 50% 0%, oklch(0.16 0.03 260) 0%, transparent 55%),
     linear-gradient(135deg, oklch(0.07 0.01 260) 0%, oklch(0.05 0.005 260) 100%);
   box-shadow: 0 1.25rem 3.75rem oklch(0 0 0 / 0.55);
-}
-
-.terminal-intro-poster {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-6);
-  background-size: cover;
-  background-position: center;
 }
 
 .terminal-intro-gl {
@@ -105,7 +94,7 @@
   text-decoration: underline;
 }
 
-/* Poster-only paths never animate the beat. */
+/* Static-only paths never animate the beat. */
 @media (prefers-reduced-motion: reduce) {
   .terminal-intro-gl,
   .terminal-intro-enter,

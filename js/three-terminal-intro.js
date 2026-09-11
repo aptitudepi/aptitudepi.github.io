@@ -13,22 +13,22 @@
 // can never drift. Lines tick at ~100ms during boot only, the texture
 // uploads on change (needsUpdate), and freezes at handoff.
 //
-// Lifecycle (one-shot-then-poster): the solved frame doubles as the poster
-// (pre-first-frame + fallback + exit-frame triple-use). Exits land on the
-// poster; re-entry rebuilds from the kept scene description + CPU caches
-// while every GPU object is ephemeral. The loop is fully dead outside boot:
-// single on-demand renders only, renderer.setAnimationLoop(null) at all
-// times, plus IntersectionObserver + visibilitychange gating. Idle ~30s
-// dims to the poster. Hover/focus gives ±3° parallax + brighten only.
+// Lifecycle (one-shot-then-static): the beat opens on the static stage and
+// every exit lands back on it; re-entry rebuilds from the kept scene
+// description + CPU caches while every GPU object is ephemeral. The loop is
+// fully dead outside boot: single on-demand renders only,
+// renderer.setAnimationLoop(null) at all times, plus IntersectionObserver +
+// visibilitychange gating. Idle ~30s dims to the static stage. Hover/focus
+// gives ±3° parallax + brighten only.
 //
 // Sole interaction (enter beacon): hover-brighten, then click/Enter runs a
 // ≤200ms phosphor-flash crossfade and focuses the REAL xterm terminal
 // (preventScroll + aria-live + Escape returns to the beacon). Native
 // <button>, keyboard operable throughout.
 //
-// Fallbacks (poster + live DOM terminal, three never in the critical path):
+// Fallbacks (static stage + live DOM terminal, three never in the critical path):
 // reduced-motion / Save-Data / slow links (via js/motion.js motionOK()),
-// mobile (coarse pointer or narrow viewport: poster + Enter only, no canvas
+// mobile (coarse pointer or narrow viewport: stage + Enter only, no canvas
 // flight, no tilt), WebGL-off, and context-lost. This module itself loads
 // only via dynamic import from an idle callback in js/main.js, after first
 // DOM paint. It never touches js/backgrounds.js loop ownership and adds no
@@ -39,13 +39,11 @@ import { isMotionOK, onMotionChange } from './motion.js';
 
 const INTRO_MOUNT_ID = `terminal-intro`;
 const INTRO_STAGE_SELECTOR = `.terminal-intro-stage`;
-const INTRO_POSTER_SELECTOR = `.terminal-intro-poster`;
 const INTRO_ENTER_ID = `terminal-intro-enter`;
 const INTRO_STATUS_ID = `terminal-intro-status`;
 const INTRO_CANVAS_CLASS = `terminal-intro-gl`;
 const INTRO_FLASH_CLASS = `terminal-intro-flash`;
 const INTRO_DIMMED_CLASS = `is-dimmed`;
-const INTRO_FRAMED_CLASS = `has-frame`;
 const COARSE_POINTER_QUERY = `(pointer: coarse)`;
 const NARROW_VIEWPORT_QUERY = `(max-width: 768px)`;
 const BOOT_TICK_MILLIS = 100;
@@ -86,11 +84,9 @@ let textureContext = null;
 let canvasElement = null;
 let flashElement = null;
 let stageNode = null;
-let posterNode = null;
 let enterButtonNode = null;
 let statusNode = null;
 let keptSceneDescription = null;
-let keptPosterDataUrl = null;
 let bootTickTimeout = 0;
 let idleDimTimeout = 0;
 let pendingParallaxFrame = 0;
@@ -148,10 +144,10 @@ function readWebglAvailable() {
   }
 }
 
-// Poster-only unless every gate passes: motion policy (reduced-motion /
+// Static-stage-only unless every gate passes: motion policy (reduced-motion /
 // Save-Data / slow links / manual pin), desktop-class pointer + viewport,
-// and a working WebGL context. Poster + live DOM terminal + Enter button
-// remain in every fallback path.
+// and a working WebGL context. The static stage + live DOM terminal + Enter
+// button remain in every fallback path.
 function readIntroEligible() {
   if (isMotionOK() === false) return false;
   if (readSaveDataSignal()) return false;
@@ -381,14 +377,14 @@ function setScreenBrighten(brightened) {
   requestSolvedRender();
 }
 
-function clearDimToPoster() {
+function clearDimToStage() {
   if (stageNode) stageNode.classList.remove(INTRO_DIMMED_CLASS);
 }
 
 function handleStagePointerEnter() {
   if (introState !== `live`) return;
   cancelIdleDimTimer();
-  clearDimToPoster();
+  clearDimToStage();
   setScreenBrighten(true);
   armIdleDimTimer();
 }
@@ -403,7 +399,7 @@ function handleStagePointerLeave() {
 function handleBeaconFocus() {
   if (introState !== `live`) return;
   cancelIdleDimTimer();
-  clearDimToPoster();
+  clearDimToStage();
   setScreenBrighten(true);
 }
 
@@ -426,28 +422,18 @@ function armIdleDimTimer() {
     idleDimTimeout = 0;
     if (introState !== `live` || !stageNode) return;
     stageNode.classList.add(INTRO_DIMMED_CLASS);
-    stageNode.dataset.state = `poster`;
+    stageNode.dataset.state = `static`;
   }, IDLE_DIM_MILLIS);
 }
 
-// Solved-frame poster triple-use: the captured first frame upgrades the
-// static poster (pre-first-frame), serves every fallback, and is the frame
-// every exit lands on.
-function captureSolvedPoster() {
-  try {
-    if (!canvasElement || !posterNode) return;
-    keptPosterDataUrl = canvasElement.toDataURL(`image/png`);
-    posterNode.style.backgroundImage = `url("${keptPosterDataUrl}")`;
-    posterNode.classList.add(INTRO_FRAMED_CLASS);
-  } catch (captureError) {
-    console.warn(`[terminal-intro] poster capture skipped: ${captureError.message}`);
-  }
-}
-
-function applyPosterState() {
+// Static-state helper: every exit (handoff, dim, context-lost, motion-off,
+// ineligible) lands the stage back on its static frame. The `static` token
+// replaces the removed poster element's `poster` token; no stylesheet reads
+// it, it only marks the beat's resting frame for debugging.
+function applyStaticState() {
   if (stageNode) {
     stageNode.classList.remove(INTRO_DIMMED_CLASS);
-    stageNode.dataset.state = `poster`;
+    stageNode.dataset.state = `static`;
   }
 }
 
@@ -456,7 +442,6 @@ function runBootEchoTick(nextLineCount) {
   if (nextLineCount > BOOT_SCRIPT.length) {
     introState = `live`;
     requestSolvedRender();
-    captureSolvedPoster();
     armIdleDimTimer();
     return;
   }
@@ -476,7 +461,7 @@ async function constructIntroGraphics(firstBootEcho) {
     loadedThree = await import(`three`);
   } catch (importError) {
     console.warn(`[terminal-intro] three import skipped: ${importError.message}`);
-    applyPosterState();
+    applyStaticState();
     return;
   }
   threeLibrary = loadedThree;
@@ -486,7 +471,7 @@ async function constructIntroGraphics(firstBootEcho) {
   } catch (buildError) {
     console.warn(`[terminal-intro] scene build skipped: ${buildError.message}`);
     threeLibrary = null;
-    applyPosterState();
+    applyStaticState();
     return;
   }
   if (firstBootEcho) {
@@ -501,14 +486,13 @@ async function constructIntroGraphics(firstBootEcho) {
   introState = `live`;
   stageNode.dataset.state = `live`;
   requestSolvedRender();
-  captureSolvedPoster();
   armIdleDimTimer();
 }
 
 // Scroll the hero terminal into view before focusing it: the intro beat
 // sits a full viewport below the hero, so focusing xterm alone leaves the
-// visitor staring at the poster (a "static pane"). Smooth-scroll only while
-// the motion policy is on; instant when it is off.
+// visitor staring at the intro stage (a "static pane"). Smooth-scroll only
+// while the motion policy is on; instant when it is off.
 function scrollHeroTerminalIntoView() {
   try {
     const heroTarget = document.getElementById(`hero-target`);
@@ -579,7 +563,7 @@ function hideFlashOverlay() {
 }
 
 // ENTER BEACON: phosphor-flash crossfade (≤200ms), focus the real terminal,
-// land on the poster with every GPU handle destroyed.
+// land on the static stage with every GPU handle destroyed.
 function handoffToTerminal() {
   if (introState === `handed-off`) {
     focusRealTerminal();
@@ -588,7 +572,7 @@ function handoffToTerminal() {
   introState = `handed-off`;
   cancelIdleDimTimer();
   cancelPendingParallax();
-  clearDimToPoster();
+  clearDimToStage();
   showFlashOverlay();
   announceIntroStatus(`Entering the live terminal.`);
   window.setTimeout(() => {
@@ -597,7 +581,7 @@ function handoffToTerminal() {
     announceIntroStatus(`Terminal focused. Press Escape to return to the intro.`);
     document.addEventListener(`keydown`, handleHandoffEscape, true);
     destroyIntroGraphics(`handoff`);
-    applyPosterState();
+    applyStaticState();
   }, FLASH_MILLIS);
 }
 
@@ -718,9 +702,9 @@ function handleIntroContextLost(contextEvent) {
   } catch (contextError) {
     console.warn(`[terminal-intro] context-lost guard skipped: ${contextError.message}`);
   }
-  announceIntroStatus(`3D context lost. Showing the poster with the live terminal below.`);
+  announceIntroStatus(`3D context lost. Showing the static intro with the live terminal below.`);
   destroyIntroGraphics(`context-lost`);
-  applyPosterState();
+  applyStaticState();
 }
 
 function handleIntroVisibilityChange() {
@@ -742,9 +726,9 @@ function handleIntroResize() {
   }
 }
 
-// Re-entry: rebuild from the kept scene description + CPU caches (poster,
-// boot texture dimensions) when the beat scrolls back into view after a
-// non-handoff destroy. GPU objects are always rebuilt, never reused.
+// Re-entry: rebuild from the kept scene description + CPU caches (stage
+// dimensions, boot texture size) when the beat scrolls back into view after
+// a non-handoff destroy. GPU objects are always rebuilt, never reused.
 function maybeRebuildAfterExit() {
   if (introState !== `destroyed`) return;
   if (!readIntroEligible()) return;
@@ -769,9 +753,9 @@ function observeStageVisibility() {
 
 function handleMotionPolicyChange(motionOff) {
   if (motionOff === true && rendererObject) {
-    announceIntroStatus(`Motion parked. Showing the poster with the live terminal below.`);
+    announceIntroStatus(`Motion parked. Showing the static intro with the live terminal below.`);
     destroyIntroGraphics(`motion-off`);
-    applyPosterState();
+    applyStaticState();
   }
 }
 
@@ -779,7 +763,6 @@ function initTerminalIntro() {
   const mountNode = document.getElementById(INTRO_MOUNT_ID);
   if (!mountNode) return false;
   stageNode = mountNode.querySelector(INTRO_STAGE_SELECTOR);
-  posterNode = mountNode.querySelector(INTRO_POSTER_SELECTOR);
   enterButtonNode = document.getElementById(INTRO_ENTER_ID);
   statusNode = document.getElementById(INTRO_STATUS_ID);
   if (!stageNode || !enterButtonNode) return false;
@@ -798,15 +781,15 @@ function initTerminalIntro() {
   observeStageVisibility();
   onMotionChange(handleMotionPolicyChange);
   if (!readIntroEligible()) {
-    introState = `poster`;
-    stageNode.dataset.state = `poster`;
-    announceIntroStatus(`3D intro parked. Poster shown with the live terminal below.`);
+    introState = `static`;
+    stageNode.dataset.state = `static`;
+    announceIntroStatus(`3D intro parked. Static intro shown with the live terminal below.`);
     return true;
   }
-  introState = `poster`;
-  stageNode.dataset.state = `poster`;
+  introState = `static`;
+  stageNode.dataset.state = `static`;
   window.setTimeout(() => {
-    if (stageOnScreen && readIntroEligible() && introState === `poster` && !rendererObject) {
+    if (stageOnScreen && readIntroEligible() && introState === `static` && !rendererObject) {
       constructIntroGraphics(true);
     }
   }, FIRST_BUILD_DELAY_MILLIS);
