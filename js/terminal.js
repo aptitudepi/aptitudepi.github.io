@@ -236,6 +236,25 @@ function submitBufferLine() {
   if (bootDone) executeCommand(commandLine, term);
 }
 
+// Ctrl+K palette injection: type a full command line onto the live prompt
+// and submit it, so the transcript shows the prompt line (❯ weather) before
+// the output — exactly as if typed. Same guards as typed input (boot done,
+// shell-local mode), history records the line, and the foreground runner
+// still owns busy refusal, so a palette submit while busy echoes first and
+// then prints the blocked line, matching typing-while-busy exactly.
+function injectAndSubmitLine(commandLine) {
+  if (!term || bootDone === false || mode !== 'local') return false;
+  const cleanLine = String(commandLine ?? '');
+  if (cleanLine.trim().length === 0) return false;
+  hideSuggestions();
+  term.write('\r\x1b[K');
+  writePrompt(term);
+  inputBuffer = cleanLine;
+  term.write(cleanLine);
+  submitBufferLine();
+  return true;
+}
+
 // Strip leading shell prompts ($, ❯, user@host) from pasted text so a
 // docs-site copy-paste runs instead of failing with "command not found".
 function cleanPastedLine(rawLine) {
@@ -565,4 +584,4 @@ function getMode() { return mode; }
 function getTerm() { return term; }
 function isBootDone() { return bootDone; }
 
-export { createTerminal, startBoot, setMode, getMode, setV86InputHandler, getTerm, isBootDone };
+export { createTerminal, startBoot, setMode, getMode, setV86InputHandler, getTerm, isBootDone, injectAndSubmitLine };

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "tool": "tools/snapshot-terminal.mjs",
-  "commit": "f5a950af75e2cc60683456dae371ca677f7465e8",
+  "commit": "4f3bf53f7413e9f4d64417dfae3f204cd5e073ea",
   "origin": "http://127.0.0.1:8901/",
   "viewport": {
     "width": 1280,
@@ -66,8 +66,8 @@
     {
       "command": "ls",
       "file": "ls.ans",
-      "sha256": "d18558f28ab891246279158c1c6c8d4a63d6c471078e6efe9d53d2b15c1ab446",
-      "bytes": 221,
+      "sha256": "6db969b701b40894314dcd11bf0bad8d68591eee40ee3873034e1007720e694b",
+      "bytes": 253,
       "prompts": 1
     },
     {

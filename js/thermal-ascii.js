@@ -139,6 +139,10 @@ function brailleDotCount(ch) {
 //              position; drawn cells get a neutral gray whose value scales with
 //              braille dot density (dimmer shadows, brighter faces), so the
 //              headshot reads before heat colours it in.
+//
+// Portrait detail lives one step downstream: upscaleArtGrid() doubles the
+// decoded grid to 2W x 2L (nearest glyph + bilinear RGB), so the headshot
+// below renders at twice the cell resolution with interpolated color.
 export function parseAnsiArt(artLines) {
   const rows = [];
   for (const line of artLines) {
@@ -168,6 +172,59 @@ export function parseAnsiArt(artLines) {
   }
   const cols = rows.reduce((max, r) => Math.max(max, r.length), 0);
   return { cols, rows: rows.length, cells: rows };
+}
+
+// Double a decoded art grid to 2W x 2L cells without new source binaries:
+// each destination cell samples its 2x2 source neighborhood with bilinear
+// RGB interpolation (smooth color gradients at twice the resolution) while
+// the glyph stays nearest-source, so the braille dot-density shading parsed
+// above (dimmer shadows, brighter faces) survives the upscale instead of
+// smearing. Pure function over the grid (no DOM), so node harnesses can
+// assert the 2x cell counts directly.
+export function upscaleArtGrid(sourceGrid) {
+  const sourceRows = sourceGrid.rows;
+  const sourceCols = sourceGrid.cols;
+  const sourceCells = sourceGrid.cells;
+  const sampleSource = (sampleRow, sampleCol) => {
+    const clampedRow = Math.max(0, Math.min(sourceRows - 1, sampleRow));
+    const clampedCol = Math.max(0, Math.min(sourceCols - 1, sampleCol));
+    const sourceRow = sourceCells[clampedRow] || [];
+    return sourceRow[clampedCol] || { glyph: ' ', r: 0, g: 0, b: 0 };
+  };
+  const mixChannel = (topLeft, topRight, bottomLeft, bottomRight, colFrac, rowFrac, channel) => {
+    const topMix = topLeft[channel] * (1 - colFrac) + topRight[channel] * colFrac;
+    const bottomMix = bottomLeft[channel] * (1 - colFrac) + bottomRight[channel] * colFrac;
+    return Math.round(topMix * (1 - rowFrac) + bottomMix * rowFrac);
+  };
+  const destCols = sourceCols * 2;
+  const destRows = sourceRows * 2;
+  const destCells = [];
+  for (let destRow = 0; destRow < destRows; destRow++) {
+    const sourceY = destRow / 2;
+    const topRow = Math.floor(sourceY);
+    const bottomRow = Math.min(sourceRows - 1, topRow + 1);
+    const rowFrac = sourceY - topRow;
+    const destRowCells = [];
+    for (let destCol = 0; destCol < destCols; destCol++) {
+      const sourceX = destCol / 2;
+      const leftCol = Math.floor(sourceX);
+      const rightCol = Math.min(sourceCols - 1, leftCol + 1);
+      const colFrac = sourceX - leftCol;
+      const topLeftCell = sampleSource(topRow, leftCol);
+      const topRightCell = sampleSource(topRow, rightCol);
+      const bottomLeftCell = sampleSource(bottomRow, leftCol);
+      const bottomRightCell = sampleSource(bottomRow, rightCol);
+      const glyphCell = sampleSource(Math.round(sourceY), Math.round(sourceX));
+      destRowCells.push({
+        glyph: glyphCell.glyph,
+        r: mixChannel(topLeftCell, topRightCell, bottomLeftCell, bottomRightCell, colFrac, rowFrac, 'r'),
+        g: mixChannel(topLeftCell, topRightCell, bottomLeftCell, bottomRightCell, colFrac, rowFrac, 'g'),
+        b: mixChannel(topLeftCell, topRightCell, bottomLeftCell, bottomRightCell, colFrac, rowFrac, 'b'),
+      });
+    }
+    destCells.push(destRowCells);
+  }
+  return { cols: destCols, rows: destRows, cells: destCells };
 }
 
 export function initThermalAscii(canvas, options = {}) {
@@ -209,11 +266,16 @@ export function initThermalAscii(canvas, options = {}) {
   let disposed = false;
   let fontFamily = "'JetBrains Mono', ui-monospace, monospace";
 
-  // Portrait mode: decode the art once into a cell grid.
+  // Portrait mode: decode the art once into a cell grid, then upscale to
+  // 2W x 2L for headshot detail (bilinear RGB, nearest glyph). The canvas
+  // keeps its fitted size (cells halve in each dimension), the resting
+  // portrait pre-renders into the static layer once, and per-frame work
+  // stays heat-only — maxDpr and heatRadius are untouched, so frame cost is
+  // unchanged apart from the larger skip-fast heat scan.
   let artGrid = null;
   if (art && Array.isArray(art)) {
     const decoded = parseAnsiArt(art);
-    if (decoded && decoded.rows > 0 && decoded.cols > 0) artGrid = decoded;
+    if (decoded && decoded.rows > 0 && decoded.cols > 0) artGrid = upscaleArtGrid(decoded);
   }
   const portraitMode = Boolean(artGrid);
 

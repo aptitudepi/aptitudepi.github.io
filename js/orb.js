@@ -686,8 +686,9 @@ function tintFromColor(str) {
  * inside the `dvxb.io` link, so the two are one hover group for free.
  *
  * Design B: the lattice always takes the bar's `--nav-cycle` ink. On
- * :hover/:focus-visible the wordmark is painted from that same clock each
- * frame — CSS `color: var(--nav-cycle)` with `transition: color` was
+ * :hover/:focus-visible the wordmark AND the /terminal crumb are painted
+ * from that same clock each frame — CSS `color: var(--nav-cycle)` with
+ * `transition: color` was
  * re-interpolating toward a moving target and never looked like a cycle.
  * Under reduced motion the clock freezes and both hold rest blue.
  */
@@ -697,6 +698,9 @@ function mountNavOrb() {
 
   const bar = canvas.closest('.doc-nav');
   const group = canvas.closest('a');
+  // The /terminal crumb syncs off the same live clock as the dvxb.io
+  // wordmark below (same source, same phase, same inline-tint behavior).
+  const crumbLink = bar ? bar.querySelector('.doc-nav-crumb') : null;
 
   const cycleColor = () => {
     // Scoped logo clock (motion.css section G): the bar stays parked for
@@ -716,6 +720,15 @@ function mountNavOrb() {
       if (group) {
         if (group.matches(':hover, :focus-visible')) group.style.color = cycle;
         else if (group.style.color) group.style.color = '';
+      }
+      // The /terminal crumb paints from the SAME cycle string on hover, so
+      // wordmark and crumb move as one. The RGB-split glitch
+      // pseudo-elements are untouched, so they keep firing over the tinted
+      // text. Under reduced motion cycleColor() is the static rest blue,
+      // matching the parked wordmark.
+      if (crumbLink) {
+        if (crumbLink.matches(':hover, :focus-visible')) crumbLink.style.color = cycle;
+        else if (crumbLink.style.color) crumbLink.style.color = '';
       }
       return tintFromColor(cycle);
     },

@@ -1,7 +1,6 @@
 import { isMotionOK } from './motion.js';
 
 let isAnimatingScroll = false;
-const navStartTime = Date.now();
 
 // Live gate on the single motion policy (js/motion.js) — read per call, so
 // mid-session flips (and saveData / slow-2g) take effect without a reload.
@@ -90,14 +89,15 @@ function scrollToSection(id) {
 }
 
 function initDotScroll() {
-  document.querySelectorAll('.nav-dot').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const section = btn.dataset.section;
+  document.querySelectorAll('.nav-dot').forEach((dotButton) => {
+    dotButton.addEventListener('click', () => {
+      const section = dotButton.dataset.section;
       scrollToSection(section);
-      const phase = ((Date.now() - navStartTime) / 1000) % 6;
-      document.querySelectorAll('.nav-dot').forEach(b => {
-        b.classList.toggle('active', b.dataset.section === section);
-        b.style.animationDelay = b.dataset.section === section ? `-${phase}s` : '';
+      // Phase sync rides the shared --cycle-phase (css/tokens.css): no
+      // inline animation-delay here, so activating a dot never restarts its
+      // colorcycle mid-flight and every dot stays in step with the cards.
+      document.querySelectorAll('.nav-dot').forEach((otherButton) => {
+        otherButton.classList.toggle('active', otherButton.dataset.section === section);
       });
     });
   });
@@ -107,11 +107,8 @@ function initActiveTracking() {
   const dotBtns = document.querySelectorAll('.nav-dot');
 
   function updateActive(id) {
-    const phase = ((Date.now() - navStartTime) / 1000) % 6;
-    dotBtns.forEach(btn => {
-      const isActive = btn.dataset.section === id;
-      btn.classList.toggle('active', isActive);
-      btn.style.animationDelay = isActive ? `-${phase}s` : '';
+    dotBtns.forEach((dotButton) => {
+      dotButton.classList.toggle('active', dotButton.dataset.section === id);
     });
   }
 

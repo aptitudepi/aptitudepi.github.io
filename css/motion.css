@@ -316,6 +316,22 @@ html[data-motion="off"] *::after {
   }
 }
 
+/* ── E4. Sidebar active-dot colorcycle ─────────────────────
+ * The calm demotion parks every infinite cycle, which froze the active
+ * sidebar dot at static rest blue. The active dot is wayfinding chrome, so
+ * it keeps cycling in the default mode on the same 6s clock + shared
+ * --cycle-phase as the cards/contact/header (js/nav.js writes no inline
+ * animation delays, so nothing restarts the cycle mid-flight and every
+ * handoff stays in step). Same gates as sections E/F: static under
+ * reduced-motion (gate + kill-switch + reduce blanket). The mobile
+ * nav-dialog links are untouched. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] .nav-dot.active {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow12 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+}
+
 /* ── F. Synchronized project-card colorcycle ─────────────────────
  * Same contract as section E, extended to the project cards: the card's
  * animated `color` drives the tag ink (color: inherit), the hover edge
@@ -371,10 +387,13 @@ html[data-motion="off"] *::after {
  * Restore scoped: the bar stays parked (calm holds for topo/thermal),
  * while the wordmark link carries its own navCycle clock. js/orb.js reads
  * the link first (group || bar) so the lattice + hover paint stay locked
- * to the same scoped ink. Gated like sections E/F: static when motion is
+ * to the same scoped ink. The /terminal crumb carries the same scoped clock
+ * so the no-JS hover fallback (color: var(--nav-cycle)) stays in phase with
+ * the orb-tinted wordmark. Gated like sections E/F: static when motion is
  * off (gate + kill-switch + reduce blanket). */
 @media (prefers-reduced-motion: no-preference) {
-  html[data-motion="on"] .doc-nav-home {
+  html[data-motion="on"] .doc-nav-home,
+  html[data-motion="on"] .doc-nav-crumb {
     animation: navCycle 6s ease-in-out infinite;
     animation-delay: var(--cycle-phase, 0s);
   }

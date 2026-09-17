@@ -112,7 +112,6 @@
 <link rel="stylesheet" href="css/nav.css">
 <link rel="stylesheet" href="css/responsive.css">
 <link rel="stylesheet" href="css/motion.css">
-<link rel="stylesheet" href="css/terminal-intro.css">
 <noscript><style>
 .cert-badge { opacity: 1; transform: none; }
 </style></noscript>
@@ -217,17 +216,6 @@
     </div>
   </div>
 </section>
-
-<!-- ── 3D terminal intro (WAVE 13 establishing shot) ────── -->
-<!-- Static-first: the sized stage + native Enter button paint with first DOM
-     paint; three.js loads only via idle-callback dynamic import and overlays
-     the canvas while the solved frame is live. No headline, no nav dot. -->
-<div id="terminal-intro" role="region" aria-label="Terminal intro">
-  <div class="terminal-intro-stage" data-state="static"></div>
-  <button id="terminal-intro-enter" class="terminal-intro-enter" type="button" aria-describedby="terminal-intro-status">Enter terminal</button>
-  <p id="terminal-intro-status" class="sr-only" role="status" aria-live="polite"></p>
-  <noscript><p class="terminal-intro-noscript">The 3D intro needs JavaScript. <a href="#hero-target">Skip to the live terminal</a>.</p></noscript>
-</div>
 
 <div id="app">
 
@@ -428,9 +416,6 @@
 
 <!-- ── Entry Point ─────────────────────── -->
 <script type="module" src="js/main.js"></script>
-
-<!-- ── Topolines color sync ─────────────── -->
-<script type="module" src="js/dev.js"></script>
 
 </body>
 </html>

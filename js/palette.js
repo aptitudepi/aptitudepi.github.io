@@ -8,7 +8,7 @@
 // registry. Ctrl+K/Cmd+K opens it from anywhere on the page.
 
 import { COMMAND_REGISTRY, resolveCommand, tokenizeCommandLine } from './commands.js';
-import { getMode, getTerm } from './terminal.js';
+import { getMode, getTerm, isBootDone, injectAndSubmitLine } from './terminal.js';
 
 let paletteDialog = null;
 let paletteInput = null;
@@ -214,9 +214,20 @@ function submitPalette(clickedEntry) {
     showPaletteHint('Terminal is not ready yet — close and retry in a moment.');
     return;
   }
+  if (isBootDone() === false) {
+    showPaletteHint('Terminal is still booting — close and retry in a moment.');
+    return;
+  }
   closePalette(false);
   activeTerm.focus();
-  window.executeTerminalCommand(commandLine, activeTerm);
+  // Inject-then-run: the command line is typed onto the live prompt first
+  // (inputBuffer + term.write, like acceptGhostText) so the transcript shows
+  // `❯ weather` before its output. The shell dispatcher still runs it, so
+  // the foreground busy guard and history apply exactly as for typed input.
+  // The direct execute fallback only covers a mode flip in the race window.
+  if (injectAndSubmitLine(commandLine) === false) {
+    window.executeTerminalCommand(commandLine, activeTerm);
+  }
 }
 
 function openPalette() {

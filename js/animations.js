@@ -62,7 +62,6 @@ function bootAnimatedLayers() {
   initBentoSync();
   initAboutScroll();
   initSocialHover();
-  initCertHover();
   initProjectLinkHover();
   initMagneticText();
   initParticleBurst();
@@ -213,14 +212,20 @@ function initCardTracking() {
   document.querySelectorAll('.spotlight-card, .bento-card, .cert-badge').forEach((trackedCard) => {
     let glowX = 0, glowY = 0, targetGlowX = 0, targetGlowY = 0;
     let tiltX = 0, tiltY = 0, targetTiltX = 0, targetTiltY = 0;
+    // Certification badges share the spotlight perspective tilt AND keep
+    // their hover scale: both ride this one eased transform writer, so no
+    // second animator ever fights it for style.transform.
+    const wantsBadgeScale = trackedCard.classList.contains('cert-badge');
+    let badgeScale = 1, targetBadgeScale = 1;
     let frameHandle = null;
-    const skipTilt = trackedCard.classList.contains('bento-card') || trackedCard.classList.contains('cert-badge');
+    const skipTilt = trackedCard.classList.contains('bento-card');
 
     const tickTrack = () => {
       glowX += (targetGlowX - glowX) * 0.18;
       glowY += (targetGlowY - glowY) * 0.18;
       tiltX += (targetTiltX - tiltX) * 0.18;
       tiltY += (targetTiltY - tiltY) * 0.18;
+      badgeScale += (targetBadgeScale - badgeScale) * 0.18;
       trackedCard.style.setProperty('--gx', glowX.toFixed(1));
       trackedCard.style.setProperty('--gy', glowY.toFixed(1));
       // Tilt is pointer flourish: parked while the motion policy is off (the
@@ -228,11 +233,13 @@ function initCardTracking() {
       // matching :focus-visible/.is-tapped CSS keeps keyboard and touch
       // users on the same visual language).
       if (!skipTilt && isMotionOK()) {
-        trackedCard.style.transform = `perspective(900px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) translateY(-2px)`;
+        const scaleSuffix = wantsBadgeScale ? ` scale(${badgeScale.toFixed(3)})` : '';
+        trackedCard.style.transform = `perspective(900px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) translateY(-2px)${scaleSuffix}`;
       }
       const settledGlow = Math.abs(glowX - targetGlowX) < 0.3 && Math.abs(glowY - targetGlowY) < 0.3;
       const settledTilt = skipTilt || isMotionOK() === false || (Math.abs(tiltX) < 0.05 && Math.abs(tiltY) < 0.05);
-      if (settledGlow && settledTilt) { frameHandle = null; return; }
+      const settledScale = wantsBadgeScale === false || isMotionOK() === false || Math.abs(badgeScale - targetBadgeScale) < 0.005;
+      if (settledGlow && settledTilt && settledScale) { frameHandle = null; return; }
       frameHandle = requestAnimationFrame(tickTrack);
     };
 
@@ -249,12 +256,14 @@ function initCardTracking() {
       targetGlowX = pointerX; targetGlowY = pointerY;
       const tiltPair = tiltFor((pointerX / cardRect.width) * 2 - 1, (pointerY / cardRect.height) * 2 - 1);
       targetTiltX = tiltPair.tiltX; targetTiltY = tiltPair.tiltY;
+      if (wantsBadgeScale) targetBadgeScale = 1.07;
       kickTrack();
     });
 
     trackedCard.addEventListener('mouseleave', () => {
       targetGlowX = -250; targetGlowY = -250;
       targetTiltX = 0; targetTiltY = 0;
+      if (wantsBadgeScale) targetBadgeScale = 1;
       trackedCard.style.transform = '';
       trackedCard.classList.remove('is-tapped');
       kickTrack();
@@ -364,18 +373,6 @@ function initSocialHover() {
     link.addEventListener('mouseleave', () => {
       anime.animate(link, { scale: 1, translateY: 0, duration: 500, ease: springBouncy });
       if (icon) anime.animate(icon, { rotate: [10, 0], duration: 400, ease: springSnap });
-    });
-  });
-}
-
-function initCertHover() {
-  const spring = anime.spring({ stiffness: 260, damping: 18 });
-  document.querySelectorAll('.cert-badge').forEach(badge => {
-    badge.addEventListener('mouseenter', () => {
-      anime.animate(badge, { scale: 1.07, duration: 400, ease: spring });
-    });
-    badge.addEventListener('mouseleave', () => {
-      anime.animate(badge, { scale: 1, duration: 400, ease: spring });
     });
   });
 }

@@ -245,8 +245,8 @@ function bootSequence(term, onDone) {
     const cpu = asyncCPU || getCPU();
     const memGB = navigator.deviceMemory || 2;
     // Dynamic probe lines stay local; the static service lines come from the
-    // shared BOOT_SCRIPT constant so the transcript and the 3D intro texture
-    // painter read the same source. Order and colors are unchanged.
+    // shared BOOT_SCRIPT constant so the transcript reads the single source
+    // of truth. Order and colors are unchanged.
     const dynamicLines = [
       { text: `[    0.000000] Booting ${getTerminalHost()}...`, color: SITE_FAINT },
       { text: `[    0.004201] CPU: ${cpu} Genuine`, color: SITE_FAINT },

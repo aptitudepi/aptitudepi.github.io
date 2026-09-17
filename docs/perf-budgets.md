@@ -29,7 +29,7 @@ split, not to minify.
 
 | Metric | Target | Notes |
 |---|---|---|
-| LCP | ≤ 2.5 s | Desktop, throttled Moto G4 profile; the 3D intro paints a poster first, live WebGL after |
+| LCP | ≤ 2.5 s | Desktop, throttled Moto G4 profile; the hero live terminal paints first, ambient WebGL layers after |
 | TBT | ≤ 200 ms | The perf scaler (`js/perf.js`) sheds particle count/post/DPR within ~2 s of sustained jank |
 | CLS | ≤ 0.1 | Canvases are fixed-position with explicit sizes; heatmap/radar reserve layout boxes |
 
@@ -39,8 +39,10 @@ split, not to minify.
   freezes its GPU-texture swaps (`ParticleDev.isPaused()`), the perf scaler
   suspends preserving ema/warmup (`perf.getSuspendDepth()`), and the owner
   loop parks (`Backgrounds.getActiveLoopCount() === 0`).
-- Exactly one `perf.onChange` subscriber for the particle ladder across any
-  number of pause/resume cycles (`perf.getListenerCount() === 1`).
+- Exactly two `perf.onChange` subscribers in steady state — particle quality
+  ladder (`js/three-particles.js:1086`) plus badge spawn re-cadence
+  (`js/particle-badge.js:260`) — stable across pause/resume
+  (`perf.getListenerCount() === 2`); each handle subscribed once, never stacked.
 - Boot GPU probes (`perf.js` `readRenderer`, `shell.js` `getGPU`) release
   their throwaway GL contexts immediately (`WEBGL_lose_context` + nulled refs).
 - Every external fetch races a wall-clock timeout (`js/fetch-timeout.js`:

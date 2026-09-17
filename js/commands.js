@@ -64,9 +64,8 @@ function setTerminalHost(nextHost) {
 
 // WAVE 13 shared boot script: the static establishing-shot lines. Each entry
 // carries { text, fill } where fill reuses the palette constants above. The
-// live boot path (js/shell.js bootSequence) and the 3D intro texture painter
-// (js/three-terminal-intro.js) both consume this constant, so the xterm
-// transcript and the screen-plane texture can never drift apart. Dynamic
+// live boot path (js/shell.js bootSequence) consumes this constant, so the
+// xterm transcript reads the single source of truth. Dynamic
 // lines (CPU/GPU/clock/memory) stay in shell.js; this list is static text.
 const BOOT_SCRIPT = [
   { text: `[  OK  ] Started auditd.service`, fill: SITE_OK },
@@ -569,6 +568,50 @@ function lookupVfsPath(rawPath) {
   const direct = vfs.get(normalized);
   if (direct !== undefined) return direct;
   return vfs.get(`${normalized}/`);
+}
+
+// Directory model for ls/cat (GNU-flavored):
+//   • `/home/db/links/` is a stored directory blob (shortcut names).
+//   • `/home/db` itself is virtual: its listing derives from the vfs keys.
+//   • `ls <file>` prints the basename (like GNU ls on a file operand).
+//   • `cat` only reads files; any directory operand errors "Is a directory".
+//   • `links/<name>` entries are shortcut names with no stored content, so
+//     `cat` on them reports "No such file or directory" (browse them with
+//     `ls links`).
+const VFS_HOME_DIR = '/home/db';
+
+function isVfsDirectory(normalizedPath) {
+  if (vfs.get(`${normalizedPath}/`) !== undefined) return true;
+  const childPrefix = `${normalizedPath}/`;
+  for (const storedKey of vfs.keys()) {
+    if (storedKey.startsWith(childPrefix)) return true;
+  }
+  return false;
+}
+
+function listVfsDirectory(normalizedDir) {
+  const storedListing = vfs.get(`${normalizedDir}/`);
+  if (storedListing !== undefined) return storedListing.split('\n');
+  const childPrefix = `${normalizedDir}/`;
+  const childNames = [];
+  for (const storedKey of vfs.keys()) {
+    if (storedKey.startsWith(childPrefix) === false) continue;
+    const relativePath = storedKey.slice(childPrefix.length);
+    if (relativePath.length === 0) continue;
+    const slashIndex = relativePath.indexOf('/');
+    if (slashIndex === -1) {
+      childNames.push(relativePath);
+      continue;
+    }
+    const dirName = `${relativePath.slice(0, slashIndex)}/`;
+    if (childNames.includes(dirName) === false) childNames.push(dirName);
+  }
+  return childNames;
+}
+
+function baseNameOfPath(normalizedPath) {
+  const pathSegments = normalizedPath.split('/').filter((pathSegment) => pathSegment.length > 0);
+  return pathSegments.length > 0 ? pathSegments[pathSegments.length - 1] : '/';
 }
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
@@ -1096,6 +1139,11 @@ async function runPwdCommand(term, args, runSignal) {
 }
 async function runCatCommand(term, args, runSignal) {
   if (!args.length) { term.writeln(`${SITE_ERR}cat: missing operand${ANSI_RESET}`); return; }
+  const normalizedCatPath = normalizeVfsPath(args[0]);
+  if (isVfsDirectory(normalizedCatPath)) {
+    term.writeln(`${SITE_ERR}cat: ${args[0]}: Is a directory${ANSI_RESET}`);
+    return;
+  }
   const catContent = lookupVfsPath(args[0]);
   if (catContent === undefined) {
     term.writeln(`${SITE_ERR}cat: ${args[0]}: No such file or directory${ANSI_RESET}`);
@@ -1110,16 +1158,23 @@ async function runCatCommand(term, args, runSignal) {
   return;
 }
 async function runLsCommand(term, args, runSignal) {
-  const lsPath = args[0] || '/home/db/';
-  const lsEntry = lookupVfsPath(lsPath);
-  if (lsEntry === undefined) {
-    term.writeln(`${SITE_ERR}ls: ${lsPath}: No such file or directory${ANSI_RESET}`);
-  } else {
-    lsEntry.split('\n').forEach(item => {
-      const isLink = item.includes('.pdf');
-      term.writeln(`${isLink ? SITE_RED : SITE_CYAN}${item}${ANSI_RESET}`);
+  const lsPath = args[0] || VFS_HOME_DIR;
+  const normalizedLsPath = normalizeVfsPath(lsPath);
+  if (isVfsDirectory(normalizedLsPath)) {
+    listVfsDirectory(normalizedLsPath).forEach((listedItem) => {
+      const isLink = listedItem.includes('.pdf');
+      const isDir = listedItem.endsWith('/');
+      term.writeln(`${isLink ? SITE_RED : (isDir ? SITE_BLUE : SITE_CYAN)}${listedItem}${ANSI_RESET}`);
     });
+    return;
   }
+  const lsContent = lookupVfsPath(lsPath);
+  if (lsContent === undefined) {
+    term.writeln(`${SITE_ERR}ls: ${lsPath}: No such file or directory${ANSI_RESET}`);
+    return;
+  }
+  // GNU ls on a file operand prints the name, not the contents.
+  term.writeln(`${SITE_CYAN}${baseNameOfPath(normalizedLsPath)}${ANSI_RESET}`);
   return;
 }
 async function runEchoCommand(term, args, runSignal) {
@@ -1813,7 +1868,7 @@ const COMMAND_REGISTRY = [
     plain: "Display file contents",
     category: "CORE",
     argsSpec: "<file>",
-    examples: ["cat about.txt"],
+    examples: ["cat about.txt", "cat resume.md"],
     helpDisplay: "cat <file>",
     helpDesc: "Display file contents",
     helpPos: 7,
@@ -1831,7 +1886,7 @@ const COMMAND_REGISTRY = [
     plain: "List directory contents",
     category: "CORE",
     argsSpec: "[path]",
-    examples: ["ls", "ls links"],
+    examples: ["ls", "ls links", "ls about.txt"],
     helpDisplay: "ls [path]",
     helpDesc: "List directory contents",
     helpPos: 8,
