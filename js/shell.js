@@ -220,6 +220,16 @@ function syncHostChrome(resolvedCity, visitorIp) {
   }
 }
 
+// Instant host-swap hook (Option B): terminal.js owns the gated live-line
+// repaint and registers it here via setter injection — mirroring the
+// setPromptRenderer pattern — so this module never statically imports the
+// terminal (which already imports this module). Invoked once after the
+// async city identity lands; future prompts read the new host regardless.
+let hostRefreshRequester = null;
+function setHostRefreshRequester(requester) {
+  hostRefreshRequester = typeof requester === 'function' ? requester : null;
+}
+
 fetchTerminalIdentity()
   .then((resolvedIdentity) => {
     if (resolvedIdentity === null || typeof resolvedIdentity !== 'object') return;
@@ -227,6 +237,16 @@ fetchTerminalIdentity()
     if (resolvedCity === null || resolvedCity === TERMINAL_HOST_FALLBACK) return;
     setTerminalHost(resolvedCity);
     syncHostChrome(resolvedCity, resolvedIdentity.visitorIp);
+    // Instant swap: repaint the live prompt (input preserved) when idle.
+    // The gated redraw defers to the next prompt while busy, palette-open,
+    // v86 or history-search. Blocked-network runs return above, so the
+    // dvxb.io fallback goldens stay byte-identical. The visitor IP feeds
+    // only the chrome title via syncHostChrome above — never the terminal.
+    try {
+      if (hostRefreshRequester) hostRefreshRequester();
+    } catch (refreshError) {
+      console.warn(`host prompt refresh skipped: ${refreshError.message}`);
+    }
   })
   .catch((applyError) => { console.warn(`host identity apply skipped: ${applyError.message}`); });
 
@@ -386,7 +406,7 @@ window.executeTerminalCommand = executeCommand;
 const resfetch = neofetch;
 
 export {
-  executeCommand, bootSequence, neofetch, resfetch, writePrompt, SITE_GREEN,
+  executeCommand, bootSequence, neofetch, resfetch, writePrompt, setHostRefreshRequester, SITE_GREEN,
   SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_FAINT,
   ANSI_RESET,
 };

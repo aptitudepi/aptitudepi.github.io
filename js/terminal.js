@@ -1,4 +1,4 @@
-import { executeCommand, bootSequence, writePrompt, vfs, CMD_HISTORY, stripAnsi } from './shell.js';
+import { executeCommand, bootSequence, writePrompt, setHostRefreshRequester, vfs, CMD_HISTORY, stripAnsi } from './shell.js';
 import { COMMAND_COMPLETION_NAMES } from './commands.js';
 import { isForegroundBusy, requestForegroundCancel } from './foreground.js';
 
@@ -223,6 +223,43 @@ function redrawInputLine() {
   writePrompt(term);
   term.write(inputBuffer);
 }
+
+// Option B gated redraw (instant host swap): repaint the live prompt line
+// the moment the async city identity resolves, preserving in-progress
+// input. Synchronous with fail-closed gates — returns true when the line
+// was repainted, false when deferred (a later prompt reads the new host
+// anyway). Never focuses, scrolls or refits; the ghost is re-anchored so
+// the overlay tracks the fresh prompt end. Blocked-network runs never call
+// this, so fallback goldens stay byte-identical.
+function isCommandPaletteOpen() {
+  try {
+    if (typeof document === 'undefined') return false;
+    const paletteDialog = document.getElementById('command-palette');
+    return Boolean(paletteDialog && paletteDialog.open);
+  } catch (dialogError) {
+    console.warn(`palette dialog check skipped: ${dialogError.message}`);
+    return true;
+  }
+}
+
+function requestTerminalHostRefresh() {
+  if (term === null || bootDone === false || mode !== 'local' || isForegroundBusy()) return false;
+  if (suggestionMode === 'history') return false;
+  if (isCommandPaletteOpen()) return false;
+  const savedInput = inputBuffer;
+  try {
+    term.write('\r\x1b[K');
+    writePrompt(term);
+    term.write(savedInput);
+    refreshSuggestions();
+  } catch (refreshError) {
+    console.warn(`host prompt refresh skipped: ${refreshError.message}`);
+    return false;
+  }
+  return true;
+}
+
+setHostRefreshRequester(requestTerminalHostRefresh);
 
 function submitBufferLine() {
   term.write('\r\n');
@@ -584,4 +621,4 @@ function getMode() { return mode; }
 function getTerm() { return term; }
 function isBootDone() { return bootDone; }
 
-export { createTerminal, startBoot, setMode, getMode, setV86InputHandler, getTerm, isBootDone, injectAndSubmitLine };
+export { createTerminal, startBoot, setMode, getMode, setV86InputHandler, getTerm, isBootDone, injectAndSubmitLine, requestTerminalHostRefresh };
