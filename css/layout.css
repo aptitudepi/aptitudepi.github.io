@@ -4,8 +4,6 @@
   z-index: 1;
   min-height: 100dvh;
   background: var(--color-glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 section {
