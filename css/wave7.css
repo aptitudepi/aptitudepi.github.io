@@ -24,10 +24,10 @@
   font: inherit;
   padding: 4px 12px;
   cursor: pointer;
-  /* Per-card frost over raw WebGL (chipbar-level 8px plain blur; #app blur
+  /* Per-card frost over raw WebGL (chipbar-level 5px plain blur; #app blur
      stays off). Plain blur() only — no url(#liquid-glass) turbulence. */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 #terminal-mode-toggle button.active {
   background: rgba(120, 140, 250, 0.22);
@@ -45,9 +45,9 @@
   border-radius: 8px;
   padding: 4px 12px;
   cursor: pointer;
-  /* Per-card frost over raw WebGL (chipbar-level 8px plain blur). */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* Per-card frost over raw WebGL (chipbar-level 5px plain blur). */
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 #exit-vm-button[hidden] { display: none; }
 
@@ -85,9 +85,9 @@
   border-radius: 8px;
   padding: 4px 10px;
   cursor: pointer;
-  /* Frost: terminal-bg + blur(8px). */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* Frost: terminal-bg + blur(5px). */
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 .explore-button:hover,
 .explore-button:focus-visible {
@@ -139,9 +139,9 @@
   border-radius: var(--radius-full);
   padding: 6px 14px;
   cursor: pointer;
-  /* Frost: terminal-bg + blur(8px). */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* Frost: terminal-bg + blur(5px). */
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
@@ -198,7 +198,7 @@ html[data-motion="off"] .guided-ai-row { transition: none; transform: none; }
  * Narrow centered modal parked near the top of the viewport over a dimmed
  * backdrop; arrow keys move the highlight, Enter runs, Esc exits (behavior
  * in js/palette.js is unchanged — this restyle is positioning + surface).
- * Calm blur: 8px frost on the dialog (see BLUR note in the palette task),
+ * Calm blur: 5px frost on the dialog (see BLUR note in the palette task),
  * well under main's 20px dialog blur. */
 #command-palette {
   width: min(480px, 92vw);
@@ -206,8 +206,8 @@ html[data-motion="off"] .guided-ai-row { transition: none; transform: none; }
   margin: 10vh auto auto;
   padding: 0;
   background: rgba(12, 14, 22, 0.94);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   border: 1px solid var(--color-glass-border);
   border-radius: 12px;
   color: var(--color-text);

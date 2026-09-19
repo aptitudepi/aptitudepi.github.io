@@ -20,8 +20,8 @@
   z-index: 10;
   pointer-events: none;
   background: var(--color-glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 section {
@@ -62,8 +62,8 @@ section:not(#hero-target) > * {
   background: var(--color-terminal-bg);
   position: relative;
   z-index: 1;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   /* overflow:clip keeps pane rounding without breaking sticky .doc-nav (hidden fallback). */
   overflow: hidden;
   overflow: clip;
@@ -134,19 +134,19 @@ section:not(#hero-target) > * {
   margin-top: var(--space-4);
 }
 
-/* Frost: terminal-bg + blur(8px). */
+/* Frost: terminal-bg + blur(5px). */
 #about .about-grid {
   background: var(--color-terminal-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-8);
 }
 .stats-grid .stat-item {
   background: var(--color-terminal-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
