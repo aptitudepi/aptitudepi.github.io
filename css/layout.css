@@ -1,9 +1,27 @@
 #app {
   width: 100%;
   position: relative;
-  z-index: 1;
+  z-index: 30;
   min-height: 100dvh;
   background: var(--color-glass);
+}
+
+/* Full-page blur sheet: fixed layer above the particle canvas (#c, z 0)
+   and below the topo overlay (#topo-host, z 20), with content (#app and
+   #hero-target, z 30) above both. Plain blur() only — no url(#liquid-glass)
+   turbulence — so scroll stays composited. pointer-events none: never blocks. */
+.page-blur {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100%;
+  z-index: 10;
+  pointer-events: none;
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 section {
@@ -30,6 +48,8 @@ section:not(#hero-target) > * {
   display: flex;
   align-items: stretch;
   padding: 0;
+  position: relative;
+  z-index: 30;
 }
 
 .hero-shell {
@@ -44,7 +64,9 @@ section:not(#hero-target) > * {
   z-index: 1;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  /* overflow:clip keeps pane rounding without breaking sticky .doc-nav (hidden fallback). */
   overflow: hidden;
+  overflow: clip;
 }
 
 .section-header {
@@ -110,4 +132,22 @@ section:not(#hero-target) > * {
 }
 .about-text p + p {
   margin-top: var(--space-4);
+}
+
+/* Frost: terminal-bg + blur(10px). Exact match, no legibility exception. */
+#about .about-grid {
+  background: var(--color-terminal-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+}
+.stats-grid .stat-item {
+  background: var(--color-terminal-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
 }

@@ -1,6 +1,11 @@
 import { isMotionOK } from './motion.js';
 
 let isAnimatingScroll = false;
+// Cancellable dot-scroll tween: a second dot click cancels the in-flight
+// tween instead of fighting it, and the html scroll-behavior override below
+// guarantees a single scroll driver while the tween runs.
+let currentScrollTween = null;
+let scrollRestoreTimer = 0;
 
 // Live gate on the single motion policy (js/motion.js) — read per call, so
 // mid-session flips (and saveData / slow-2g) take effect without a reload.
@@ -10,6 +15,34 @@ function initNav() {
   initMobileToggle();
   initActiveTracking();
   initDotScroll();
+  initFixedNavOffset();
+}
+
+function readNavHeight() {
+  const barNode = document.querySelector(`.doc-nav`);
+  if (!barNode) return 0;
+  return barNode.offsetHeight;
+}
+
+function syncNavHeightVar() {
+  const barHeight = readNavHeight();
+  const pageRoot = document.documentElement;
+  pageRoot.style.setProperty(`--doc-nav-height`, `${barHeight}px`);
+}
+
+function initFixedNavOffset() {
+  syncNavHeightVar();
+  window.addEventListener(`resize`, () => {
+    syncNavHeightVar();
+  });
+  const fontSet = document.fonts;
+  if (fontSet && typeof fontSet.ready.then === `function`) {
+    fontSet.ready.then(() => {
+      syncNavHeightVar();
+    }).catch((fontError) => {
+      console.warn(`nav height font sync skipped: ${fontError.message}`);
+    });
+  }
 }
 
 function initMobileToggle() {
@@ -60,32 +93,79 @@ function initMobileToggle() {
 
 const sectionIds = ['hero-target', 'about', 'projects', 'certifications', 'contact'];
 
-function scrollToSection(id) {
-  const target = document.getElementById(id);
-  if (!target) return;
+function scrollToSection(sectionId) {
+  const targetNode = document.getElementById(sectionId);
+  if (!targetNode) return;
+  // Single driver, no view-transition snapshot: the old path wrapped the
+  // anime tween in a VT update callback while html kept
+  // scroll-behavior:smooth, so the VT snapshot, the CSS smooth scroll, and
+  // the anime scrollTop tween fought over the same scroll offset (glitch,
+  // then tween, then jump-back when the stale snapshot/offset resolved).
+  // Dot scrolls now take exactly one path: cancellable anime tween with
+  // scroll-behavior parked at auto, or native instant when the motion
+  // policy is off. The destination y is recomputed fresh on every click
+  // fresh on every click (after layout, never cached), so content-visibility
+  // skips in .certs-section cannot serve a stale offset.
   const performScroll = () => {
-    const y = target.getBoundingClientRect().top + window.scrollY;
+    const barNode = document.querySelector(`.doc-nav`);
+    const barHeight = barNode ? barNode.offsetHeight : 0;
+    const rawDest = targetNode.getBoundingClientRect().top + window.scrollY;
+    const fixedDest = rawDest - barHeight;
+    const destY = fixedDest < 0 ? 0 : fixedDest;
+    try {
+      if (currentScrollTween && typeof currentScrollTween.cancel === 'function') {
+        currentScrollTween.cancel();
+      }
+    } catch (cancelError) {
+      console.warn(`nav dot scroll cancel skipped: ${cancelError.message}`);
+    }
+    currentScrollTween = null;
+    if (scrollRestoreTimer) {
+      clearTimeout(scrollRestoreTimer);
+      scrollRestoreTimer = 0;
+    }
     isAnimatingScroll = true;
     if (!noAnim()) {
-      anime.animate(document.scrollingElement, {
-        scrollTop: y,
-        duration: 1200,
-        ease: 'inOut(2)',
-      });
-      setTimeout(() => { isAnimatingScroll = false; }, 1300);
+      const rootNode = document.documentElement;
+      const priorBehavior = rootNode.style.scrollBehavior;
+      rootNode.style.scrollBehavior = `auto`;
+      const settleScroll = () => {
+        rootNode.style.scrollBehavior = priorBehavior;
+        currentScrollTween = null;
+        isAnimatingScroll = false;
+      };
+      try {
+        currentScrollTween = anime.animate(document.scrollingElement, {
+          scrollTop: destY,
+          duration: 1200,
+          ease: `inOut(2)`,
+          onComplete: () => {
+            if (scrollRestoreTimer) {
+              clearTimeout(scrollRestoreTimer);
+              scrollRestoreTimer = 0;
+            }
+            settleScroll();
+          },
+        });
+      } catch (tweenError) {
+        console.warn(`nav dot tween skipped: ${tweenError.message}`);
+        window.scrollTo({ top: destY, behavior: `auto` });
+        settleScroll();
+        return;
+      }
+      scrollRestoreTimer = setTimeout(() => {
+        scrollRestoreTimer = 0;
+        settleScroll();
+      }, 1400);
     } else {
       // Instant while the motion policy is off: an explicit smooth scroll
       // would animate against the user's reduced-motion need.
-      window.scrollTo({ top: y, behavior: 'auto' });
+      window.scrollTo({ top: destY, behavior: `auto` });
       setTimeout(() => { isAnimatingScroll = false; }, 400);
     }
   };
 
-  if (typeof document.startViewTransition === 'function' && !noAnim()) {
-    document.startViewTransition(() => performScroll());
-  } else {
-    performScroll();
-  }
+  performScroll();
 }
 
 function initDotScroll() {

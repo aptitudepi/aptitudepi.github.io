@@ -46,6 +46,13 @@
   flex-direction: column;
   gap: var(--space-2);
   z-index: 50;
+  /* Rail frost: glass + 12px plain blur() over WebGL. Static only, reduced-motion safe. */
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
 }
 .nav-dot {
   display: flex;
@@ -58,6 +65,10 @@
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   color: var(--color-text-faint);
+  /* Small per-dot frost over raw WebGL (8px plain blur keeps wayfinding
+     legible; #app blur stays off). No animation changes. */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
   text-align: right;
   justify-content: flex-end;
@@ -70,6 +81,8 @@
 .nav-dot.active {
   color: #0000FF;
   background: var(--color-primary-dim);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow12 6s ease-in-out infinite;
 }
 .nav-dot:hover {
@@ -164,9 +177,10 @@
   padding: var(--space-8);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  background: var(--color-glass);
-  backdrop-filter: url("#liquid-glass") blur(12px);
-  -webkit-backdrop-filter: url("#liquid-glass") blur(12px);
+  background: var(--color-terminal-bg);
+  /* Frost: terminal-bg + blur(10px). */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   overflow: hidden;
   transition: border-color 300ms var(--ease-out-expo), transform 300ms var(--ease-out-expo);
   animation: blueRedColor 6s ease-in-out infinite;
@@ -264,9 +278,10 @@
   padding: var(--space-6);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  background: var(--color-glass);
-  backdrop-filter: url("#liquid-glass") blur(12px);
-  -webkit-backdrop-filter: url("#liquid-glass") blur(12px);
+  background: var(--color-terminal-bg);
+  /* Frost: terminal-bg + blur(10px). */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   overflow: hidden;
   opacity: 0;
   transition: all var(--transition-interactive);
@@ -336,6 +351,10 @@
   font-family: var(--font-display);
   font-size: 0.875rem;
   font-weight: 500;
+  background: var(--color-terminal-bg);
+  /* Frost: terminal-bg + blur(10px). */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
@@ -364,9 +383,9 @@
   padding: var(--space-4);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  background: var(--color-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--color-terminal-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   transition: border-color 300ms var(--ease-out-expo), transform 300ms var(--ease-out-expo);
   cursor: pointer;
   overflow: hidden;
@@ -427,9 +446,9 @@
   height: 52px;
   border-radius: var(--radius-full);
   border: 1px solid var(--color-border);
-  background: var(--color-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--color-terminal-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--color-text-muted);
   opacity: 0;
   transition: all var(--transition-interactive);
@@ -520,8 +539,12 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-terminal-border) tran
   left: 0;
   right: 0;
   bottom: 0;
-  width: 100vw;
+  /* 100% avoids scrollbar overflow; 100dvh (vh fallback) covers mobile
+     URL-bar range. Fixed + inset:0 tracks the viewport; no JS sizing. */
+  width: 100%;
   height: 100vh;
+  height: 100dvh;
+  min-height: 100%;
   z-index: 20;
   pointer-events: none;
 }
@@ -638,9 +661,9 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-terminal-border) tran
   padding: var(--space-6);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  background: var(--color-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--color-terminal-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   overflow: hidden;
 }
 .gh-card-title {

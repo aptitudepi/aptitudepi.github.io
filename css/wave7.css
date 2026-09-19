@@ -24,6 +24,10 @@
   font: inherit;
   padding: 4px 12px;
   cursor: pointer;
+  /* Per-card frost over raw WebGL (chipbar-level 8px plain blur; #app blur
+     stays off). Plain blur() only — no url(#liquid-glass) turbulence. */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 #terminal-mode-toggle button.active {
   background: rgba(120, 140, 250, 0.22);
@@ -41,6 +45,9 @@
   border-radius: 8px;
   padding: 4px 12px;
   cursor: pointer;
+  /* Per-card frost over raw WebGL (chipbar-level 8px plain blur). */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 #exit-vm-button[hidden] { display: none; }
 
@@ -56,7 +63,14 @@
   letter-spacing: 0.08em;
 }
 #mode-pill[data-mode="linux"] {
-  border-color: rgba(60, 200, 120, 0.6);
+  /* Minimal VM fix (full pill->crumb removal is a separate slice): kill the
+     resting green border/outline so no top outline renders in the VM. The
+     pill is a non-focusable span, so resting outline/box-shadow are safe to
+     drop here; the global :focus-visible ring in css/tokens.css is untouched
+     and keeps a11y focus everywhere else. */
+  border-color: transparent;
+  outline: none;
+  box-shadow: none;
   color: #7fe0a8;
 }
 #mode-pill[hidden] { display: none; }
@@ -66,11 +80,14 @@
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   color: var(--color-text-muted);
-  background: transparent;
+  background: var(--color-terminal-bg);
   border: 1px solid var(--color-glass-border);
   border-radius: 8px;
   padding: 4px 10px;
   cursor: pointer;
+  /* Frost: terminal-bg + blur(10px). */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .explore-button:hover,
 .explore-button:focus-visible {
@@ -113,12 +130,8 @@
   gap: 8px;
 }
 .guided-button {
-  /* View-more language at terminal-chrome scale: hairline border resting,
-     pill radius, muted ink, blue↔red text + glow colorcycle in the shared
-     phase (motion.css parks it to the resting shadow when calm, same as
-     .view-more-cta a). Smaller mono metrics for the guided row; the guided
-     run path (js/guided.js) is untouched, so guided≡typed holds. */
-  background: var(--color-glass);
+  /* View-more language at terminal scale; guided run path untouched. */
+  background: var(--color-terminal-bg);
   border: 1px solid var(--color-border);
   color: var(--color-text-muted);
   font: inherit;
@@ -126,6 +139,9 @@
   border-radius: var(--radius-full);
   padding: 6px 14px;
   cursor: pointer;
+  /* Frost: terminal-bg + blur(10px). */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }

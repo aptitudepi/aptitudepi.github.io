@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import perf from './perf.js';
+import perf, { createFlipGuard } from './perf.js';
 import { isMotionOK } from './motion.js';
 let uRainbow = 0;
 
@@ -167,7 +167,6 @@ function initParticles() {
   let displayHz = 60;                // native refresh, learned once via detectHz
   let targetInterval = 1000 / 60;    // frame budget, derived from quality + displayHz
   let lastFrameTime = 0;
-  let scrollOffset = 0;
   let syncTopo = true;               // dev default: particle clock drives topo
   let currentT = 0;                  // latest particle elapsed time (for topo sync)
   let topoSpeedMult = 0.25;          // topo evolves at this fraction of particle speed
@@ -221,14 +220,71 @@ function initParticles() {
   // particle-elapsed-driven.
   let topoEvery = 2;
   let frameCount = 0;
+  // Intelligent instanceCount for 120fps: instead of fixing the count at the
+  // tier value (65k ultra), an in-frame cost probe (performance.now() around
+  // the GL work, EMA-smoothed, 60-frame warmup) steps instanceCount along the
+  // COUNT_LADDER rungs toward the largest count sustaining a 120fps ceiling
+  // (8.33ms/frame: step up only below 6.0ms EMA, step down above 8.0ms, dead
+  // band between). Tier-owned factors (topoEvery, dprCap, chroma/scanline,
+  // size/alpha) stay exactly per tier — only instanceCount moves, clamped to
+  // the ladder bounds [8192, 65536], one rung per decision, 2 agreeing votes
+  // (hysteresis) per step, and at most 3 flips per 10s via the shared
+  // perf flip guard. Manual pins (dev setCount, ?quality tier/slider pins)
+  // always win: the probe stays inert while manualCount or perf.isManual().
+  const COUNT_LADDER = [8192, 16384, 32768, 65536];
+  const PROBE_WARMUP_DRAWN = 60;
+  const PROBE_EVAL_EVERY = 90;
+  const PROBE_STEP_UP_MS = 6.0;
+  const PROBE_STEP_DOWN_MS = 8.0;
+  const PROBE_AGREE_VOTES = 2;
+  let tierBaselineCount = N_MAX;
+  let adaptiveCount = N_MAX;
+  let adaptiveSeedTier = -1;
+  let probeWarmupFrames = 0;
+  let probeEvalFrames = 0;
+  let probeVoteUp = 0;
+  let probeVoteDown = 0;
+  let probeCostEmaMs = 0;
+  const adaptiveFlipGuard = createFlipGuard(3, 10000);
+  // One probe decision: vote on the EMA cost, step one ladder rung on two
+  // agreeing votes and a free flip-guard slot. No-ops while manual pins hold.
+  function stepAdaptiveCount(nowMs) {
+    if (manualCount || perf.isManual()) return;
+    if (!isMotionOK()) return;
+    if (typeof document !== `undefined` && document.hidden) return;
+    if (probeCostEmaMs <= PROBE_STEP_UP_MS) {
+      probeVoteUp += 1;
+      probeVoteDown = 0;
+    } else if (probeCostEmaMs >= PROBE_STEP_DOWN_MS) {
+      probeVoteDown += 1;
+      probeVoteUp = 0;
+    } else {
+      probeVoteUp = 0;
+      probeVoteDown = 0;
+      return;
+    }
+    if (probeVoteUp < PROBE_AGREE_VOTES && probeVoteDown < PROBE_AGREE_VOTES) return;
+    const stepDirection = probeVoteUp >= PROBE_AGREE_VOTES ? 1 : -1;
+    probeVoteUp = 0;
+    probeVoteDown = 0;
+    let rungIndex = COUNT_LADDER.indexOf(adaptiveCount);
+    if (rungIndex === -1) {
+      rungIndex = COUNT_LADDER.indexOf(tierBaselineCount);
+      if (rungIndex === -1) rungIndex = 2;
+    }
+    const targetRung = Math.max(0, Math.min(COUNT_LADDER.length - 1, rungIndex + stepDirection));
+    if (targetRung === rungIndex) return;
+    if (!adaptiveFlipGuard.tryFlip(nowMs)) return;
+    adaptiveCount = COUNT_LADDER[targetRung];
+    activeCount = adaptiveCount;
+    if (triGeo) triGeo.instanceCount = activeCount;
+  }
   // Overlay visibility: skip the density feed while the topo host is
   // off-screen (IntersectionObserver flips this; defaults to visible).
   let topoOnScreen = true;
   // Particle GL context state (phase 3): lost → frame() stops rescheduling;
   // restored → onResize() rebuilds targets and the loop restarts.
   let particleContextLost = false;
-
-  window.addEventListener('scroll', () => { scrollOffset = window.scrollY; }, { passive: true });
 
   const W = () => window.innerWidth;
   const H = () => window.innerHeight;
@@ -336,9 +392,22 @@ function initParticles() {
       onResize();
     }
   }
-  function applyTierCount(tierEntry) {
+  function applyTierCount(tierEntry, tierIndex) {
+    // The tier owns the baseline; the 120fps adaptive probe then moves only
+    // instanceCount within the ladder bounds (reseeding here on tier change
+    // so a stale adapted value never survives a tier move). Tier factors
+    // (post/density/topoEvery/dprCap) are applied by their own appliers.
+    tierBaselineCount = tierEntry.count;
     if (manualCount) return;
-    activeCount = tierEntry.count;
+    if (tierIndex !== adaptiveSeedTier) {
+      adaptiveSeedTier = tierIndex;
+      adaptiveCount = tierEntry.count;
+      probeWarmupFrames = 0;
+      probeEvalFrames = 0;
+      probeVoteUp = 0;
+      probeVoteDown = 0;
+    }
+    activeCount = adaptiveCount;
     if (triGeo) triGeo.instanceCount = activeCount;
   }
   // applyTierPost + applyTierDensity live below the material definitions:
@@ -356,13 +425,13 @@ function initParticles() {
     if (tierIndex >= currentTierIndex) {
       applyTierDpr(qualityValue, tierEntry);
       applyTierPost(tierEntry);
-      applyTierCount(tierEntry);
+      applyTierCount(tierEntry, tierIndex);
       applyTierDensity(tierEntry);
       topoEvery = tierEntry.topoEvery;
     } else {
       topoEvery = tierEntry.topoEvery;
       applyTierDensity(tierEntry);
-      applyTierCount(tierEntry);
+      applyTierCount(tierEntry, tierIndex);
       applyTierPost(tierEntry);
       applyTierDpr(qualityValue, tierEntry);
     }
@@ -375,7 +444,11 @@ function initParticles() {
     }
     currentTierIndex = tierIndex;
 
-    const fpsCap = Math.round(30 + 60 * qualityValue);              // 30 … 90
+    // Frame budget follows the quality scalar up to a 120fps ceiling: the
+    // adaptive count probe above owns the instanceCount side, this owns the
+    // vsync-side cap (min(displayHz, quality-cap)) so a 120Hz+ panel with
+    // headroom can actually reach 120fps instead of parking at 90.
+    const fpsCap = Math.round(30 + 90 * qualityValue);              // 30 … 120
     const target = Math.min(displayHz, fpsCap);
     targetInterval = 1000 / target;
   }
@@ -865,6 +938,10 @@ void main(){
     if (particlePaused || !particleOnScreen || !particlePageVisible) return;
     if (ts - lastFrameTime < targetInterval - 1) { scheduleParticleFrame(); return; }
     lastFrameTime = ts;
+    // 120fps probe clock: wall time around the GL work below (not the rAF
+    // delta, which the targetInterval gate above would pollute). Measures
+    // true per-frame render cost against the 8.33ms 120fps budget.
+    const probeStartMs = performance.now();
     // Reset the render counters once per drawn frame (see autoReset note at
     // renderer creation): skipped gate frames keep the last totals, which is
     // exactly what the 1Hz sampler should report.
@@ -949,7 +1026,9 @@ void main(){
     tmp = trailA; trailA = trailB; trailB = tmp;
     ever = true;
 
-    canvas.style.transform = `translateY(${-scrollOffset * 0.025}px)`;
+    /* Fixed canvas is viewport-sized: any upward shift leaves a bottom
+       gap. Field keeps its in-shader motion; dropping this per-frame
+       style write also saves a layout per tick. */
 
     // Drive the topo from the particle clock when sync is on — skipped while
     // the single background owner drives the topo itself (WAVE 12), or the
@@ -962,6 +1041,23 @@ void main(){
           topoPausedForSync = true;
         }
         topoInstance.setClock(currentT * topoSpeedMult);
+      }
+    }
+
+    // 120fps adaptive-count probe: fold this frame's render cost into the EMA
+    // (warmup seeds it), then decide at most every PROBE_EVAL_EVERY drawn
+    // frames. Gated/paused frames return above, so only real work is timed.
+    const frameCostMs = performance.now() - probeStartMs;
+    if (probeWarmupFrames < PROBE_WARMUP_DRAWN) {
+      probeWarmupFrames += 1;
+      const warmupBlend = probeWarmupFrames === 1 ? 1 : 0.1;
+      probeCostEmaMs += (frameCostMs - probeCostEmaMs) * warmupBlend;
+    } else {
+      probeCostEmaMs += (frameCostMs - probeCostEmaMs) * 0.05;
+      probeEvalFrames += 1;
+      if (probeEvalFrames >= PROBE_EVAL_EVERY) {
+        probeEvalFrames = 0;
+        stepAdaptiveCount(performance.now());
       }
     }
 
@@ -1097,10 +1193,22 @@ void main(){
 
       setCount(countValue) {
         manualCount = true;
+        adaptiveSeedTier = -1;
         activeCount = Math.max(1024, Math.min(N_MAX, Math.round(countValue)));
         if (triGeo) triGeo.instanceCount = activeCount;
       },
       getCount() { return activeCount; },
+      /* Adaptive 120fps probe state ({ count, baseline, costMs, rung }): the
+         live instanceCount target, the current tier baseline, the EMA render
+         cost in ms, and the ladder rung index (or -1 while manual). */
+      getAdaptive() {
+        return {
+          count: adaptiveCount,
+          baseline: tierBaselineCount,
+          costMs: probeCostEmaMs,
+          rung: COUNT_LADDER.indexOf(adaptiveCount),
+        };
+      },
       setCA(caValue) {
         manualCA = true;
         caStrength = Math.max(0, Math.min(1, caValue));
@@ -1201,7 +1309,9 @@ void main(){
       getTopoEvery() { return topoEvery; },
       getAlpha() { return pMat.uniforms.uAlpha.value; },
       /* Release every manual pin (count/CA/scanline/vignette/size) back to
-         the auto ladder and re-apply the live quality immediately. */
+         the auto ladder and re-apply the live quality immediately. The
+         120fps adaptive probe reseeds from the tier baseline (seed forced
+         stale here) and re-warms before its next decision. */
       clearManualPins() {
         manualCount = false;
         manualCA = false;
@@ -1209,6 +1319,7 @@ void main(){
         manualVignette = false;
         manualSize = false;
         manualSizeMult = 1;
+        adaptiveSeedTier = -1;
         applyQuality(perf.quality());
       },
       /* Sync topo — particle clock drives topo's setClock(). Topo's own rAF

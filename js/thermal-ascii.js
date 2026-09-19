@@ -140,9 +140,11 @@ function brailleDotCount(ch) {
 //              braille dot density (dimmer shadows, brighter faces), so the
 //              headshot reads before heat colours it in.
 //
-// Portrait detail lives one step downstream: upscaleArtGrid() doubles the
-// decoded grid to 2W x 2L (nearest glyph + bilinear RGB), so the headshot
-// below renders at twice the cell resolution with interpolated color.
+// Portrait detail used to live one step downstream: upscaleArtGrid() doubles
+// the decoded grid to 2W x 2L (nearest glyph + bilinear RGB). The 106x55
+// source grid won the /tmp preview, so the live site stays on the base
+// parseAnsiArt grid (106 cols x 55 rows) and upscaleArtGrid() remains only
+// for preview/dev use via the initThermalAscii `upscaleArt: true` flag.
 export function parseAnsiArt(artLines) {
   const rows = [];
   for (const line of artLines) {
@@ -227,6 +229,31 @@ export function upscaleArtGrid(sourceGrid) {
   return { cols: destCols, rows: destRows, cells: destCells };
 }
 
+// Edge test for the thermal colorcycle rim: a hot cell is an EDGE cell when
+// its own heat is above the threshold but a 4-neighbor sits below it (the
+// trail boundary) or the local gradient is steep (a neighbor differs by
+// more than the edge step). Out-of-bounds neighbors count as cold, so the
+// art border reads as an edge. Interior hot cells keep their ORIGINAL ascii
+// color; only edge cells lerp to the nav-cycle blue<->red flare. Pure
+// helper (no DOM) so node harnesses can assert edge/interior splits.
+const EDGE_GRADIENT_STEP = 0.12;
+export function isThermalEdgeCell(cellIndex, cellCol, cellRow, heatField, fieldCols, fieldRows, heatCutoff) {
+  const centerHeat = heatField[cellIndex];
+  if (centerHeat < heatCutoff) return false;
+  const neighborDeltas = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  for (const [deltaCol, deltaRow] of neighborDeltas) {
+    const neighborCol = cellCol + deltaCol;
+    const neighborRow = cellRow + deltaRow;
+    if (neighborCol < 0 || neighborCol >= fieldCols || neighborRow < 0 || neighborRow >= fieldRows) {
+      return true;
+    }
+    const neighborHeat = heatField[neighborRow * fieldCols + neighborCol];
+    if (neighborHeat < heatCutoff) return true;
+    if (Math.abs(centerHeat - neighborHeat) > EDGE_GRADIENT_STEP) return true;
+  }
+  return false;
+}
+
 export function initThermalAscii(canvas, options = {}) {
   let {
     fontPx = 11,
@@ -238,6 +265,9 @@ export function initThermalAscii(canvas, options = {}) {
     ramp = RAMP,
     maxDpr = 2,
     art = null, // array of ANSI lines (shell.js ASCII_ART) — portrait mode
+    // Preview/dev flag only: false (default) keeps the base 106x55
+    // parseAnsiArt grid; true restores the legacy 2x upscale for previews.
+    upscaleArt = false,
   } = options;
 
   // Grapheme steps for the active ramp (see RAMP_BENGALI note above): one
@@ -266,16 +296,17 @@ export function initThermalAscii(canvas, options = {}) {
   let disposed = false;
   let fontFamily = "'JetBrains Mono', ui-monospace, monospace";
 
-  // Portrait mode: decode the art once into a cell grid, then upscale to
-  // 2W x 2L for headshot detail (bilinear RGB, nearest glyph). The canvas
-  // keeps its fitted size (cells halve in each dimension), the resting
-  // portrait pre-renders into the static layer once, and per-frame work
-  // stays heat-only — maxDpr and heatRadius are untouched, so frame cost is
-  // unchanged apart from the larger skip-fast heat scan.
+  // Portrait mode: decode the art once into the base 106x55 cell grid. The
+  // legacy 2W x 2L upscale (bilinear RGB, nearest glyph) runs only when the
+  // preview/dev `upscaleArt` flag is set. The canvas keeps its fitted size,
+  // the resting portrait pre-renders into the static layer once, and
+  // per-frame work stays heat-only — maxDpr and heatRadius are untouched.
   let artGrid = null;
   if (art && Array.isArray(art)) {
     const decoded = parseAnsiArt(art);
-    if (decoded && decoded.rows > 0 && decoded.cols > 0) artGrid = upscaleArtGrid(decoded);
+    if (decoded && decoded.rows > 0 && decoded.cols > 0) {
+      artGrid = upscaleArt ? upscaleArtGrid(decoded) : decoded;
+    }
   }
   const portraitMode = Boolean(artGrid);
 
@@ -385,6 +416,8 @@ export function initThermalAscii(canvas, options = {}) {
     return layer;
   }
 
+  // Edge-only colorcycle rim (helper isThermalEdgeCell lives at module scope
+  // so node harnesses can import and assert edge/interior splits directly).
   function frame() {
     raf = 0;
     if (disposed || !ctx || !staticLayer) return;
@@ -415,18 +448,32 @@ export function initThermalAscii(canvas, options = {}) {
       const mix = Math.min(1, currentHeat * currentPal.boost);
       // Character scramble: a heated glyph gains WEIGHT through the ramp
       // (`.`` becomes `+` becomes `@`) as heat rises — on the portrait too.
+      // Geometry (heatRadius/stamp/pulse/decay/threshold) is untouched.
       const scrambleIdx = Math.min(rampGlyphs.length - 1, base + Math.round(currentHeat * 6));
       const scrambleGlyph = rampGlyphs[scrambleIdx];
-      // Lerp the cell's ink toward the live nav-cycle flare (or burn to black
-      // on a light page). Portrait cells start from their decoded colour;
-      // noise cells start from the shared base grey.
-      const col = portraitMode
-        ? [
-            Math.round(baseColors[i * 3] + (hotTarget[0] - baseColors[i * 3]) * mix),
-            Math.round(baseColors[i * 3 + 1] + (hotTarget[1] - baseColors[i * 3 + 1]) * mix),
-            Math.round(baseColors[i * 3 + 2] + (hotTarget[2] - baseColors[i * 3 + 2]) * mix),
-          ]
-        : currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (hotTarget[colorIdx] - baseColor) * mix));
+      // Edge-only colorcycle: interior hot cells retain their ORIGINAL ink
+      // (decoded portrait color with PORTRAIT_BRIGHTNESS_GAIN, or the shared
+      // base grey in noise mode) while EDGE cells — heat above threshold
+      // with a cold/steep neighbor — lerp toward the live nav-cycle flare
+      // (blue<->red, or burn to black on a light page). Static-safe: with no
+      // heat above threshold nothing paints and the resting static layer
+      // (original colors) shows untouched.
+      const edgeCell = isThermalEdgeCell(i, colIdx, rowIdx, heat, COLS, ROWS, heatThreshold);
+      const col = edgeCell
+        ? (portraitMode
+          ? [
+              Math.round(baseColors[i * 3] + (hotTarget[0] - baseColors[i * 3]) * mix),
+              Math.round(baseColors[i * 3 + 1] + (hotTarget[1] - baseColors[i * 3 + 1]) * mix),
+              Math.round(baseColors[i * 3 + 2] + (hotTarget[2] - baseColors[i * 3 + 2]) * mix),
+            ]
+          : currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (hotTarget[colorIdx] - baseColor) * mix)))
+        : (portraitMode
+          ? [
+              Math.round(baseColors[i * 3]),
+              Math.round(baseColors[i * 3 + 1]),
+              Math.round(baseColors[i * 3 + 2]),
+            ]
+          : [currentPal.base[0], currentPal.base[1], currentPal.base[2]]);
       ctx.clearRect(colIdx * cellW, rowIdx * cellH, cellW, cellH);
       ctx.fillStyle = `rgb(${col.join(",")})`;
       ctx.fillText(scrambleGlyph, colIdx * cellW, rowIdx * cellH);

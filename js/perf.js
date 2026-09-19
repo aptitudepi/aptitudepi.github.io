@@ -478,6 +478,33 @@ if (typeof document !== 'undefined') {
   start();
 }
 
+/* ── Adaptive-count flip discipline ──────── */
+
+// Rate limiter for adaptive steppers (particle instanceCount, …): at most
+// maxFlipTotal changes per sliding windowMs window, so a noisy probe cannot
+// flip-flop every evaluation. Pure state machine (no DOM/timers) — the owner
+// passes its own clock (performance.now()) for testability.
+function createFlipGuard(maxFlipTotal, windowMs) {
+  const flipStampList = [];
+  function pruneFlipStamps(nowMs) {
+    const cutoffMs = nowMs - windowMs;
+    while (flipStampList.length > 0 && flipStampList[0] < cutoffMs) {
+      flipStampList.shift();
+    }
+  }
+  function tryFlip(nowMs) {
+    pruneFlipStamps(nowMs);
+    if (flipStampList.length >= maxFlipTotal) return false;
+    flipStampList.push(nowMs);
+    return true;
+  }
+  function getFlipCount(nowMs) {
+    pruneFlipStamps(nowMs);
+    return flipStampList.length;
+  }
+  return { tryFlip, getFlipCount };
+}
+
 /* ── Public API ────────────────────────────── */
 
 const perf = {
@@ -616,4 +643,4 @@ resolveBootOverride();
 watchBatteryHint();
 
 export default perf;
-export { perf };
+export { perf, createFlipGuard };

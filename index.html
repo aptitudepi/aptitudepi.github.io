@@ -137,6 +137,8 @@
 
 <canvas id="c" aria-hidden="true"></canvas>
 
+<div class="page-blur" aria-hidden="true"></div>
+
 <canvas id="matrix-rain" role="img" aria-label="Matrix rain full-screen effect. Press Escape to exit."></canvas>
 <p id="matrix-status" class="sr-only" role="status"></p>
 
@@ -168,31 +170,34 @@
 
 <div class="progress-bar" id="progressBar"></div>
 
+<!-- Page-wide pinned terminal bar: direct body child so position:fixed is
+     viewport-relative (.hero-shell backdrop-filter would contain fixed). -->
+<nav class="doc-nav" aria-label="Site navigation">
+  <div class="terminal-dots" aria-hidden="true">
+    <span class="terminal-dot red"></span>
+    <span class="terminal-dot yellow"></span>
+    <span class="terminal-dot green"></span>
+  </div>
+  <div class="doc-crumb">
+    <a class="doc-nav-home" href="/"><canvas class="nav-orb" width="24" height="24" aria-hidden="true"></canvas>dvxb.io</a>
+    <span class="doc-nav-sep" aria-hidden="true">/</span>
+    <a class="doc-nav-crumb" href="#hero-target" data-text="terminal">terminal</a>
+  </div>
+  <span class="terminal-title" data-text="db@dvxb.io — fish 3.7">db@dvxb.io — fish 3.7</span>
+  <nav class="doc-nav-links" aria-label="Pages">
+    <a href="/resume">resume</a>
+    <a href="/cv">cv</a>
+    <a href="/man/">man</a>
+  </nav>
+  <span id="mode-pill" data-mode="shell" title="Terminal mode: shell or linux" hidden>shell</span>
+  <button class="explore-button" type="button" data-open-palette>Explore <kbd>⌘K</kbd></button>
+  <span class="terminal-clock" id="headerClock"></span>
+</nav>
+
 <!-- ── Hero / Terminal (full width) ────── -->
 <h1 class="sr-only">Devkumar Banerjee — CS Student, Builder, Researcher</h1>
 <section id="hero-target">
   <div class="hero-shell terminal-window">
-    <nav class="doc-nav" aria-label="Site navigation">
-      <div class="terminal-dots" aria-hidden="true">
-        <span class="terminal-dot red"></span>
-        <span class="terminal-dot yellow"></span>
-        <span class="terminal-dot green"></span>
-      </div>
-      <div class="doc-crumb">
-        <a class="doc-nav-home" href="/"><canvas class="nav-orb" width="24" height="24" aria-hidden="true"></canvas>dvxb.io</a>
-        <span class="doc-nav-sep" aria-hidden="true">/</span>
-        <a class="doc-nav-crumb" href="#hero-target" data-text="terminal">terminal</a>
-      </div>
-      <span class="terminal-title" data-text="db@dvxb.io — fish 3.7">db@dvxb.io — fish 3.7</span>
-      <nav class="doc-nav-links" aria-label="Pages">
-        <a href="/resume">resume</a>
-        <a href="/cv">cv</a>
-        <a href="/man/">man</a>
-      </nav>
-      <span id="mode-pill" data-mode="shell" title="Terminal mode: shell or linux" hidden>shell</span>
-      <button class="explore-button" type="button" data-open-palette>Explore <kbd>⌘K</kbd></button>
-      <span class="terminal-clock" id="headerClock"></span>
-    </nav>
     <div class="terminal-body two-column">
       <div class="thermal-column">
         <canvas id="thermal-ascii" aria-hidden="true"></canvas>
