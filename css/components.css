@@ -46,10 +46,10 @@
   flex-direction: column;
   gap: var(--space-2);
   z-index: 50;
-  /* Rail frost: glass + 12px plain blur() over WebGL. Static only, reduced-motion safe. */
+  /* Rail frost: glass + 8px plain blur() over WebGL. Static only, reduced-motion safe. */
   background: var(--color-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-2);
@@ -101,8 +101,8 @@
   justify-content: center;
   gap: 5px;
   background: var(--color-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -128,8 +128,8 @@
   padding: 0;
   margin: auto;
   background: color-mix(in oklch, var(--color-bg) 96%, transparent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   color: var(--color-text-muted);
 }
 #nav-dialog[open] {
@@ -178,9 +178,9 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-terminal-bg);
-  /* Frost: terminal-bg + blur(10px). */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* Frost: terminal-bg + blur(8px). */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   overflow: hidden;
   transition: border-color 300ms var(--ease-out-expo), transform 300ms var(--ease-out-expo);
   animation: blueRedColor 6s ease-in-out infinite;
@@ -279,9 +279,9 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-terminal-bg);
-  /* Frost: terminal-bg + blur(10px). */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* Frost: terminal-bg + blur(8px). */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   overflow: hidden;
   opacity: 0;
   transition: all var(--transition-interactive);
@@ -352,9 +352,9 @@
   font-size: 0.875rem;
   font-weight: 500;
   background: var(--color-terminal-bg);
-  /* Frost: terminal-bg + blur(10px). */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* Frost: terminal-bg + blur(8px). */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
@@ -384,8 +384,8 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-terminal-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   transition: border-color 300ms var(--ease-out-expo), transform 300ms var(--ease-out-expo);
   cursor: pointer;
   overflow: hidden;
@@ -447,8 +447,8 @@
   border-radius: var(--radius-full);
   border: 1px solid var(--color-border);
   background: var(--color-terminal-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--color-text-muted);
   opacity: 0;
   transition: all var(--transition-interactive);
@@ -457,7 +457,7 @@
 .social-link:hover { border-color: currentColor; background: color-mix(in srgb, currentColor 18%, transparent); transform: translateY(-2px); }
 .social-link svg { width: 22px; height: 22px; }
 
-.footer { text-align: center; padding: var(--space-6); background: var(--color-glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--color-text-faint); font-size: 0.75rem; }
+.footer { text-align: center; padding: var(--space-6); background: var(--color-glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: var(--color-text-faint); font-size: 0.75rem; }
 
 .certs-section { content-visibility: auto; contain-intrinsic-size: 1px; }
 
@@ -662,8 +662,8 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-terminal-border) tran
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-terminal-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   overflow: hidden;
 }
 .gh-card-title {

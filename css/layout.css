@@ -20,8 +20,8 @@
   z-index: 10;
   pointer-events: none;
   background: var(--color-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 section {
@@ -134,19 +134,19 @@ section:not(#hero-target) > * {
   margin-top: var(--space-4);
 }
 
-/* Frost: terminal-bg + blur(10px). Exact match, no legibility exception. */
+/* Frost: terminal-bg + blur(8px). */
 #about .about-grid {
   background: var(--color-terminal-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-8);
 }
 .stats-grid .stat-item {
   background: var(--color-terminal-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-4);

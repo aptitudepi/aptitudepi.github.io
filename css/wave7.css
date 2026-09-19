@@ -85,9 +85,9 @@
   border-radius: 8px;
   padding: 4px 10px;
   cursor: pointer;
-  /* Frost: terminal-bg + blur(10px). */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* Frost: terminal-bg + blur(8px). */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .explore-button:hover,
 .explore-button:focus-visible {
@@ -139,9 +139,9 @@
   border-radius: var(--radius-full);
   padding: 6px 14px;
   cursor: pointer;
-  /* Frost: terminal-bg + blur(10px). */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* Frost: terminal-bg + blur(8px). */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   transition: all var(--transition-interactive);
   animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
 }
