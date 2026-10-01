@@ -68,15 +68,15 @@ function setTerminalHost(nextHost) {
 // xterm transcript reads the single source of truth. Dynamic
 // lines (CPU/GPU/clock/memory) stay in shell.js; this list is static text.
 const BOOT_SCRIPT = [
-  { text: `[  OK  ] Started auditd.service`, fill: SITE_OK },
-  { text: `[  OK  ] Mounted /research`, fill: SITE_OK },
-  { text: `[  OK  ] Started decipher-psma@MDA.service`, fill: SITE_OK },
-  { text: `[  OK  ] Started physics-gnn@DIVE.TAMU.service`, fill: SITE_OK },
-  { text: `[  OK  ] Started sok-water@AGGIES.TAMU.service`, fill: SITE_OK },
-  { text: `[  OK  ] Started build-agent@LM.service`, fill: SITE_OK },
-  { text: `[  OK  ] Reached target cs-student.target`, fill: SITE_OK },
-  { text: `[  OK  ] Started Builder.service`, fill: SITE_OK },
-  { text: `[  OK  ] Reached target Builder.target`, fill: SITE_OK },
+  { text: '[  OK  ] Started auditd.service', fill: SITE_OK },
+  { text: '[  OK  ] Mounted /research', fill: SITE_OK },
+  { text: '[  OK  ] Started decipher-psma@MDA.service', fill: SITE_OK },
+  { text: '[  OK  ] Started physics-gnn@DIVE.TAMU.service', fill: SITE_OK },
+  { text: '[  OK  ] Started sok-water@AGGIES.TAMU.service', fill: SITE_OK },
+  { text: '[  OK  ] Started build-agent@LM.service', fill: SITE_OK },
+  { text: '[  OK  ] Reached target cs-student.target', fill: SITE_OK },
+  { text: '[  OK  ] Started Builder.service', fill: SITE_OK },
+  { text: '[  OK  ] Reached target Builder.target', fill: SITE_OK },
 ];
 
 const ASCII_ART = [
@@ -215,7 +215,7 @@ const PORTFOLIO_PROJECTS = [
     key: 'aggiemap',
     name: 'TheAggieMap',
     tags: ['Next.js', 'FastAPI', 'TypeScript'],
-    description: `Monorepo with a Next.js 14 frontend and FastAPI backend serving as Aggieland's interactive campus map. Built for HowdyHack 2025.`,
+    description: 'Monorepo with a Next.js 14 frontend and FastAPI backend serving as Aggieland\'s interactive campus map. Built for HowdyHack 2025.',
     repo: 'https://github.com/aptitudepi/TheAggieMap',
     role: 'Led full-stack integration across the FastAPI backend and Next.js frontend; deployed both services with systemd.',
     outcome: 'Best Aggie Hack — HowdyHack 2025.',
@@ -678,14 +678,14 @@ function neofetch(term) {
   const infoLines = [
     { label: '', value: `${ANSI_BOLD}${SITE_WHITE}db@${getTerminalHost()}${ANSI_RESET}` },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
-    { label: 'Name', value: `Devkumar Banerjee` },
-    { label: 'Education', value: `BS CS, Texas A&M (2029)` },
-    { label: 'Research', value: `MD Anderson · DIVE Lab · AGGIES Lab · Houston Methodist · UTHSCSA` },
-    { label: 'Work', value: `AI/SRE @ Lockheed Martin · SF Dev @ The Association` },
-    { label: 'Skills', value: `Python · PyTorch · C · C++ · Java · Linux · Docker · Ansible · Keras · Streamlit` },
-    { label: 'Certs', value: `GSEC · GFACT · AZ-900 · SC-900 · Linux Pro · CCST · ITF+ · RVFA` },
-    { label: 'Shell', value: `fish 3.7` },
-    { label: 'AI', value: `Groq cloud default (local option) · cloud prompts sent via Worker proxy` },
+    { label: 'Name', value: 'Devkumar Banerjee' },
+    { label: 'Education', value: 'BS CS, Texas A&M (2029)' },
+    { label: 'Research', value: 'MD Anderson · DIVE Lab · AGGIES Lab · Houston Methodist · UTHSCSA' },
+    { label: 'Work', value: 'AI/SRE @ Lockheed Martin · SF Dev @ The Association' },
+    { label: 'Skills', value: 'Python · PyTorch · C · C++ · Java · Linux · Docker · Ansible · Keras · Streamlit' },
+    { label: 'Certs', value: 'GSEC · GFACT · AZ-900 · SC-900 · Linux Pro · CCST · ITF+ · RVFA' },
+    { label: 'Shell', value: 'fish 3.7' },
+    { label: 'AI', value: 'Groq cloud default (local option) · cloud prompts sent via Worker proxy' },
     { label: 'Uptime', value: uptimeStr() },
     { label: '', value: `${SITE_MUTED}─────────────────────────────────────────────────────────────────────────────────────────${ANSI_RESET}` },
     { label: '', value: `${tryText}${' '.repeat(blockCol - visibleLen(tryText))}${blocks1}` },
@@ -773,7 +773,7 @@ async function getLocation(runSignal) {
 async function weatherCommand(term, args, runSignal) {
   const isF = args.includes('-f');
   term.writeln(`${SITE_MUTED}Fetching location...${ANSI_RESET}`);
-  let loc;
+  let loc = undefined;
   if (_prefetchedLocation) {
     loc = _prefetchedLocation;
   } else {
@@ -985,7 +985,7 @@ async function hnCommand(term, args, runSignal) {
           )
         );
         for (const comment of comments) {
-          if (comment && comment.kids && comment.kids.length > 0) {
+          if (comment?.kids && comment.kids.length > 0) {
             const replyIds = comment.kids.slice(0, 3);
             comment._replies = (await Promise.all(
               replyIds.map((replyId) =>
@@ -1097,7 +1097,7 @@ async function mdCommand(term, args, runSignal) {
     document.body.appendChild(closeBtn);
     term.writeln(`${SITE_GREEN}md viewer opened. Press ✕ or Esc to close${ANSI_RESET}`);
     document.addEventListener('keydown', onEsc);
-  } catch (viewerError) {
+  } catch {
     term.writeln(`${SITE_ERR}Failed to open markdown viewer${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}Next: check the URL and retry \`md <url>\`${ANSI_RESET}`);
   }
@@ -1109,23 +1109,23 @@ function tokenizeCommandLine(lineText) {
   return String(lineText).match(/(?:[^\s"]+|"[^"]*")+/g) || [];
 }
 
-async function runWhoamiCommand(term, args, runSignal) {
+function runWhoamiCommand(term) {
   term.writeln(`${SITE_WHITE}db${ANSI_RESET}`);
   return;
 }
-async function runHostnameCommand(term, args, runSignal) {
+function runHostnameCommand(term) {
   term.writeln(`${SITE_CYAN}${getTerminalHost()}${ANSI_RESET}`);
   return;
 }
-async function runDateCommand(term, args, runSignal) {
+function runDateCommand(term) {
   term.writeln(`${SITE_WHITE}${new Date().toString()}${ANSI_RESET}`);
   return;
 }
-async function runUptimeCommand(term, args, runSignal) {
+function runUptimeCommand(term) {
   term.writeln(`\r${SITE_GREEN} up ${uptimeStr()}${ANSI_RESET}`);
   return;
 }
-async function runUnameCommand(term, args, runSignal) {
+function runUnameCommand(term, args) {
   if (args.includes('-a')) {
     term.writeln(`${SITE_WHITE}Linux ${getTerminalHost()} 7.x-LTS #1 dvxb v2 x86_64 GNU/Linux${ANSI_RESET}`);
   } else {
@@ -1133,11 +1133,11 @@ async function runUnameCommand(term, args, runSignal) {
   }
   return;
 }
-async function runPwdCommand(term, args, runSignal) {
+function runPwdCommand(term) {
   term.writeln(`${SITE_BLUE}/home/db${ANSI_RESET}`);
   return;
 }
-async function runCatCommand(term, args, runSignal) {
+function runCatCommand(term, args) {
   if (!args.length) { term.writeln(`${SITE_ERR}cat: missing operand${ANSI_RESET}`); return; }
   const normalizedCatPath = normalizeVfsPath(args[0]);
   if (isVfsDirectory(normalizedCatPath)) {
@@ -1157,7 +1157,7 @@ async function runCatCommand(term, args, runSignal) {
   }
   return;
 }
-async function runLsCommand(term, args, runSignal) {
+function runLsCommand(term, args) {
   const lsPath = args[0] || VFS_HOME_DIR;
   const normalizedLsPath = normalizeVfsPath(lsPath);
   if (isVfsDirectory(normalizedLsPath)) {
@@ -1177,15 +1177,15 @@ async function runLsCommand(term, args, runSignal) {
   term.writeln(`${SITE_CYAN}${baseNameOfPath(normalizedLsPath)}${ANSI_RESET}`);
   return;
 }
-async function runEchoCommand(term, args, runSignal) {
+function runEchoCommand(term, args) {
   term.writeln(`${SITE_WHITE}${args.join(' ')}${ANSI_RESET}`);
   return;
 }
-async function runClearCommand(term, args, runSignal) {
+function runClearCommand(term) {
   term.clear();
   return;
 }
-async function runAboutCommand(term, args, runSignal) {
+function runAboutCommand(term) {
   term.writeln(`${SITE_WHITE}Devkumar Banerjee${ANSI_RESET}`);
   term.writeln(`${SITE_MUTED}───────────────${ANSI_RESET}`);
   term.writeln(`${SITE_WHITE}CS Honors @ Texas A&M University${ANSI_RESET}`);
@@ -1193,14 +1193,14 @@ async function runAboutCommand(term, args, runSignal) {
   term.writeln(`frosted glass UI, ${SITE_CYAN}Three.js${ANSI_RESET} particle effects, and a`);
   term.writeln(`networked AI assistant (${SITE_CYAN}Groq${ANSI_RESET} cloud default, local option)`);
   term.writeln(`${SITE_MUTED}Cloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download${ANSI_RESET}`);
-  term.writeln(`Systems tinkerer, researcher, and open-source`);
-  term.writeln(`contributor. Interested in ML infrastructure, developer tooling,`);
-  term.writeln(`and building things that feel alive.`);
+  term.writeln('Systems tinkerer, researcher, and open-source');
+  term.writeln('contributor. Interested in ML infrastructure, developer tooling,');
+  term.writeln('and building things that feel alive.');
   term.writeln(`cv: ${SITE_BLUE}https://dvxb.io${ANSI_RESET}`);
   term.writeln(`gh: ${SITE_BLUE}https://github.com/aptitudepi${ANSI_RESET}`);
   return;
 }
-async function runFortuneCommand(term, args, runSignal) {
+function runFortuneCommand(term) {
   if (FORTUNES.length) {
     term.writeln(`${SITE_WHITE}${FORTUNES[Math.floor(Math.random() * FORTUNES.length)]}${ANSI_RESET}`);
   } else {
@@ -1208,7 +1208,7 @@ async function runFortuneCommand(term, args, runSignal) {
   }
   return;
 }
-async function runCowsayCommand(term, args, runSignal) {
+function runCowsayCommand(term, args) {
   const cowMsg = args.join(' ') || 'Moo!';
   const MAX_W = 58;
   const words = cowMsg.split(' ');
@@ -1235,7 +1235,7 @@ async function runCowsayCommand(term, args, runSignal) {
   term.writeln(`${SITE_GREEN}           ||     ||${ANSI_RESET}`);
   return;
 }
-async function runMatrixCommand(term, args, runSignal) {
+function runMatrixCommand(term) {
   if (typeof window.stopMatrixRain === 'function' && typeof window.isMatrixActive === 'function' && window.isMatrixActive()) {
     window.stopMatrixRain();
     term.writeln(`${SITE_MUTED}Matrix rain stopped${ANSI_RESET}`);
@@ -1248,7 +1248,7 @@ async function runMatrixCommand(term, args, runSignal) {
   }
   return;
 }
-async function runVmCommand(term, args, runSignal) {
+function runVmCommand(term, runSignal) {
   term.writeln(`${SITE_MUTED}Run Linux in your browser — booting Buildroot Linux (5–15s to boot)...${ANSI_RESET}`);
   if (typeof window.bootVM === 'function') {
     return window.bootVM(term, runSignal);
@@ -1260,11 +1260,11 @@ async function runVmCommand(term, args, runSignal) {
 async function runAiCommand(term, args, runSignal) {
   return (await import('./ai.js')).generateOutput(args.join(' '), term, runSignal);
 }
-async function runAiModelsCommand(term, args, runSignal) {
+async function runAiModelsCommand(term) {
   (await import('./ai.js')).showModelSelector(term);
   return;
 }
-async function runAiModelCommand(term, args, runSignal) {
+async function runAiModelCommand(term, args) {
   if (args.length) {
     (await import('./ai.js')).switchModel(args[0], term);
   } else {
@@ -1272,28 +1272,28 @@ async function runAiModelCommand(term, args, runSignal) {
   }
   return;
 }
-async function runAiMemoryCommand(term, args, runSignal) {
+async function runAiMemoryCommand(term, args) {
   const memoryModule = await import('./memory.js');
-  const leadToken = String(args[0] ?? ``).toLowerCase();
-  const tailFact = args.slice(1).join(` `).trim();
-  if (leadToken === `on`) {
+  const leadToken = String(args[0] ?? '').toLowerCase();
+  const tailFact = args.slice(1).join(' ').trim();
+  if (leadToken === 'on') {
     memoryModule.setMemoryEnabled(true);
     term.writeln(`${SITE_GREEN}\x1b[1mAI memory ON — saved facts and recent turns feed the next prompt.${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}Cloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download${ANSI_RESET}`);
     return;
   }
-  if (leadToken === `off`) {
+  if (leadToken === 'off') {
     memoryModule.setMemoryEnabled(false);
     term.writeln(`${SITE_GREEN}\x1b[1mAI memory OFF — stored facts and turns stay on this device and are NOT sent.${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}Verify with \`ai details\`: memory shows OFF and the sends line drops memory.${ANSI_RESET}`);
     return;
   }
-  if (leadToken === `clear`) {
+  if (leadToken === 'clear') {
     memoryModule.clearMemory();
     term.writeln(`${SITE_GREEN}\x1b[1mAI memory cleared — facts and conversation turns wiped from this browser.${ANSI_RESET}`);
     return;
   }
-  if (leadToken === `save`) {
+  if (leadToken === 'save') {
     if (!tailFact) {
       term.writeln(`${SITE_MUTED}Usage: ai-memory save <fact>${ANSI_RESET}`);
       return;
@@ -1303,7 +1303,7 @@ async function runAiMemoryCommand(term, args, runSignal) {
     term.writeln(`${SITE_GREEN}\x1b[1mSaved fact (${factTotal} stored): ${sanitizeTerminalText(tailFact)}${ANSI_RESET}`);
     return;
   }
-  if (leadToken === `--json`) {
+  if (leadToken === '--json') {
     const exportPayload = {
       enabled: memoryModule.isMemoryEnabled(),
       facts: memoryModule.getStoredMemory().facts,
@@ -1312,7 +1312,7 @@ async function runAiMemoryCommand(term, args, runSignal) {
     term.writeln(JSON.stringify(exportPayload));
     return;
   }
-  if (leadToken !== ``) {
+  if (leadToken !== '') {
     term.writeln(`${SITE_ERR}ai-memory: unknown subcommand "${sanitizeTerminalText(args[0])}"${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}Usage: ai-memory [on|off|clear|save <fact>|--json]${ANSI_RESET}`);
     return;
@@ -1352,7 +1352,7 @@ async function runAiMemoryCommand(term, args, runSignal) {
   term.writeln(`${SITE_MUTED}Cloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download${ANSI_RESET}`);
   return;
 }
-async function runHistoryCommand(term, args, runSignal) {
+function runHistoryCommand(term) {
   if (CMD_HISTORY.length === 0) {
     term.writeln(`${SITE_MUTED}No commands in history${ANSI_RESET}`);
   } else {
@@ -1363,7 +1363,7 @@ async function runHistoryCommand(term, args, runSignal) {
   }
   return;
 }
-async function runCrtCommand(term, args, runSignal) {
+function runCrtCommand(term) {
   const crtOverlay = document.getElementById('crt-overlay');
   if (crtOverlay) {
     crtOverlay.classList.toggle('active');
@@ -1371,7 +1371,7 @@ async function runCrtCommand(term, args, runSignal) {
   }
   return;
 }
-async function runNoiseCommand(term, args, runSignal) {
+function runNoiseCommand(term) {
   const noiseOverlay = document.getElementById('noise-overlay');
   if (noiseOverlay) {
     noiseOverlay.classList.toggle('active');
@@ -1379,7 +1379,7 @@ async function runNoiseCommand(term, args, runSignal) {
   }
   return;
 }
-async function runBackgroundCommand(term, args, runSignal) {
+async function runBackgroundCommand(term, args) {
   const modeArg = String(args[0] ?? '').trim().toLowerCase();
   const backgroundsModule = await import('./backgrounds.js');
   if (!modeArg) {
@@ -1404,19 +1404,19 @@ async function runBackgroundCommand(term, args, runSignal) {
   return;
 }
 async function runWallDeleteCommand(term, args, runSignal) {
-  const targetId = String(args[1] ?? ``).trim();
+  const targetId = String(args[1] ?? '').trim();
   if (targetId.length === 0) {
     term.writeln(`${SITE_ERR}Usage: wall delete <post-id> [delete-token]${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}Next: paste the id from your post; the token was shown once at submit (also kept in browser storage)${ANSI_RESET}`);
     return;
   }
-  let deleteToken = String(args[2] ?? ``).trim();
+  let deleteToken = String(args[2] ?? '').trim();
   if (deleteToken.length === 0) {
     try {
-      deleteToken = String(localStorage.getItem(`guestbook:delete:${targetId}`) ?? ``);
-    } catch (lookupError) {
+      deleteToken = String(localStorage.getItem(`guestbook:delete:${targetId}`) ?? '');
+    } catch {
       term.writeln(`${SITE_FAINT}Browser storage unavailable; paste the delete token explicitly.${ANSI_RESET}`);
-      deleteToken = ``;
+      deleteToken = '';
     }
   }
   if (deleteToken.length === 0) {
@@ -1427,8 +1427,8 @@ async function runWallDeleteCommand(term, args, runSignal) {
   term.writeln(`${SITE_FAINT}Requesting deletion...${ANSI_RESET}`);
   try {
     const deleteResp = await fetch(`https://0.supernovadkb.workers.dev/api/guestbook/${encodeURIComponent(targetId)}`, {
-      method: `DELETE`,
-      headers: { 'Content-Type': `application/json` },
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: deleteToken }),
       signal: combinedTimeoutSignal(runSignal, 10000),
     });
@@ -1438,11 +1438,11 @@ async function runWallDeleteCommand(term, args, runSignal) {
       term.writeln(`${SITE_GREEN}\x1b[1mEntry deleted from the guestbook.${ANSI_RESET}`);
       try {
         localStorage.removeItem(`guestbook:delete:${targetId}`);
-      } catch (forgetError) {
+      } catch {
         term.writeln(`${SITE_FAINT}Browser storage kept a stale token copy; the server entry is gone.${ANSI_RESET}`);
       }
     } else {
-      term.writeln(`${SITE_ERR}Delete failed: ${stripAnsi(deleteData.error || `Unknown error`)}${ANSI_RESET}`);
+      term.writeln(`${SITE_ERR}Delete failed: ${stripAnsi(deleteData.error || 'Unknown error')}${ANSI_RESET}`);
       term.writeln(`${SITE_MUTED}Next: check the id/token, or contact the site owner for manual review${ANSI_RESET}`);
     }
   } catch (postError) {
@@ -1453,8 +1453,8 @@ async function runWallDeleteCommand(term, args, runSignal) {
   return;
 }
 async function runWallCommand(term, args, runSignal) {
-  const leadArg = String(args[0] ?? ``).toLowerCase();
-  if (leadArg === `delete`) {
+  const leadArg = String(args[0] ?? '').toLowerCase();
+  if (leadArg === 'delete') {
     await runWallDeleteCommand(term, args, runSignal);
     return;
   }
@@ -1506,12 +1506,12 @@ async function runWallCommand(term, args, runSignal) {
     term.writeln(`${SITE_MUTED}Entries are public; device signals are encrypted to the owner for abuse prevention (coarse city-level geo only; posts submit regardless).${ANSI_RESET}`);
     let armoredTelemetry = null;
     try {
-      const telemetryModule = await import(`./wall-telemetry.js`);
+      const telemetryModule = await import('./wall-telemetry.js');
       const telemetryRecord = await telemetryModule.collectWallTelemetry(telemetryModule.newWallNonce());
       const canonicalText = JSON.stringify(telemetryRecord);
       armoredTelemetry = await telemetryModule.encryptWallTelemetry(canonicalText, telemetryModule.wallTelemetryVendorUrl());
     } catch (telemetryError) {
-      console.warn(`wall telemetry skipped`, telemetryError);
+      console.warn('wall telemetry skipped', telemetryError);
       armoredTelemetry = null;
     }
     const postResp = await fetch('https://0.supernovadkb.workers.dev/wall', {
@@ -1529,7 +1529,7 @@ async function runWallCommand(term, args, runSignal) {
         term.writeln(`  ${SITE_MUTED}Delete token (shown once — save it): ${stripAnsi(postData.deleteToken)}${ANSI_RESET}`);
         try {
           localStorage.setItem(`guestbook:delete:${String(postData.post.id)}`, postData.deleteToken);
-        } catch (storageError) {
+        } catch {
           term.writeln(`${SITE_MUTED}Browser storage blocked the delete-token backup; keep the token above.${ANSI_RESET}`);
         }
       }
@@ -1595,7 +1595,7 @@ async function runMyipCommand(term, args, runSignal) {
   }
   return;
 }
-async function runProjectsCommand(term, args, runSignal) {
+function runProjectsCommand(term, args) {
   const jsonMode = args.includes('--json');
   const filterWords = args.filter((argText) => argText !== '--json');
   const filterText = sanitizeTerminalText(filterWords.join(' ')).toLowerCase();
@@ -1626,7 +1626,7 @@ async function runProjectsCommand(term, args, runSignal) {
   return;
 }
 
-async function runCaseCommand(term, args, runSignal) {
+function runCaseCommand(term, args) {
   const queryKey = sanitizeTerminalText(args.join(' ')).toLowerCase().replace(/[^a-z0-9]/g, '');
   const caseProject = PORTFOLIO_PROJECTS.find((project) => {
     const projectKey = project.name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -1647,7 +1647,7 @@ async function runCaseCommand(term, args, runSignal) {
   return;
 }
 
-async function runSkillsCommand(term, args, runSignal) {
+function runSkillsCommand(term) {
   const skillNames = RESUME.Skills;
   const nameWidth = Math.max(...skillNames.map((skillText) => skillText.length));
   term.writeln(`${ANSI_BOLD}${SITE_WHITE}Technical skills (${skillNames.length})${ANSI_RESET}`);
@@ -1658,7 +1658,7 @@ async function runSkillsCommand(term, args, runSignal) {
   return;
 }
 
-async function runTimelineCommand(term, args, runSignal) {
+function runTimelineCommand(term) {
   term.writeln(`${ANSI_BOLD}${SITE_WHITE}Career timeline${ANSI_RESET}`);
   for (let entryIndex = 0; entryIndex < TIMELINE_ENTRIES.length; entryIndex++) {
     const timelineEntry = TIMELINE_ENTRIES[entryIndex];
@@ -1747,7 +1747,7 @@ async function runExportCommand(term, args, runSignal) {
   return;
 }
 
-async function runDevmodeCommand(term, args, runSignal) {
+async function runDevmodeCommand(term) {
   term.writeln(`${SITE_MUTED}Loading dev panel…${ANSI_RESET}`);
   try {
     const devtools = await import('./devtools.js');
@@ -2612,7 +2612,7 @@ function renderMan(term, target) {
   }
 }
 
-async function runManCommand(term, args) {
+function runManCommand(term, args) {
   renderMan(term, args[0] ?? '');
 }
 

@@ -482,7 +482,7 @@ function renderHeader(content) {
   return `<div class="resume-header">` +
     `<h1 class="resume-name">${nameHtml}</h1>` +
     (contact ? `<p class="resume-contact">${contact}</p>` : '') +
-    `</div>`;
+    '</div>';
 }
 
 function parseBlocks(src) {
@@ -515,7 +515,7 @@ function parseBlocks(src) {
           throw new TexParseError('\\resumeSubheading expects 4 arguments');
         }
         let html = p.closePlain() + p.closeEntry();
-        html += `<li class="resume-entry">`;
+        html += '<li class="resume-entry">';
         html += `<div class="entry-row"><span class="entry-title"><strong>${renderInline(a)}</strong></span><span class="entry-date">${renderInline(b)}</span></div>`;
         html += `<div class="entry-row muted"><span class="entry-org"><em>${renderInline(c)}</em></span><span class="entry-loc"><em>${renderInline(d)}</em></span></div>`;
         p.openEntry = true;
@@ -526,7 +526,7 @@ function parseBlocks(src) {
         const b = p.readGroup();
         if (a == null || b == null) throw new TexParseError('\\resumeSubSubheading expects 2 arguments');
         let html = p.closePlain() + p.closeEntry();
-        html += `<li class="resume-entry">`;
+        html += '<li class="resume-entry">';
         html += `<div class="entry-row muted"><span class="entry-org"><em>${renderInline(a)}</em></span><span class="entry-loc"><em>${renderInline(b)}</em></span></div>`;
         p.openEntry = true;
         return html;
@@ -536,7 +536,7 @@ function parseBlocks(src) {
         const b = p.readGroup();
         if (a == null || b == null) throw new TexParseError('\\resumeProjectHeading expects 2 arguments');
         let html = p.closePlain() + p.closeEntry();
-        html += `<li class="resume-entry project">`;
+        html += '<li class="resume-entry project">';
         html += `<div class="entry-row"><span class="entry-title">${renderInline(a)}</span><span class="entry-date">${renderInline(b)}</span></div>`;
         p.openEntry = true;
         return html;

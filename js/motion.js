@@ -24,18 +24,18 @@
 // `window.setExpressive(true)`), reflected as `html[data-expressive]` and
 // honoured only under `prefers-reduced-motion: no-preference`.
 
-const REDUCE_QUERY_TEXT = `(prefers-reduced-motion: reduce)`;
-const MOTION_STORAGE_KEY = `dvxb.motion`;
-const EXPRESSIVE_STORAGE_KEY = `dvxb.expressive`;
-const MODE_OFF_TEXT = `off`;
-const MODE_ON_TEXT = `on`;
-const EXPRESSIVE_FULL_TEXT = `full`;
-const EXPRESSIVE_CALM_TEXT = `calm`;
-const SLOW_LINK_TYPES = new Set([`slow-2g`, `2g`]);
+const REDUCE_QUERY_TEXT = '(prefers-reduced-motion: reduce)';
+const MOTION_STORAGE_KEY = 'dvxb.motion';
+const EXPRESSIVE_STORAGE_KEY = 'dvxb.expressive';
+const MODE_OFF_TEXT = 'off';
+const MODE_ON_TEXT = 'on';
+const EXPRESSIVE_FULL_TEXT = 'full';
+const EXPRESSIVE_CALM_TEXT = 'calm';
+const SLOW_LINK_TYPES = new Set(['slow-2g', '2g']);
 
 function readReduceMatcher() {
   try {
-    if (typeof window === `undefined` || typeof window.matchMedia !== `function`) return null;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return null;
     return window.matchMedia(REDUCE_QUERY_TEXT);
   } catch (matcherError) {
     console.warn(`motion policy matcher unavailable: ${matcherError.message}`);
@@ -45,7 +45,7 @@ function readReduceMatcher() {
 
 function readQueryParam(paramName) {
   try {
-    if (typeof window === `undefined` || !window.location) return null;
+    if (typeof window === 'undefined' || !window.location) return null;
     return new URLSearchParams(window.location.search).get(paramName);
   } catch (paramError) {
     console.warn(`motion policy query read skipped: ${paramError.message}`);
@@ -55,7 +55,7 @@ function readQueryParam(paramName) {
 
 function readStoredValue(storageKey) {
   try {
-    if (typeof window === `undefined` || !window.localStorage) return null;
+    if (typeof window === 'undefined' || !window.localStorage) return null;
     return window.localStorage.getItem(storageKey);
   } catch (storageError) {
     console.warn(`motion policy storage read skipped: ${storageError.message}`);
@@ -65,7 +65,7 @@ function readStoredValue(storageKey) {
 
 function storeValue(storageKey, storedText) {
   try {
-    if (typeof window === `undefined` || !window.localStorage) return;
+    if (typeof window === 'undefined' || !window.localStorage) return;
     window.localStorage.setItem(storageKey, storedText);
   } catch (storageError) {
     console.warn(`motion policy storage persist skipped: ${storageError.message}`);
@@ -78,13 +78,13 @@ function normalizeMotionToken(rawToken) {
   const tokenText = String(rawToken).trim().toLowerCase();
   if (tokenText === MODE_OFF_TEXT) return MODE_OFF_TEXT;
   if (tokenText === MODE_ON_TEXT) return MODE_ON_TEXT;
-  if (tokenText === `auto`) return `auto`;
+  if (tokenText === 'auto') return `auto`;
   return null;
 }
 
 function readConnectionInfo() {
   try {
-    if (typeof navigator === `undefined`) return null;
+    if (typeof navigator === 'undefined') return null;
     return navigator.connection || null;
   } catch (connectionError) {
     console.warn(`motion policy connection read skipped: ${connectionError.message}`);
@@ -107,7 +107,7 @@ function readSlowLinkSignal() {
   const connectionInfo = readConnectionInfo();
   if (!connectionInfo) return false;
   try {
-    return SLOW_LINK_TYPES.has(String(connectionInfo.effectiveType || ``));
+    return SLOW_LINK_TYPES.has(String(connectionInfo.effectiveType || ''));
   } catch (linkError) {
     console.warn(`motion policy effectiveType read skipped: ${linkError.message}`);
     return false;
@@ -116,51 +116,46 @@ function readSlowLinkSignal() {
 
 // Boot precedence: ?motion= URL > localStorage dvxb.motion > auto. Invalid
 // tokens warn and fall through to the next source, never pin.
+let manualOverride = null;
+let expressiveOptIn = false;
 function resolveBootOverride() {
-  const urlToken = normalizeMotionToken(readQueryParam(`motion`));
-  if (urlToken === null && readQueryParam(`motion`) !== null) {
-    console.warn(`[motion] ignoring invalid ?motion value, expected off|on|auto`);
+  const urlToken = normalizeMotionToken(readQueryParam('motion'));
+  if (urlToken === null && readQueryParam('motion') !== null) {
+    console.warn('[motion] ignoring invalid ?motion value, expected off|on|auto');
   }
   if (urlToken === MODE_OFF_TEXT || urlToken === MODE_ON_TEXT) {
     manualOverride = urlToken;
-    overrideSource = `url`;
     return;
   }
-  if (urlToken === `auto`) {
+  if (urlToken === 'auto') {
     manualOverride = null;
-    overrideSource = `auto`;
     return;
   }
   const storedToken = normalizeMotionToken(readStoredValue(MOTION_STORAGE_KEY));
   if (storedToken === MODE_OFF_TEXT || storedToken === MODE_ON_TEXT) {
     manualOverride = storedToken;
-    overrideSource = `stored`;
     return;
   }
   manualOverride = null;
-  overrideSource = `auto`;
 }
 
 function resolveBootExpressive() {
-  const urlFlag = readQueryParam(`expressive`);
+  const urlFlag = readQueryParam('expressive');
   if (urlFlag !== null) {
-    expressiveOptIn = urlFlag === `1` || String(urlFlag).toLowerCase() === `full`;
-    storeValue(EXPRESSIVE_STORAGE_KEY, expressiveOptIn ? `1` : `0`);
+    expressiveOptIn = urlFlag === '1' || String(urlFlag).toLowerCase() === 'full';
+    storeValue(EXPRESSIVE_STORAGE_KEY, expressiveOptIn ? '1' : '0');
     return;
   }
-  expressiveOptIn = readStoredValue(EXPRESSIVE_STORAGE_KEY) === `1`;
+  expressiveOptIn = readStoredValue(EXPRESSIVE_STORAGE_KEY) === '1';
 }
 
 let reduceMatcher = readReduceMatcher();
-let manualOverride = null;
-let overrideSource = `auto`;
-let expressiveOptIn = false;
 const motionListeners = new Set();
 
 function computeMotionOff() {
   // prefers-reduced-motion always wins: an access need beats any preference.
   try {
-    if (reduceMatcher && reduceMatcher.matches) return true;
+    if (reduceMatcher?.matches) return true;
   } catch (reduceError) {
     console.warn(`motion policy reduce read skipped: ${reduceError.message}`);
   }
@@ -184,7 +179,7 @@ function isExpressive() {
 function applyMotionState() {
   const motionOff = currentMotionOff();
   try {
-    if (typeof document !== `undefined` && document.documentElement) {
+    if (typeof document !== 'undefined' && document.documentElement) {
       document.documentElement.dataset.motion = motionOff ? MODE_OFF_TEXT : MODE_ON_TEXT;
       document.documentElement.dataset.expressive = expressiveOptIn ? EXPRESSIVE_FULL_TEXT : EXPRESSIVE_CALM_TEXT;
     }
@@ -229,16 +224,16 @@ function attachPolicyListeners() {
   if (attachPolicyListeners.attached) return;
   attachPolicyListeners.attached = true;
   try {
-    if (reduceMatcher && typeof reduceMatcher.addEventListener === `function`) {
-      reduceMatcher.addEventListener(`change`, handleMatcherChange);
+    if (reduceMatcher && typeof reduceMatcher.addEventListener === 'function') {
+      reduceMatcher.addEventListener('change', handleMatcherChange);
     }
   } catch (matcherListenError) {
     console.warn(`motion policy matcher listen skipped: ${matcherListenError.message}`);
   }
   try {
     const connectionInfo = readConnectionInfo();
-    if (connectionInfo && typeof connectionInfo.addEventListener === `function`) {
-      connectionInfo.addEventListener(`change`, handleConnectionChange);
+    if (connectionInfo && typeof connectionInfo.addEventListener === 'function') {
+      connectionInfo.addEventListener('change', handleConnectionChange);
     }
   } catch (connectionListenError) {
     console.warn(`motion policy connection listen skipped: ${connectionListenError.message}`);
@@ -251,18 +246,16 @@ attachPolicyListeners.attached = false;
 function setMotionOverride(modeName, sourceName) {
   const normalizedMode = normalizeMotionToken(modeName);
   if (normalizedMode === null) {
-    console.warn(`[motion] ignoring invalid motion override, expected off|on|auto`);
+    console.warn('[motion] ignoring invalid motion override, expected off|on|auto');
     return manualOverride;
   }
-  const resolvedSource = sourceName === `url` ? `url` : `sidebar`;
-  if (normalizedMode === `auto`) {
+  const resolvedSource = sourceName === 'url' ? 'url' : 'sidebar';
+  if (normalizedMode === 'auto') {
     manualOverride = null;
-    overrideSource = `auto`;
-    if (resolvedSource === `sidebar`) storeValue(MOTION_STORAGE_KEY, `auto`);
+    if (resolvedSource === 'sidebar') storeValue(MOTION_STORAGE_KEY, 'auto');
   } else {
     manualOverride = normalizedMode;
-    overrideSource = resolvedSource;
-    if (resolvedSource === `sidebar`) storeValue(MOTION_STORAGE_KEY, normalizedMode);
+    if (resolvedSource === 'sidebar') storeValue(MOTION_STORAGE_KEY, normalizedMode);
   }
   applyMotionState();
   return manualOverride;
@@ -270,7 +263,7 @@ function setMotionOverride(modeName, sourceName) {
 
 function setExpressive(expressiveOn) {
   expressiveOptIn = Boolean(expressiveOn);
-  storeValue(EXPRESSIVE_STORAGE_KEY, expressiveOptIn ? `1` : `0`);
+  storeValue(EXPRESSIVE_STORAGE_KEY, expressiveOptIn ? '1' : '0');
   applyMotionState();
   return expressiveOptIn;
 }
@@ -285,19 +278,19 @@ function auditRunningAnimations(sampleLimit) {
   const cappedLimit = Number.isFinite(parsedLimit) ? Math.max(1, Math.min(50, parsedLimit)) : 10;
   const offenders = [];
   try {
-    if (typeof document === `undefined`) return offenders;
-    const allNodes = document.querySelectorAll(`*`);
+    if (typeof document === 'undefined') return offenders;
+    const allNodes = document.querySelectorAll('*');
     for (const candidate of Array.from(allNodes)) {
       if (offenders.length >= cappedLimit) break;
       const computedStyle = getComputedStyle(candidate);
-      const iterationText = String(computedStyle.animationIterationCount || ``);
-      const nameText = String(computedStyle.animationName || ``);
-      const playText = String(computedStyle.animationPlayState || ``);
-      const isInfinite = iterationText.includes(`infinite`) && nameText !== `` && nameText !== `none`;
-      if (!isInfinite || playText !== `running`) continue;
+      const iterationText = String(computedStyle.animationIterationCount || '');
+      const nameText = String(computedStyle.animationName || '');
+      const playText = String(computedStyle.animationPlayState || '');
+      const isInfinite = iterationText.includes('infinite') && nameText !== '' && nameText !== 'none';
+      if (!isInfinite || playText !== 'running') continue;
       const labelText = candidate.id
         ? `#${candidate.id}`
-        : `${candidate.tagName.toLowerCase()}${candidate.className ? `.${String(candidate.className).split(` `).slice(0, 2).join(`.`)}` : ``}`;
+        : `${candidate.tagName.toLowerCase()}${candidate.className ? `.${String(candidate.className).split(' ').slice(0, 2).join('.')}` : ''}`;
       offenders.push(`${labelText} :: ${nameText}`);
     }
   } catch (auditError) {
@@ -313,7 +306,7 @@ resolveBootExpressive();
 attachPolicyListeners();
 applyMotionState();
 
-if (typeof window !== `undefined`) {
+if (typeof window !== 'undefined') {
   window.motionOK = isMotionOK;
   window.setMotionOverride = setMotionOverride;
   window.setExpressive = setExpressive;

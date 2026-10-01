@@ -126,7 +126,7 @@ function splitTableRow(rowText) {
 
 // GFM-subset tables: header row first, one `---` separator row, then body.
 // Cells stay plain text (no inline spans) so padding math stays visible.
-function renderTableBlock(bufferedRows, maxWidth) {
+function renderTableBlock(bufferedRows) {
   const parsedRows = bufferedRows.map(splitTableRow);
   const bodyRows = parsedRows.filter((rowCells) => rowCells.some((cellText) => /[^-:\s]/.test(cellText)));
   if (bodyRows.length === 0) {

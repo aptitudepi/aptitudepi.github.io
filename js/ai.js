@@ -23,18 +23,18 @@ let pipelineLoading = false;
 // opt-in; (c) Terminal controls = tool-allowlist explainer (cloud backend).
 // The choice persists in localStorage; the first `ai` call with no saved
 // mode opens the picker instead of generating (nothing is sent).
-const AI_MODE_KEY = `dvxb_ai_mode_v1`;
-const AI_LOCAL_MODEL_KEY = `dvxb_ai_local_model_v1`;
-const AI_PENDING_PROMPT_KEY = `dvxb_ai_pending_prompt_v1`;
+const AI_MODE_KEY = 'dvxb_ai_mode_v1';
+const AI_LOCAL_MODEL_KEY = 'dvxb_ai_local_model_v1';
+const AI_PENDING_PROMPT_KEY = 'dvxb_ai_pending_prompt_v1';
 const DEFAULT_LOCAL_MODEL = 2;
-const CLOUD_DISCLOSURE_LINE = `Cloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download`;
-const NO_MATCH_FALLFORWARD = `I don't have that in the portfolio — try \`projects\` / \`timeline\` / \`ai web <q>\` for live search.`;
-const CITATION_INSTRUCTION = `When you use the Retrieved Context below, cite the chunks Perplexity-style with [1], [2] markers matching their numbers. Answer ONLY from the context when it matches; never invent portfolio facts.`;
+const CLOUD_DISCLOSURE_LINE = 'Cloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download';
+const NO_MATCH_FALLFORWARD = 'I don\'t have that in the portfolio — try `projects` / `timeline` / `ai web <q>` for live search.';
+const CITATION_INSTRUCTION = 'When you use the Retrieved Context below, cite the chunks Perplexity-style with [1], [2] markers matching their numbers. Answer ONLY from the context when it matches; never invent portfolio facts.';
 
 function getSavedAiMode() {
   try {
     const storedMode = localStorage.getItem(AI_MODE_KEY);
-    if (storedMode === `quick` || storedMode === `local` || storedMode === `controls`) return storedMode;
+    if (storedMode === 'quick' || storedMode === 'local' || storedMode === 'controls') return storedMode;
     return null;
   } catch (storageError) {
     console.warn(`ai mode read skipped: ${storageError.message}`);
@@ -65,7 +65,7 @@ function persistAiMode(modeName, modelIndex) {
 // Restore the persisted backend before the first call: local mode revives
 // its model index, everything else boots to the Cloud Qwen default.
 const savedModeAtBoot = getSavedAiMode();
-activeModel = savedModeAtBoot === `local` ? readSavedLocalModel() : 0;
+activeModel = savedModeAtBoot === 'local' ? readSavedLocalModel() : 0;
 
 // Pending first-run prompt, held while the picker is open. Mirrored to
 // localStorage so a chip click (outside the terminal's foreground run) can
@@ -132,7 +132,7 @@ function storeFailedPromptSnapshot(failedPrompt) {
 }
 
 function showAiRetryAffordance(term) {
-  term.writeln(`\x1b[2mRetry available — type \`ai retry\` to replay the exact prompt\x1b[0m`);
+  term.writeln('\x1b[2mRetry available — type `ai retry` to replay the exact prompt\x1b[0m');
 }
 
 // Set while a local model downloads; the chip-bar Cancel button (and the
@@ -141,7 +141,7 @@ function showAiRetryAffordance(term) {
 let localDownloadCanceller = null;
 
 function requestLocalDownloadCancel() {
-  if (typeof localDownloadCanceller === `function`) {
+  if (typeof localDownloadCanceller === 'function') {
     const canceller = localDownloadCanceller;
     localDownloadCanceller = null;
     canceller();
@@ -154,11 +154,11 @@ async function loadPipeline(term, loadOptions) {
   if (pipelineLoading) return null;
   pipelineLoading = true;
 
-  const progressHandler = typeof loadOptions?.onProgress === `function` ? loadOptions.onProgress : null;
+  const progressHandler = typeof loadOptions?.onProgress === 'function' ? loadOptions.onProgress : null;
   const abortSignal = loadOptions?.runSignal ?? null;
 
   try {
-    if (term) term.writeln(`\x1b[2mLoading AI module...\x1b[0m`);
+    if (term) term.writeln('\x1b[2mLoading AI module...\x1b[0m');
 
     const { pipeline: p } = await import('@huggingface/transformers');
 
@@ -170,7 +170,7 @@ async function loadPipeline(term, loadOptions) {
     if (term) {
       term.writeln(`\x1b[2mGPU backend: navigator.gpu = ${gpu ? '\x1b[32mactive\x1b[2m' : '\x1b[91mundefined\x1b[2m'} \u2192 using ${device} (${numThreads} threads)\x1b[0m`);
       term.writeln(`\r\x1b[2mLoading ${model.name} (${model.size}, ${device})...\x1b[0m`);
-      term.writeln(`\x1b[2mOne-time download, cached in this browser after the first fetch — Ctrl+C (or chip Cancel) aborts\x1b[0m`);
+      term.writeln('\x1b[2mOne-time download, cached in this browser after the first fetch — Ctrl+C (or chip Cancel) aborts\x1b[0m');
     }
 
     await new Promise(r => setTimeout(r, 0));
@@ -214,15 +214,15 @@ async function loadPipeline(term, loadOptions) {
     ]);
 
     localDownloadCanceller = null;
-    if (term) term.writeln(`\r\x1b[32mModel loaded\x1b[0m`);
+    if (term) term.writeln('\r\x1b[32mModel loaded\x1b[0m');
     return pipeline;
   } catch (loadError) {
     localDownloadCanceller = null;
-    if (isAbortError(loadError) || String(loadError?.message) === `Local download cancelled`) {
-      if (term) term.writeln(`\r\x1b[2mLocal download cancelled — pick a size again or run \`ai-model 0\` for cloud\x1b[0m`);
+    if (isAbortError(loadError) || String(loadError?.message) === 'Local download cancelled') {
+      if (term) term.writeln('\r\x1b[2mLocal download cancelled — pick a size again or run `ai-model 0` for cloud\x1b[0m');
     } else {
       if (term) term.writeln(`\r\x1b[91mFailed to load local model: ${loadError.message}\x1b[0m`);
-      if (term) term.writeln(`\x1b[2mNext: retry \`ai <prompt>\`, or switch back with \`ai-model 0\` for Groq cloud\x1b[0m`);
+      if (term) term.writeln('\x1b[2mNext: retry `ai <prompt>`, or switch back with `ai-model 0` for Groq cloud\x1b[0m');
     }
     pipelineLoading = false;
     return null;
@@ -320,9 +320,9 @@ function createStreamWriter(targetTerm) {
     const carriedChunk = heldReturn ? `\r${rawChunk}` : rawChunk;
     heldReturn = false;
     const cleanedChunk = stripAnsi(carriedChunk);
-    const unifiedChunk = cleanedChunk.split(`\r\n`).join(`\n`);
-    const expandedChunk = unifiedChunk.split(`\n`).join(`\r\n`);
-    if (expandedChunk.endsWith(`\r`)) {
+    const unifiedChunk = cleanedChunk.split('\r\n').join('\n');
+    const expandedChunk = unifiedChunk.split('\n').join('\r\n');
+    if (expandedChunk.endsWith('\r')) {
       heldReturn = true;
       return expandedChunk.slice(0, -1);
     }
@@ -330,7 +330,7 @@ function createStreamWriter(targetTerm) {
   }
   function writeStreamChunk(rawChunk) {
     const normalizedChunk = normalizeChunk(rawChunk);
-    if (normalizedChunk !== ``) {
+    if (normalizedChunk !== '') {
       targetTerm.write(normalizedChunk);
     }
   }
@@ -340,7 +340,7 @@ function createStreamWriter(targetTerm) {
 async function streamGroq(prompt, context, term, runSignal) {
   const workerUrl = 'https://0.supernovadkb.workers.dev/ai';
   
-  term.write(`\x1b[1mAI:\x1b[0m `);
+  term.write('\x1b[1mAI:\x1b[0m ');
 
   const memoryContext = buildMemoryPromptContext();
   const fullSystemContent = `${BASELINE_SYSTEM_PROMPT}\n${CITATION_INSTRUCTION}\n\n${memoryContext}Retrieved Context:\n${context}`;
@@ -461,7 +461,7 @@ async function streamGroq(prompt, context, term, runSignal) {
   } catch (streamError) {
     if (isAbortError(streamError)) throw streamError;
     term.writeln(`\r\x1b[91mGroq cloud stream error: ${streamError.message}\x1b[0m`);
-    term.writeln(`\x1b[2mTip: Switch to local in-browser model using \`ai-model 1\`\x1b[0m`);
+    term.writeln('\x1b[2mTip: Switch to local in-browser model using `ai-model 1`\x1b[0m');
     return false;
   }
 }
@@ -470,7 +470,7 @@ async function streamLocal(pipelineHandle, prompt, context, term, runSignal) {
   if (runSignal?.aborted) return;
   const { TextStreamer } = await import('@huggingface/transformers');
   
-  term.write(`\x1b[1mAI:\x1b[0m `);
+  term.write('\x1b[1mAI:\x1b[0m ');
 
   let fullResponse = '';
   const writeStreamChunk = createStreamWriter(term);
@@ -515,19 +515,19 @@ export async function fetchWebSearch(query, runSignal) {
 function showAiStatus(term) {
   const current = MODELS[activeModel];
   const backend = activeModel === 0 ? 'Groq cloud via Worker proxy' : 'local ONNX (Transformers.js, WASM/WebGPU)';
-  term.writeln(`\x1b[1mAI backend status\x1b[0m`);
+  term.writeln('\x1b[1mAI backend status\x1b[0m');
   term.writeln(`\x1b[2mactive: ${current.name} — ${backend}\x1b[0m`);
-  term.writeln(`\x1b[2mdefault: Groq cloud model; switch with ai-model <id>\x1b[0m`);
+  term.writeln('\x1b[2mdefault: Groq cloud model; switch with ai-model <id>\x1b[0m');
   term.writeln(`\x1b[2m${CLOUD_DISCLOSURE_LINE}\x1b[0m`);
-  term.writeln(`\x1b[2mnetwork required (cloud inference or model download)\x1b[0m`);
+  term.writeln('\x1b[2mnetwork required (cloud inference or model download)\x1b[0m');
 }
 
 // Perplexity-style Sources footer plus the cloud disclosure line, printed
 // adjacent to every AI answer (MATCH cites chunk titles, NO_MATCH skips the
 // list but keeps the disclosure).
 function printAiAnswerFooter(term, rankedResult) {
-  if (rankedResult && rankedResult.verdict === `MATCH` && rankedResult.sourceList.length > 0) {
-    term.writeln(`\x1b[2mSources:\x1b[0m`);
+  if (rankedResult?.verdict === 'MATCH' && rankedResult.sourceList.length > 0) {
+    term.writeln('\x1b[2mSources:\x1b[0m');
     for (const source of rankedResult.sourceList) {
       term.writeln(`\x1b[2m${source.marker} ${stripAnsi(source.title)}\x1b[0m`);
     }
@@ -538,11 +538,11 @@ function printAiAnswerFooter(term, rankedResult) {
 // Terminal-controls explainer shared by picker choice 3 and `ai details`:
 // the model may only emit tool tags for the read-only allowlist.
 function printToolAllowlist(term) {
-  const allowedNames = [...TOOL_ALLOWLIST_NAMES].join(`, `);
-  term.writeln(`\x1b[1mTerminal controls — what the assistant may run\x1b[0m`);
-  term.writeln(`\x1b[2mThe assistant may emit [[TOOL: exec("…")]] for read-only/display commands only:\x1b[0m`);
+  const allowedNames = [...TOOL_ALLOWLIST_NAMES].join(', ');
+  term.writeln('\x1b[1mTerminal controls — what the assistant may run\x1b[0m');
+  term.writeln('\x1b[2mThe assistant may emit [[TOOL: exec("…")]] for read-only/display commands only:\x1b[0m');
   term.writeln(`  \x1b[32m${allowedNames}\x1b[0m`);
-  term.writeln(`\x1b[2m\`wall\` bare only (reads the guestbook, never posts). Anything else prints [Tool blocked]: ai/llm, ai-model, md, clear, vm, devmode, guestbook, man.\x1b[0m`);
+  term.writeln('\x1b[2m`wall` bare only (reads the guestbook, never posts). Anything else prints [Tool blocked]: ai/llm, ai-model, md, clear, vm, devmode, guestbook, man.\x1b[0m');
 }
 
 // First-run picker: printed in-terminal with an HTML chip bar beneath the
@@ -550,12 +550,12 @@ function printToolAllowlist(term) {
 // 1/2/3). The prompt is stashed, never sent, until a choice persists.
 function openAiPicker(term, promptText) {
   stashPendingAiPrompt(promptText);
-  term.writeln(`\x1b[1mFirst run — choose how AI answers (saved on this device):\x1b[0m`);
-  term.writeln(`  \x1b[2m[1]\x1b[0m \x1b[36mQuick answer\x1b[0m — Cloud Qwen (qwen/qwen3.8-27b) via Worker proxy`);
-  term.writeln(`      \x1b[2mSends: prompt + RAG portfolio context + memory (when ON)\x1b[0m`);
-  term.writeln(`  \x1b[2m[2]\x1b[0m \x1b[36mOn this device\x1b[0m — private local model (135MB–1.1GB, cached after download)`);
-  term.writeln(`  \x1b[2m[3]\x1b[0m \x1b[36mTerminal controls\x1b[0m — what the assistant may run (tool allowlist)`);
-  term.writeln(`\x1b[2mType \`ai 1\`, \`ai 2\` or \`ai 3\` (or bare 1/2/3), click a chip below, Esc keeps typed choice. Your prompt is held — nothing was sent.\x1b[0m`);
+  term.writeln('\x1b[1mFirst run — choose how AI answers (saved on this device):\x1b[0m');
+  term.writeln('  \x1b[2m[1]\x1b[0m \x1b[36mQuick answer\x1b[0m — Cloud Qwen (qwen/qwen3.8-27b) via Worker proxy');
+  term.writeln('      \x1b[2mSends: prompt + RAG portfolio context + memory (when ON)\x1b[0m');
+  term.writeln('  \x1b[2m[2]\x1b[0m \x1b[36mOn this device\x1b[0m — private local model (135MB–1.1GB, cached after download)');
+  term.writeln('  \x1b[2m[3]\x1b[0m \x1b[36mTerminal controls\x1b[0m — what the assistant may run (tool allowlist)');
+  term.writeln('\x1b[2mType `ai 1`, `ai 2` or `ai 3` (or bare 1/2/3), click a chip below, Esc keeps typed choice. Your prompt is held — nothing was sent.\x1b[0m');
   printCloudDisclosure(term);
   renderAiModeChipbar(term, { showSizes: false });
 }
@@ -567,20 +567,20 @@ function printAiDetails(term) {
   const current = MODELS[activeModel];
   const savedMode = getSavedAiMode();
   const cloudBackend = activeModel === 0;
-  const backendLabel = cloudBackend ? `Groq cloud via Worker proxy` : `local ONNX (Transformers.js, WASM/WebGPU)`;
+  const backendLabel = cloudBackend ? 'Groq cloud via Worker proxy' : 'local ONNX (Transformers.js, WASM/WebGPU)';
   const storedMemory = getStoredMemory();
   const storedHistory = getStoredHistory();
   const memoryOn = isMemoryEnabled();
   const factTotal = storedMemory.facts.length;
   const turnTotal = storedHistory.length;
-  term.writeln(`\x1b[1mAI details\x1b[0m`);
-  term.writeln(`\x1b[2mmode: ${savedMode === null ? `not chosen yet (the picker holds your next prompt)` : savedMode}\x1b[0m`);
+  term.writeln('\x1b[1mAI details\x1b[0m');
+  term.writeln(`\x1b[2mmode: ${savedMode === null ? 'not chosen yet (the picker holds your next prompt)' : savedMode}\x1b[0m`);
   term.writeln(`\x1b[2mmodel: ${current.name} (${current.id}) — ${current.size}\x1b[0m`);
   term.writeln(`\x1b[2mbackend: ${backendLabel}\x1b[0m`);
   if (cloudBackend) {
-    term.writeln(`\x1b[2msends: prompt + RAG portfolio context + memory (${memoryOn ? `ON` : `OFF`}) to the Worker → Groq\x1b[0m`);
+    term.writeln(`\x1b[2msends: prompt + RAG portfolio context + memory (${memoryOn ? 'ON' : 'OFF'}) to the Worker → Groq\x1b[0m`);
   } else {
-    term.writeln(`\x1b[2msends: nothing leaves this device after the one-time model download\x1b[0m`);
+    term.writeln('\x1b[2msends: nothing leaves this device after the one-time model download\x1b[0m');
   }
   if (memoryOn) {
     term.writeln(`\x1b[2mmemory: ON — ${factTotal} facts, ${turnTotal} turns feed the prompt (\`ai-memory off\` stops injection)\x1b[0m`);
@@ -589,7 +589,7 @@ function printAiDetails(term) {
   }
   term.writeln(`\x1b[2mRAG cosine threshold: ${effectiveCosineThreshold()} (default ${RAG_COSINE_THRESHOLD}; tune with \`ai threshold <0-1>\`)\x1b[0m`);
   printToolAllowlist(term);
-  term.writeln(`\x1b[2mSwitch mode any time: \`ai 1\` quick · \`ai 2\` this device · \`ai 3\` controls\x1b[0m`);
+  term.writeln('\x1b[2mSwitch mode any time: `ai 1` quick · `ai 2` this device · `ai 3` controls\x1b[0m');
   printCloudDisclosure(term);
 }
 
@@ -601,16 +601,16 @@ function showAiDetails(term) {
 // `ai sources <q>`: deterministic RAG debug view — keyword-ranked chunks
 // with scores plus the MATCH/NO_MATCH verdict, no embedder download.
 async function showAiSources(rawQuery, term) {
-  const trimmedQuery = String(rawQuery ?? ``).trim();
+  const trimmedQuery = String(rawQuery ?? '').trim();
   if (!trimmedQuery) {
-    term.writeln(`\x1b[2mUsage: ai sources <query> — ranked RAG chunks + MATCH/NO_MATCH verdict\x1b[0m`);
+    term.writeln('\x1b[2mUsage: ai sources <query> — ranked RAG chunks + MATCH/NO_MATCH verdict\x1b[0m');
     return;
   }
   const rankedResult = await retrieveRankedContext(trimmedQuery, null, { keywordOnly: true });
   const thresholdValue = effectiveCosineThreshold();
   term.writeln(`\x1b[1mSources for "${stripAnsi(trimmedQuery)}"\x1b[0m`);
   term.writeln(`\x1b[2mkeyword rank (deterministic; live runs add bge-small-en cosine, threshold ${thresholdValue})\x1b[0m`);
-  if (rankedResult.verdict === `NO_MATCH`) {
+  if (rankedResult.verdict === 'NO_MATCH') {
     term.writeln(`\x1b[2mNo chunk clears the keyword floor (${RAG_KEYWORD_FLOOR}) — NO_MATCH\x1b[0m`);
     term.writeln(`\x1b[33m${NO_MATCH_FALLFORWARD}\x1b[0m`);
     printCloudDisclosure(term);
@@ -619,14 +619,14 @@ async function showAiSources(rawQuery, term) {
   for (const source of rankedResult.sourceList) {
     term.writeln(`  \x1b[32m${source.marker}\x1b[0m ${stripAnsi(source.title)} \x1b[2m(keyword ${source.score.toFixed(2)})\x1b[0m`);
   }
-  const markerList = rankedResult.sourceList.map((source) => source.marker).join(`, `);
+  const markerList = rankedResult.sourceList.map((source) => source.marker).join(', ');
   term.writeln(`\x1b[2mVerdict: MATCH — ${rankedResult.sourceList.length} chunk(s) feed the prompt as ${markerList}\x1b[0m`);
   printCloudDisclosure(term);
 }
 
 function isThresholdArgument(tailText) {
   const normalizedTail = String(tailText).trim().toLowerCase();
-  if (normalizedTail === `reset` || normalizedTail === `default` || normalizedTail === `clear`) return true;
+  if (normalizedTail === 'reset' || normalizedTail === 'default' || normalizedTail === 'clear') return true;
   if (!/^\d+(\.\d+)?$/u.test(normalizedTail)) return false;
   const parsedValue = Number(normalizedTail);
   return Number.isFinite(parsedValue) && parsedValue >= 0 && parsedValue <= 1;
@@ -635,20 +635,20 @@ function isThresholdArgument(tailText) {
 // `ai threshold` shows the floor; `ai threshold <0-1>` persists an override
 // (reset restores the documented constant).
 function showAiThreshold(tailText, term) {
-  const normalizedTail = String(tailText ?? ``).trim().toLowerCase();
+  const normalizedTail = String(tailText ?? '').trim().toLowerCase();
   if (!normalizedTail) {
     const overrideValue = readThresholdOverride();
-    term.writeln(`\x1b[2mRAG cosine threshold: ${effectiveCosineThreshold()} (default ${RAG_COSINE_THRESHOLD}${overrideValue === null ? `` : `, override ${overrideValue}`}) — set with \`ai threshold <0-1>\`, \`ai threshold reset\`\x1b[0m`);
+    term.writeln(`\x1b[2mRAG cosine threshold: ${effectiveCosineThreshold()} (default ${RAG_COSINE_THRESHOLD}${overrideValue === null ? '' : `, override ${overrideValue}`}) — set with \`ai threshold <0-1>\`, \`ai threshold reset\`\x1b[0m`);
     return;
   }
-  if (normalizedTail === `reset` || normalizedTail === `default` || normalizedTail === `clear`) {
+  if (normalizedTail === 'reset' || normalizedTail === 'default' || normalizedTail === 'clear') {
     clearThresholdOverride();
     term.writeln(`\x1b[2mRAG cosine threshold reset to default ${RAG_COSINE_THRESHOLD}\x1b[0m`);
     return;
   }
   const parsedValue = Number(normalizedTail);
   if (!Number.isFinite(parsedValue) || parsedValue < 0 || parsedValue > 1) {
-    term.writeln(`\x1b[91mthreshold must be a number 0-1 (or \`reset\`)\x1b[0m`);
+    term.writeln('\x1b[91mthreshold must be a number 0-1 (or `reset`)\x1b[0m');
     return;
   }
   setThresholdOverride(parsedValue);
@@ -660,35 +660,35 @@ function showAiThreshold(tailText, term) {
 // any held prompt so the first run completes in one flow.
 async function resolveAiModeChoice(choiceDigit, term, runSignal) {
   const normalizedChoice = String(choiceDigit).trim();
-  if (normalizedChoice !== `1` && normalizedChoice !== `2` && normalizedChoice !== `3`) {
-    term.writeln(`\x1b[2mUsage: ai 1 (quick) · ai 2 (this device) · ai 3 (controls)\x1b[0m`);
+  if (normalizedChoice !== '1' && normalizedChoice !== '2' && normalizedChoice !== '3') {
+    term.writeln('\x1b[2mUsage: ai 1 (quick) · ai 2 (this device) · ai 3 (controls)\x1b[0m');
     return;
   }
   closeAiChipbar();
-  if (normalizedChoice === `1`) {
+  if (normalizedChoice === '1') {
     activeModel = 0;
     pipeline = null;
     pipelineLoading = false;
-    persistAiMode(`quick`, null);
-    term.writeln(`\x1b[32mAI mode: Quick answer — Cloud Qwen (qwen/qwen3.8-27b) via Worker proxy\x1b[0m`);
-    term.writeln(`\x1b[2mSends: prompt + RAG portfolio context + memory (when ON) to the Worker\x1b[0m`);
+    persistAiMode('quick', null);
+    term.writeln('\x1b[32mAI mode: Quick answer — Cloud Qwen (qwen/qwen3.8-27b) via Worker proxy\x1b[0m');
+    term.writeln('\x1b[2mSends: prompt + RAG portfolio context + memory (when ON) to the Worker\x1b[0m');
     printCloudDisclosure(term);
-  } else if (normalizedChoice === `2`) {
+  } else if (normalizedChoice === '2') {
     const localIndex = readSavedLocalModel();
     activeModel = localIndex;
     pipeline = null;
     pipelineLoading = false;
-    persistAiMode(`local`, localIndex);
+    persistAiMode('local', localIndex);
     const modelEntry = MODELS[localIndex];
     term.writeln(`\x1b[32mAI mode: Private on this device — ${modelEntry.name} (${modelEntry.size}, ${modelEntry.dtype})\x1b[0m`);
-    term.writeln(`\x1b[2mOne-time download, cached in this browser; progress shows here, Ctrl+C cancels; change size with \`ai-model <id>\`\x1b[0m`);
+    term.writeln('\x1b[2mOne-time download, cached in this browser; progress shows here, Ctrl+C cancels; change size with `ai-model <id>`\x1b[0m');
     printCloudDisclosure(term);
   } else {
     activeModel = 0;
     pipeline = null;
     pipelineLoading = false;
-    persistAiMode(`controls`, null);
-    term.writeln(`\x1b[32mAI mode: Terminal controls — backend stays Cloud Qwen; choice saved\x1b[0m`);
+    persistAiMode('controls', null);
+    term.writeln('\x1b[32mAI mode: Terminal controls — backend stays Cloud Qwen; choice saved\x1b[0m');
     printToolAllowlist(term);
     printCloudDisclosure(term);
   }
@@ -702,36 +702,36 @@ async function resolveAiModeChoice(choiceDigit, term, runSignal) {
 // glass/border tokens), real <button>s so Tab/Enter work natively. Created
 // only in the pending-choice state (plus `ai details` re-opens); shell
 // purists never see chrome otherwise because the node is removed on choice.
-const AI_CHIPBAR_ID = `ai-mode-chipbar`;
+const AI_CHIPBAR_ID = 'ai-mode-chipbar';
 
 function findTerminalHost() {
-  if (typeof document === `undefined`) return null;
-  const hostNode = document.getElementById(`terminal-container`);
+  if (typeof document === 'undefined') return null;
+  const hostNode = document.getElementById('terminal-container');
   if (!hostNode || !hostNode.parentNode) return null;
   return hostNode;
 }
 
 function closeAiChipbar() {
-  if (typeof document === `undefined`) return;
+  if (typeof document === 'undefined') return;
   const chipbarNode = document.getElementById(AI_CHIPBAR_ID);
   if (chipbarNode) chipbarNode.remove();
 }
 
 function focusTerminalInput(term) {
   try {
-    if (typeof term?.focus === `function`) term.focus();
+    if (typeof term?.focus === 'function') term.focus();
   } catch (focusError) {
     console.warn(`terminal refocus skipped: ${focusError.message}`);
   }
 }
 
 function makeAiChip(chipLabel, chipTitle, chipHandler) {
-  const chipButton = document.createElement(`button`);
-  chipButton.type = `button`;
-  chipButton.className = `ai-chip`;
+  const chipButton = document.createElement('button');
+  chipButton.type = 'button';
+  chipButton.className = 'ai-chip';
   chipButton.textContent = chipLabel;
   chipButton.title = chipTitle;
-  chipButton.addEventListener(`click`, (clickEvent) => {
+  chipButton.addEventListener('click', (clickEvent) => {
     clickEvent.preventDefault();
     chipHandler();
   });
@@ -741,7 +741,7 @@ function makeAiChip(chipLabel, chipTitle, chipHandler) {
 // Chip clicks route back through the terminal dispatcher so the choice (and
 // any held prompt) runs inside the foreground runner like typed input.
 function handleAiChipChoice(choiceDigit, term) {
-  if (typeof window !== `undefined` && typeof window.executeTerminalCommand === `function` && term) {
+  if (typeof window !== 'undefined' && typeof window.executeTerminalCommand === 'function' && term) {
     window.executeTerminalCommand(`ai ${choiceDigit}`, term);
     return;
   }
@@ -754,10 +754,10 @@ function handleAiChipChoice(choiceDigit, term) {
 // one tap, no second prompt). Tapping a size persists, swaps the bar to a
 // progress + cancel view, and resumes the held prompt.
 function renderAiLocalSizePanel(barNode, term) {
-  barNode.textContent = ``;
-  const noteNode = document.createElement(`span`);
-  noteNode.className = `ai-chip-note`;
-  noteNode.textContent = `Private on this device — one tap consents to model + size. Download once, cached in this browser.`;
+  barNode.textContent = '';
+  const noteNode = document.createElement('span');
+  noteNode.className = 'ai-chip-note';
+  noteNode.textContent = 'Private on this device — one tap consents to model + size. Download once, cached in this browser.';
   barNode.appendChild(noteNode);
   MODELS.forEach((modelEntry, modelIndex) => {
     if (modelIndex === 0) return;
@@ -766,7 +766,7 @@ function renderAiLocalSizePanel(barNode, term) {
     });
     barNode.appendChild(sizeButton);
   });
-  const backButton = makeAiChip(`[Back]`, `Back to the three modes`, () => {
+  const backButton = makeAiChip('[Back]', 'Back to the three modes', () => {
     renderAiModeChipbar(term, { showSizes: false });
   });
   barNode.appendChild(backButton);
@@ -776,7 +776,7 @@ function applyLocalModelChoice(modelIndex, term) {
   activeModel = modelIndex;
   pipeline = null;
   pipelineLoading = false;
-  persistAiMode(`local`, modelIndex);
+  persistAiMode('local', modelIndex);
   const modelEntry = MODELS[modelIndex];
   term.writeln(`\x1b[32mAI mode: Private on this device — ${modelEntry.name} (${modelEntry.size}, cached after first download)\x1b[0m`);
   printCloudDisclosure(term);
@@ -786,17 +786,17 @@ function applyLocalModelChoice(modelIndex, term) {
 
 function renderAiDownloadProgress(term, modelEntry) {
   const hostNode = findTerminalHost();
-  if (!hostNode || !hostNode.parentNode || typeof document === `undefined`) return;
+  if (!hostNode || !hostNode.parentNode || typeof document === 'undefined') return;
   closeAiChipbar();
-  const barNode = document.createElement(`div`);
+  const barNode = document.createElement('div');
   barNode.id = AI_CHIPBAR_ID;
-  barNode.setAttribute(`role`, `group`);
-  barNode.setAttribute(`aria-label`, `AI model download`);
-  const progressNode = document.createElement(`span`);
-  progressNode.className = `ai-chip-note ai-chip-progress`;
+  barNode.setAttribute('role', 'group');
+  barNode.setAttribute('aria-label', 'AI model download');
+  const progressNode = document.createElement('span');
+  progressNode.className = 'ai-chip-note ai-chip-progress';
   progressNode.textContent = `Downloading ${modelEntry.name} (${modelEntry.size})…`;
   barNode.appendChild(progressNode);
-  const cancelButton = makeAiChip(`[Cancel download]`, `Abort the model download`, () => {
+  const cancelButton = makeAiChip('[Cancel download]', 'Abort the model download', () => {
     requestLocalDownloadCancel();
   });
   barNode.appendChild(cancelButton);
@@ -806,7 +806,7 @@ function renderAiDownloadProgress(term, modelEntry) {
 function resumePendingAiPrompt(term) {
   const stashedPrompt = takePendingAiPrompt();
   if (!stashedPrompt) return;
-  if (typeof window !== `undefined` && typeof window.executeTerminalCommand === `function`) {
+  if (typeof window !== 'undefined' && typeof window.executeTerminalCommand === 'function') {
     window.executeTerminalCommand(`ai ${stashedPrompt}`, term);
   }
 }
@@ -814,23 +814,23 @@ function resumePendingAiPrompt(term) {
 // Progress ticks from loadPipeline land here (chip-bar DOM only, never the
 // xterm stream, so deterministic snapshots stay byte-exact).
 function chipbarProgressHandler() {
-  if (typeof document === `undefined`) return null;
+  if (typeof document === 'undefined') return null;
   const progressNode = document.querySelector(`#${AI_CHIPBAR_ID} .ai-chip-progress`);
   if (!progressNode) return null;
   return (progressEvent) => {
-    const fileLabel = progressEvent?.file ? String(progressEvent.file) : `model`;
+    const fileLabel = progressEvent?.file ? String(progressEvent.file) : 'model';
     const rawProgress = Number(progressEvent?.progress);
-    const percentText = Number.isFinite(rawProgress) ? ` ${Math.round(rawProgress)}%` : ``;
+    const percentText = Number.isFinite(rawProgress) ? ` ${Math.round(rawProgress)}%` : '';
     progressNode.textContent = `Downloading ${fileLabel}${percentText} — cached after first fetch`;
   };
 }
 
 function markAiChipbarDone(loadSucceeded) {
-  if (typeof document === `undefined`) return;
+  if (typeof document === 'undefined') return;
   const progressNode = document.querySelector(`#${AI_CHIPBAR_ID} .ai-chip-progress`);
   if (!progressNode) return;
   if (loadSucceeded) {
-    progressNode.textContent = `Model ready — generating…`;
+    progressNode.textContent = 'Model ready — generating…';
     return;
   }
   closeAiChipbar();
@@ -838,43 +838,43 @@ function markAiChipbarDone(loadSucceeded) {
 
 function renderAiModeChipbar(term, chipOptions) {
   const hostNode = findTerminalHost();
-  if (!hostNode || !hostNode.parentNode || typeof document === `undefined`) return;
+  if (!hostNode || !hostNode.parentNode || typeof document === 'undefined') return;
   closeAiChipbar();
   const showSizes = Boolean(chipOptions?.showSizes);
-  const barNode = document.createElement(`div`);
+  const barNode = document.createElement('div');
   barNode.id = AI_CHIPBAR_ID;
-  barNode.setAttribute(`role`, `group`);
-  barNode.setAttribute(`aria-label`, `AI mode picker`);
+  barNode.setAttribute('role', 'group');
+  barNode.setAttribute('aria-label', 'AI mode picker');
   if (showSizes) {
     renderAiLocalSizePanel(barNode, term);
   } else {
-    const quickButton = makeAiChip(`[Quick answer]`, `Cloud Qwen — sends prompt+RAG+memory`, () => {
-      handleAiChipChoice(`1`, term);
+    const quickButton = makeAiChip('[Quick answer]', 'Cloud Qwen — sends prompt+RAG+memory', () => {
+      handleAiChipChoice('1', term);
     });
-    const localButton = makeAiChip(`[On this device]`, `Private local — pick a size`, () => {
+    const localButton = makeAiChip('[On this device]', 'Private local — pick a size', () => {
       renderAiModeChipbar(term, { showSizes: true });
     });
-    const detailsButton = makeAiChip(`[Details]`, `Model, backend, what is sent`, () => {
+    const detailsButton = makeAiChip('[Details]', 'Model, backend, what is sent', () => {
       printAiDetails(term);
     });
-    const hintNode = document.createElement(`span`);
-    hintNode.className = `ai-chip-note`;
-    hintNode.textContent = `Tab/Enter to pick · Esc for typed 1/2/3`;
+    const hintNode = document.createElement('span');
+    hintNode.className = 'ai-chip-note';
+    hintNode.textContent = 'Tab/Enter to pick · Esc for typed 1/2/3';
     barNode.appendChild(quickButton);
     barNode.appendChild(localButton);
     barNode.appendChild(detailsButton);
     barNode.appendChild(hintNode);
   }
   hostNode.parentNode.insertBefore(barNode, hostNode.nextSibling);
-  barNode.addEventListener(`keydown`, (keyEvent) => {
-    if (keyEvent.key === `Escape`) {
+  barNode.addEventListener('keydown', (keyEvent) => {
+    if (keyEvent.key === 'Escape') {
       keyEvent.stopPropagation();
       closeAiChipbar();
-      term.writeln(`\x1b[2mPicker dismissed — type \`ai 1\`, \`ai 2\` or \`ai 3\` (or bare 1/2/3), \`ai details\` to review\x1b[0m`);
+      term.writeln('\x1b[2mPicker dismissed — type `ai 1`, `ai 2` or `ai 3` (or bare 1/2/3), `ai details` to review\x1b[0m');
       focusTerminalInput(term);
     }
   });
-  const firstButton = barNode.querySelector(`button`);
+  const firstButton = barNode.querySelector('button');
   if (firstButton) firstButton.focus();
 }
 
@@ -884,9 +884,9 @@ function renderAiModeChipbar(term, chipOptions) {
 // being updated. DOM-only — terminal transcript strings are untouched.
 function setTerminalBusy(busyOn) {
   try {
-    if (typeof document === `undefined`) return;
-    const containerNode = document.getElementById(`terminal-container`);
-    if (containerNode) containerNode.setAttribute(`aria-busy`, busyOn ? `true` : `false`);
+    if (typeof document === 'undefined') return;
+    const containerNode = document.getElementById('terminal-container');
+    if (containerNode) containerNode.setAttribute('aria-busy', busyOn ? 'true' : 'false');
   } catch (busyError) {
     console.warn(`ai busy state skipped: ${busyError.message}`);
   }
@@ -894,7 +894,7 @@ function setTerminalBusy(busyOn) {
 
 async function runAiGeneration(targetPrompt, term, runSignal) {
   if (aiGenerationInflight) {
-    term.writeln(`\x1b[2mai retry blocked — ai generation already in flight (no parallel cloud request)\x1b[0m`);
+    term.writeln('\x1b[2mai retry blocked — ai generation already in flight (no parallel cloud request)\x1b[0m');
     return;
   }
   aiGenerationInflight = true;
@@ -905,29 +905,29 @@ async function runAiGeneration(targetPrompt, term, runSignal) {
   // `ai 1|2|3` mode switch must never replay a stale prompt.
   takePendingAiPrompt();
   try {
-    const webSearchFlag = promptSnapshot.startsWith(`web `) || promptSnapshot.startsWith(`search `) || promptSnapshot.includes(`--web`);
-    const cleanQuery = promptSnapshot.replace(/^(web|search)\s+/, ``).replace(/\s+--web/, ``).trim();
+    const webSearchFlag = promptSnapshot.startsWith('web ') || promptSnapshot.startsWith('search ') || promptSnapshot.includes('--web');
+    const cleanQuery = promptSnapshot.replace(/^(web|search)\s+/, '').replace(/\s+--web/, '').trim();
 
     // Orb searching state is always paired with adjacent Downloading text;
     // composing below is always paired with adjacent Generating text.
-    startThinkingOrb(term, `searching`);
-    term.writeln(`\x1b[2mDownloading… Searching portfolio context...\x1b[0m`);
+    startThinkingOrb(term, 'searching');
+    term.writeln('\x1b[2mDownloading… Searching portfolio context...\x1b[0m');
     try {
       const rankedResult = await retrieveRankedContext(cleanQuery, term);
       let context = rankedResult.contextText;
-      if (rankedResult.verdict === `NO_MATCH`) {
+      if (rankedResult.verdict === 'NO_MATCH') {
         if (term) term.writeln(`\x1b[33m${NO_MATCH_FALLFORWARD}\x1b[0m`);
-        context = ``;
+        context = '';
       }
 
       if (webSearchFlag) {
-        if (term) term.writeln(`\x1b[2mFetching live web results via Cloudflare Worker...\x1b[0m`);
+        if (term) term.writeln('\x1b[2mFetching live web results via Cloudflare Worker...\x1b[0m');
         const webResults = await fetchWebSearch(cleanQuery, runSignal);
         if (webResults.length) {
-          const webStr = webResults.map((webEntry, entryIndex) => `[Web Result ${entryIndex + 1}: ${webEntry.title}]\nURL: ${webEntry.url}\n${webEntry.snippet}`).join(`\n\n`);
+          const webStr = webResults.map((webEntry, entryIndex) => `[Web Result ${entryIndex + 1}: ${webEntry.title}]\nURL: ${webEntry.url}\n${webEntry.snippet}`).join('\n\n');
           context = `[Live Web Search Context]\n${webStr}\n\n${context}`;
         } else {
-          if (term) term.writeln(`\x1b[2mNo live web results returned, relying on RAG portfolio context...\x1b[0m`);
+          if (term) term.writeln('\x1b[2mNo live web results returned, relying on RAG portfolio context...\x1b[0m');
         }
       }
 
@@ -936,10 +936,10 @@ async function runAiGeneration(targetPrompt, term, runSignal) {
       markAiChipbarDone(pipelineHandle !== null);
       if (!pipelineHandle) return;
 
-      setThinkingOrbState(`composing`);
-      term.writeln(`\x1b[2m\xf0\x9f\x94\x84 Generating (real-time stream)...\x1b[0m`);
+      setThinkingOrbState('composing');
+      term.writeln('\x1b[2m\xf0\x9f\x94\x84 Generating (real-time stream)...\x1b[0m');
 
-      if (activeModel === 0 || pipelineHandle === `groq`) {
+      if (activeModel === 0 || pipelineHandle === 'groq') {
         const cloudOk = await streamGroq(cleanQuery, context, term, runSignal);
         if (cloudOk) {
           lastFailedPromptSnapshot = null;
@@ -969,59 +969,59 @@ async function runAiGeneration(targetPrompt, term, runSignal) {
 
 async function generateOutput(prompt, term, runSignal) {
   if (!prompt) {
-    term.writeln(`\x1b[2mUsage: ai <prompt>\x1b[0m`);
-    term.writeln(`\x1b[2m       ai status        (show Groq-cloud vs local backend)\x1b[0m`);
-    term.writeln(`\x1b[2m       ai details       (modes, model, backend, what is sent)\x1b[0m`);
-    term.writeln(`\x1b[2m       ai retry         (replay the exact failed prompt)\x1b[0m`);
-    term.writeln(`\x1b[2m       ai web <query>   (live web search + LLM generation)\x1b[0m`);
-    term.writeln(`\x1b[2m       ai sources <q>   (ranked RAG chunks + verdict)\x1b[0m`);
-    term.writeln(`\x1b[2m       ai threshold <v> (tune the RAG cosine threshold)\x1b[0m`);
-    term.writeln(`\x1b[2m       ai 1|2|3         (pick quick / this device / controls)\x1b[0m`);
-    term.writeln(`\x1b[2m       ai-models        (list models)\x1b[0m`);
-    term.writeln(`\x1b[2m       ai-model <id>    (switch model, 0-5)\x1b[0m`);
+    term.writeln('\x1b[2mUsage: ai <prompt>\x1b[0m');
+    term.writeln('\x1b[2m       ai status        (show Groq-cloud vs local backend)\x1b[0m');
+    term.writeln('\x1b[2m       ai details       (modes, model, backend, what is sent)\x1b[0m');
+    term.writeln('\x1b[2m       ai retry         (replay the exact failed prompt)\x1b[0m');
+    term.writeln('\x1b[2m       ai web <query>   (live web search + LLM generation)\x1b[0m');
+    term.writeln('\x1b[2m       ai sources <q>   (ranked RAG chunks + verdict)\x1b[0m');
+    term.writeln('\x1b[2m       ai threshold <v> (tune the RAG cosine threshold)\x1b[0m');
+    term.writeln('\x1b[2m       ai 1|2|3         (pick quick / this device / controls)\x1b[0m');
+    term.writeln('\x1b[2m       ai-models        (list models)\x1b[0m');
+    term.writeln('\x1b[2m       ai-model <id>    (switch model, 0-5)\x1b[0m');
     term.writeln(`\x1b[2m${CLOUD_DISCLOSURE_LINE}\x1b[0m`);
     return;
   }
 
-  if (prompt === `status`) {
+  if (prompt === 'status') {
     showAiStatus(term);
     return;
   }
 
-  if (prompt === `details`) {
+  if (prompt === 'details') {
     showAiDetails(term);
     return;
   }
 
-  if (prompt === `1` || prompt === `2` || prompt === `3`) {
+  if (prompt === '1' || prompt === '2' || prompt === '3') {
     await resolveAiModeChoice(prompt, term, runSignal);
     return;
   }
 
   const promptText = String(prompt);
-  const firstSpace = promptText.indexOf(` `);
+  const firstSpace = promptText.indexOf(' ');
   const headWord = (firstSpace === -1 ? promptText : promptText.slice(0, firstSpace)).toLowerCase();
-  const tailText = firstSpace === -1 ? `` : promptText.slice(firstSpace + 1).trim();
+  const tailText = firstSpace === -1 ? '' : promptText.slice(firstSpace + 1).trim();
 
-  if (headWord === `sources`) {
+  if (headWord === 'sources') {
     await showAiSources(tailText, term);
     return;
   }
 
-  if (headWord === `threshold` && (tailText === `` || isThresholdArgument(tailText))) {
+  if (headWord === 'threshold' && (tailText === '' || isThresholdArgument(tailText))) {
     showAiThreshold(tailText, term);
     return;
   }
 
-  if (prompt === `retry`) {
+  if (prompt === 'retry') {
     const storedSnapshot = lastFailedPromptSnapshot;
     if (!storedSnapshot) {
-      term.writeln(`\x1b[2mNo failed ai prompt to retry.\x1b[0m`);
-      term.writeln(`\x1b[2mNext: run \`ai <prompt>\` to start a request\x1b[0m`);
+      term.writeln('\x1b[2mNo failed ai prompt to retry.\x1b[0m');
+      term.writeln('\x1b[2mNext: run `ai <prompt>` to start a request\x1b[0m');
       return;
     }
     if (aiGenerationInflight) {
-      term.writeln(`\x1b[2mai retry blocked — ai generation already in flight (no parallel cloud request)\x1b[0m`);
+      term.writeln('\x1b[2mai retry blocked — ai generation already in flight (no parallel cloud request)\x1b[0m');
       return;
     }
     if (getSavedAiMode() === null) {
@@ -1043,19 +1043,19 @@ async function generateOutput(prompt, term, runSignal) {
 }
 
 function showModelSelector(term) {
-  term.writeln(`\x1b[1mAI Models\x1b[0m`);
-  term.writeln(`\x1b[2m─────────\x1b[0m`);
+  term.writeln('\x1b[1mAI Models\x1b[0m');
+  term.writeln('\x1b[2m─────────\x1b[0m');
   MODELS.forEach((m, i) => {
-    const mark = i === activeModel ? `\x1b[32m●\x1b[0m` : `\x1b[2m○\x1b[0m`;
+    const mark = i === activeModel ? '\x1b[32m●\x1b[0m' : '\x1b[2m○\x1b[0m';
     const nameStr = `\x1b[36m${m.name.padEnd(20)}\x1b[0m`;
     const sizeStr = `\x1b[37m${m.size.padEnd(12)}\x1b[0m`;
     term.writeln(`  \x1b[2m[${i}]\x1b[0m ${mark} ${nameStr} ${sizeStr}\x1b[2m${m.desc}\x1b[0m`);
   });
   term.writeln('');
-  term.writeln(`\x1b[2mUsage: ai <prompt>  —  ai-models to list, ai-model <id> to switch\x1b[0m`);
+  term.writeln('\x1b[2mUsage: ai <prompt>  —  ai-models to list, ai-model <id> to switch\x1b[0m');
 }
 
-async function switchModel(id, term) {
+function switchModel(id, term) {
   const idx = parseInt(id);
   if (isNaN(idx) || idx < 0 || idx >= MODELS.length) {
     term.writeln(`\x1b[91mInvalid model id. Use 0-${MODELS.length - 1}\x1b[0m`);
@@ -1069,9 +1069,9 @@ async function switchModel(id, term) {
   activeModel = idx;
   pipeline = null;
   pipelineLoading = false;
-  persistAiMode(idx === 0 ? `quick` : `local`, idx === 0 ? null : idx);
+  persistAiMode(idx === 0 ? 'quick' : 'local', idx === 0 ? null : idx);
   term.writeln(`\x1b[32mSwitched to ${MODELS[idx].name}\x1b[0m`);
-  term.writeln(`\x1b[2mNext \`ai\` call will load this model\x1b[0m`);
+  term.writeln('\x1b[2mNext `ai` call will load this model\x1b[0m');
 }
 
 export { generateOutput, showModelSelector, switchModel, MODELS, getLastFailedPrompt, clearLastFailedPrompt, isAiGenerationInflight, getSavedAiMode, hasPendingAiChoice, resolveAiModeChoice, requestLocalDownloadCancel, createStreamWriter };

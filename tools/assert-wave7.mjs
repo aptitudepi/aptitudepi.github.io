@@ -65,15 +65,15 @@ check(linuxTop?.name === 'vm', `fuzzy 'linux' ranks vm first (saw ${linuxTop?.na
 const manEntry = resolveCommand('man');
 const searchEntry = resolveCommand('search');
 const aiEntry = resolveCommand('ai');
-check(buildPaletteLine(manEntry, 'man ai') === 'man ai', `palette keeps 'man ai' args verbatim`);
-check(buildPaletteLine(searchEntry, 'search terminal portfolios') === 'search terminal portfolios', `palette keeps 'search <q>' args verbatim`);
-check(buildPaletteLine(aiEntry, 'ai what did Devkumar research?') === 'ai what did Devkumar research?', `palette keeps 'ai <prompt>' args verbatim`);
-check(buildPaletteLine(searchEntry, 'man ai') === 'search ai', `palette carries trailing args onto a picked row`);
-check(buildPaletteLine(resolveCommand('weather'), '') === 'weather', `palette falls back to the row example on empty input`);
+check(buildPaletteLine(manEntry, 'man ai') === 'man ai', 'palette keeps \'man ai\' args verbatim');
+check(buildPaletteLine(searchEntry, 'search terminal portfolios') === 'search terminal portfolios', 'palette keeps \'search <q>\' args verbatim');
+check(buildPaletteLine(aiEntry, 'ai what did Devkumar research?') === 'ai what did Devkumar research?', 'palette keeps \'ai <prompt>\' args verbatim');
+check(buildPaletteLine(searchEntry, 'man ai') === 'search ai', 'palette carries trailing args onto a picked row');
+check(buildPaletteLine(resolveCommand('weather'), '') === 'weather', 'palette falls back to the row example on empty input');
 
 const vmEntry = resolveCommand('vm');
-check(vmEntry?.plain === 'Run Linux in your browser (5–15s to boot)', `vm plain states the boot expectation`);
-check(vmEntry?.helpDesc === 'Run Linux in your browser (5–15s to boot)', `vm help states the boot expectation`);
+check(vmEntry?.plain === 'Run Linux in your browser (5–15s to boot)', 'vm plain states the boot expectation');
+check(vmEntry?.helpDesc === 'Run Linux in your browser (5–15s to boot)', 'vm help states the boot expectation');
 
 let guidedProblem = false;
 for (const guidedAction of GUIDED_ACTIONS) {
@@ -84,12 +84,12 @@ for (const guidedAction of GUIDED_ACTIONS) {
     process.stderr.write(`  guided action '${guidedAction.label}' head '${actionHead}' does not resolve\n`);
   }
 }
-check(!guidedProblem, `every guided button command resolves via the registry`);
+check(!guidedProblem, 'every guided button command resolves via the registry');
 
 const launcherSource = readFileSync(join(SITE_ROOT, 'js', 'v86-launcher.js'), 'utf8');
-check(launcherSource.includes('throwIfAborted'), `VM boot checks the foreground abort signal`);
-check(launcherSource.includes('Next: retry') && launcherSource.includes('or reload the page and try again'), `VM failure path shows the retry action`);
-check(launcherSource.includes('5–15s'), `VM pre-boot line states the boot expectation`);
+check(launcherSource.includes('throwIfAborted'), 'VM boot checks the foreground abort signal');
+check(launcherSource.includes('Next: retry') && launcherSource.includes('or reload the page and try again'), 'VM failure path shows the retry action');
+check(launcherSource.includes('5–15s'), 'VM pre-boot line states the boot expectation');
 
 // ── BROWSER ─────────────────────────────────────────────────────────────
 function sleepMillis(durationMillis) {
@@ -129,7 +129,7 @@ const INIT_SCRIPT = `window.__snapshotChunks = [];
   const patchTimer = setInterval(() => {
     patchTries += 1;
     const TerminalCtor = window.Terminal;
-    const openFunction = TerminalCtor && TerminalCtor.prototype && TerminalCtor.prototype.open;
+    const openFunction = TerminalCtor?.prototype?.open;
     if (typeof openFunction === 'function' && !openFunction.__wave7Wrapped) {
       const originalOpen = openFunction;
       const patchedOpen = function patchedOpen() {
@@ -141,7 +141,7 @@ const INIT_SCRIPT = `window.__snapshotChunks = [];
       patchedOpen.__wave7Wrapped = true;
       TerminalCtor.prototype.open = patchedOpen;
     }
-    if ((TerminalCtor && TerminalCtor.prototype && TerminalCtor.prototype.open && TerminalCtor.prototype.open.__wave7Wrapped) || patchTries > 1000) clearInterval(patchTimer);
+    if ((TerminalCtor?.prototype?.open?.__wave7Wrapped) || patchTries > 1000) clearInterval(patchTimer);
   }, 25);
 })();`;
 
@@ -242,7 +242,7 @@ async function runBrowserAsserts() {
     await sleepMillis(100);
     const focusRestored = await page.evaluate(() => {
       const activeElement = document.activeElement;
-      return activeElement && activeElement.hasAttribute && activeElement.hasAttribute('data-open-palette');
+      return activeElement?.hasAttribute?.('data-open-palette');
     });
     check(focusRestored, 'palette Esc restores focus to the opener');
 

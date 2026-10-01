@@ -19,7 +19,7 @@ function initNav() {
 }
 
 function readNavHeight() {
-  const barNode = document.querySelector(`.doc-nav`);
+  const barNode = document.querySelector('.doc-nav');
   if (!barNode) return 0;
   return barNode.offsetHeight;
 }
@@ -27,16 +27,16 @@ function readNavHeight() {
 function syncNavHeightVar() {
   const barHeight = readNavHeight();
   const pageRoot = document.documentElement;
-  pageRoot.style.setProperty(`--doc-nav-height`, `${barHeight}px`);
+  pageRoot.style.setProperty('--doc-nav-height', `${barHeight}px`);
 }
 
 function initFixedNavOffset() {
   syncNavHeightVar();
-  window.addEventListener(`resize`, () => {
+  window.addEventListener('resize', () => {
     syncNavHeightVar();
   });
   const fontSet = document.fonts;
-  if (fontSet && typeof fontSet.ready.then === `function`) {
+  if (fontSet && typeof fontSet.ready.then === 'function') {
     fontSet.ready.then(() => {
       syncNavHeightVar();
     }).catch((fontError) => {
@@ -107,7 +107,7 @@ function scrollToSection(sectionId) {
   // fresh on every click (after layout, never cached), so content-visibility
   // skips in .certs-section cannot serve a stale offset.
   const performScroll = () => {
-    const barNode = document.querySelector(`.doc-nav`);
+    const barNode = document.querySelector('.doc-nav');
     const barHeight = barNode ? barNode.offsetHeight : 0;
     const rawDest = targetNode.getBoundingClientRect().top + window.scrollY;
     const fixedDest = rawDest - barHeight;
@@ -128,7 +128,7 @@ function scrollToSection(sectionId) {
     if (!noAnim()) {
       const rootNode = document.documentElement;
       const priorBehavior = rootNode.style.scrollBehavior;
-      rootNode.style.scrollBehavior = `auto`;
+      rootNode.style.scrollBehavior = 'auto';
       const settleScroll = () => {
         rootNode.style.scrollBehavior = priorBehavior;
         currentScrollTween = null;
@@ -138,7 +138,7 @@ function scrollToSection(sectionId) {
         currentScrollTween = anime.animate(document.scrollingElement, {
           scrollTop: destY,
           duration: 1200,
-          ease: `inOut(2)`,
+          ease: 'inOut(2)',
           onComplete: () => {
             if (scrollRestoreTimer) {
               clearTimeout(scrollRestoreTimer);
@@ -149,7 +149,7 @@ function scrollToSection(sectionId) {
         });
       } catch (tweenError) {
         console.warn(`nav dot tween skipped: ${tweenError.message}`);
-        window.scrollTo({ top: destY, behavior: `auto` });
+        window.scrollTo({ top: destY, behavior: 'auto' });
         settleScroll();
         return;
       }
@@ -160,7 +160,7 @@ function scrollToSection(sectionId) {
     } else {
       // Instant while the motion policy is off: an explicit smooth scroll
       // would animate against the user's reduced-motion need.
-      window.scrollTo({ top: destY, behavior: `auto` });
+      window.scrollTo({ top: destY, behavior: 'auto' });
       setTimeout(() => { isAnimatingScroll = false; }, 400);
     }
   };

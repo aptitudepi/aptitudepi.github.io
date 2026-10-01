@@ -15,7 +15,7 @@ const SEARCH_TIMEOUT_MILLIS = 15000;
 function asCleanSignal(candidateSignal) {
   if (!candidateSignal) return null;
   try {
-    if (typeof AbortSignal !== `undefined` && candidateSignal instanceof AbortSignal) return candidateSignal;
+    if (typeof AbortSignal !== 'undefined' && candidateSignal instanceof AbortSignal) return candidateSignal;
   } catch (signalCheckError) {
     console.warn(`fetch timeout signal check skipped: ${signalCheckError.message}`);
   }
@@ -29,9 +29,9 @@ function combinedTimeoutSignal(runSignal, timeoutMillis) {
   const safeTimeout = Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : DEFAULT_FETCH_TIMEOUT_MILLIS;
   const cleanSignal = asCleanSignal(runSignal);
   try {
-    if (typeof AbortSignal !== `undefined` && typeof AbortSignal.timeout === `function`) {
+    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
       const timeoutSignal = AbortSignal.timeout(safeTimeout);
-      if (cleanSignal && typeof AbortSignal.any === `function`) {
+      if (cleanSignal && typeof AbortSignal.any === 'function') {
         return AbortSignal.any([cleanSignal, timeoutSignal]);
       }
       if (!cleanSignal) return timeoutSignal;
@@ -41,7 +41,7 @@ function combinedTimeoutSignal(runSignal, timeoutMillis) {
   }
   if (!cleanSignal) {
     try {
-      if (typeof AbortSignal !== `undefined` && typeof AbortSignal.timeout === `function`) {
+      if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
         return AbortSignal.timeout(safeTimeout);
       }
     } catch (timeoutOnlyError) {
@@ -55,19 +55,19 @@ function combinedTimeoutSignal(runSignal, timeoutMillis) {
     const fallbackController = new AbortController();
     const fallbackTimer = window.setTimeout(() => {
       try {
-        fallbackController.abort(new DOMException(`Timed out`, `TimeoutError`));
+        fallbackController.abort(new DOMException('Timed out', 'TimeoutError'));
       } catch (abortError) {
         console.warn(`fetch timeout abort skipped: ${abortError.message}`);
       }
     }, safeTimeout);
-    fallbackController.signal.addEventListener(`abort`, () => {
+    fallbackController.signal.addEventListener('abort', () => {
       window.clearTimeout(fallbackTimer);
     }, { once: true });
     if (cleanSignal.aborted) {
       window.clearTimeout(fallbackTimer);
       fallbackController.abort(cleanSignal.reason);
     } else {
-      cleanSignal.addEventListener(`abort`, () => {
+      cleanSignal.addEventListener('abort', () => {
         window.clearTimeout(fallbackTimer);
         try {
           fallbackController.abort(cleanSignal.reason);

@@ -81,7 +81,7 @@ function getGPU() {
     try {
       const loseExtension = probeGl ? probeGl.getExtension('WEBGL_lose_context') : null;
       if (loseExtension && typeof loseExtension.loseContext === 'function') loseExtension.loseContext();
-    } catch (releaseError) {
+    } catch {
       probeGl = null;
     }
     probeGl = null;

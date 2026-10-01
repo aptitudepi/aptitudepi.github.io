@@ -214,7 +214,7 @@ function renderTopoPoster() {
 function setTopoVisible(visibleValue) {
   const hostNode = document.getElementById('topo-host');
   if (hostNode) {
-    hostNode.style.display = visibleValue ? `` : `none`;
+    hostNode.style.display = visibleValue ? '' : 'none';
   }
 }
 

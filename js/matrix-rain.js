@@ -39,7 +39,7 @@ function describeMatrixState(runningNow) {
 }
 
 function drawMatrixFrame() {
-  ctx.fillStyle = `rgba(0, 0, 0, 0.08)`;
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const green = `hsl(${120 + Math.random() * 40}, 100%, ${50 + Math.random() * 30}%)`;
@@ -50,7 +50,7 @@ function drawMatrixFrame() {
     const dropY = drops[dropIndex] * fontSize;
 
     const bright = drops[dropIndex] < 6 && drops[dropIndex] > 0;
-    ctx.fillStyle = bright ? `#fff` : green;
+    ctx.fillStyle = bright ? '#fff' : green;
     ctx.font = bright ? `bold ${fontSize}px monospace` : `${fontSize}px monospace`;
     ctx.fillText(text, dropX, dropY);
 

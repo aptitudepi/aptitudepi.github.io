@@ -115,7 +115,7 @@ let particleDriver = null;
 // exception, still a calm poster). Never touches WebGL.
 function paintStaticGradient(fallbackCanvas) {
   if (!fallbackCanvas) return;
-  fallbackCanvas.style.background = `linear-gradient(135deg, #0b0e1a 0%, #141b2e 55%, #1d2440 100%)`;
+  fallbackCanvas.style.background = 'linear-gradient(135deg, #0b0e1a 0%, #141b2e 55%, #1d2440 100%)';
 }
 
 // WAVE 12 ownership: hand scheduling to the single background owner. Any
@@ -149,7 +149,7 @@ function isParticleSelfScheduled() {
 
 function setParticleVisible(visibleValue) {
   if (particleCanvasNode) {
-    particleCanvasNode.style.display = visibleValue ? `` : `none`;
+    particleCanvasNode.style.display = visibleValue ? '' : 'none';
   }
 }
 
@@ -196,7 +196,7 @@ function initParticles() {
   const HEAT_SYNC_SATURATION = 0.25;
   const HEAT_SYNC_CADENCE = 30;
   const HEAT_STATIC_TINT = [0.75, 0.75, 1];
-  let lastHeatCycle = ``;
+  let lastHeatCycle = '';
   // Manual pins (dev sidebar): a setCount/setCA/setScanline/setVignette/
   // setParticleSize call pins that knob and the auto ladder stops touching
   // it; clearManualPins() releases every pin back to auto. The devtools panel
@@ -248,10 +248,11 @@ function initParticles() {
   const adaptiveFlipGuard = createFlipGuard(3, 10000);
   // One probe decision: vote on the EMA cost, step one ladder rung on two
   // agreeing votes and a free flip-guard slot. No-ops while manual pins hold.
+  let triGeo = null;
   function stepAdaptiveCount(nowMs) {
     if (manualCount || perf.isManual()) return;
     if (!isMotionOK()) return;
-    if (typeof document !== `undefined` && document.hidden) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
     if (probeCostEmaMs <= PROBE_STEP_UP_MS) {
       probeVoteUp += 1;
       probeVoteDown = 0;
@@ -329,7 +330,6 @@ function initParticles() {
   //   • frame budget — continuous cap 30 (q=0) … native-but-≤90 (q=1)
   //   • count / post / topo cadence — discrete per-tier steps (TIER_TABLE)
   // Called once up front and again every time quality drifts meaningfully.
-  let triGeo = null;
   // Quantized DPR steps so applied DPR never churns resizes/FBOs per frame.
   const PR_QUANTUM = 0.05;
   // Max DPR travel per apply: big quality swings settle over a few notifies
@@ -828,9 +828,9 @@ void main(){
 
   function readScopedCycleColor() {
     try {
-      const scopedNode = document.querySelector(`.doc-nav-home`) || document.querySelector(`.doc-nav`);
+      const scopedNode = document.querySelector('.doc-nav-home') || document.querySelector('.doc-nav');
       if (!scopedNode) return ``;
-      return getComputedStyle(scopedNode).getPropertyValue(`--nav-cycle`).trim();
+      return getComputedStyle(scopedNode).getPropertyValue('--nav-cycle').trim();
     } catch (cycleReadError) {
       console.warn(`[particles] heat cycle read skipped: ${cycleReadError.message}`);
       return ``;
@@ -846,7 +846,7 @@ void main(){
     if (!trailMat) return;
     if (!isMotionOK()) {
       trailMat.uniforms.uHeat.value.set(HEAT_STATIC_TINT[0], HEAT_STATIC_TINT[1], HEAT_STATIC_TINT[2]);
-      lastHeatCycle = `static`;
+      lastHeatCycle = 'static';
       return;
     }
     const cycleColorText = readScopedCycleColor();

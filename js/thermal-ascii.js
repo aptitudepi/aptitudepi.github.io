@@ -304,7 +304,7 @@ export function initThermalAscii(canvas, options = {}) {
   let artGrid = null;
   if (art && Array.isArray(art)) {
     const decoded = parseAnsiArt(art);
-    if (decoded && decoded.rows > 0 && decoded.cols > 0) {
+    if (decoded?.rows > 0 && decoded?.cols > 0) {
       artGrid = upscaleArt ? upscaleArtGrid(decoded) : decoded;
     }
   }

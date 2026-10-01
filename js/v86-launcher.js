@@ -9,9 +9,9 @@ let v86Loading = false;
 // carry the state text; aria-busy marks the region as updating. DOM-only.
 function setVmBusy(busyOn) {
   try {
-    if (typeof document === `undefined`) return;
-    const containerNode = document.getElementById(`terminal-container`);
-    if (containerNode) containerNode.setAttribute(`aria-busy`, busyOn ? `true` : `false`);
+    if (typeof document === 'undefined') return;
+    const containerNode = document.getElementById('terminal-container');
+    if (containerNode) containerNode.setAttribute('aria-busy', busyOn ? 'true' : 'false');
   } catch (busyError) {
     console.warn(`vm busy state skipped: ${busyError.message}`);
   }
@@ -110,7 +110,7 @@ async function bootVM(term, runSignal) {
     setVmBusy(false);
     if (isAbortError(bootError)) throw bootError;
     term.writeln(`\x1b[38;2;220;80;80mError: ${bootError.message}\x1b[0m`);
-    term.writeln(`\x1b[38;2;140;140;155mNext: retry \`vm\`, or reload the page and try again\x1b[0m`);
+    term.writeln('\x1b[38;2;140;140;155mNext: retry `vm`, or reload the page and try again\x1b[0m');
     return true;
   }
 }

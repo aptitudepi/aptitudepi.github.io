@@ -235,7 +235,7 @@ function isCommandPaletteOpen() {
   try {
     if (typeof document === 'undefined') return false;
     const paletteDialog = document.getElementById('command-palette');
-    return Boolean(paletteDialog && paletteDialog.open);
+    return Boolean(paletteDialog?.open);
   } catch (dialogError) {
     console.warn(`palette dialog check skipped: ${dialogError.message}`);
     return true;

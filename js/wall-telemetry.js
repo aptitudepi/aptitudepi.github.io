@@ -72,11 +72,11 @@ export const WALL_TELEMETRY_STUN_TIMEOUT_MILLIS = 1500;
 export const WALL_TELEMETRY_IP_TIMEOUT_MILLIS = 4000;
 export const WALL_TELEMETRY_MAX_CANDIDATES = 8;
 export const WALL_TELEMETRY_MAX_CANDIDATE_CHARS = 256;
-export const WALL_PUBLIC_IP_PRIMARY_URL = `https://api.ipify.org?format=json`;
+export const WALL_PUBLIC_IP_PRIMARY_URL = 'https://api.ipify.org?format=json';
 // Full ident.me document (ip + city + postal + latitude + longitude + tz +
 // asn/aso/country): the IP chain reuses this ONE response for both the `ip`
 // field and the coarse `geo` field, so no second geo request ever fires.
-export const WALL_PUBLIC_IP_FALLBACK_URL = `https://ident.me/json`;
+export const WALL_PUBLIC_IP_FALLBACK_URL = 'https://ident.me/json';
 
 // Owner key: Devkumar Banerjee <supernovadkb@gmail.com> (assets/gpg.asc).
 // Primary fingerprint 7301fa8f5d533ef7940695fcdfc72721be0bdde2 (ed25519,
@@ -98,26 +98,26 @@ wiCtASW41lwxNhIA+wcnwPthrChxN2bMKYuybg4Pxl0x7L/FxjSmg1HeVV0M
 -----END PGP PUBLIC KEY BLOCK-----`;
 
 const WALL_TELEMETRY_FIELD_ORDER = [
-  `v`,
-  `nonce`,
-  `ip`,
-  `canvasHash`,
-  `canvasStable`,
-  `userAgent`,
-  `hardwareConcurrency`,
-  `deviceMemory`,
-  `gpuVendor`,
-  `gpuRenderer`,
-  `timezone`,
-  `devicePixelRatio`,
-  `webrtcCandidates`,
-  `geo`,
+  'v',
+  'nonce',
+  'ip',
+  'canvasHash',
+  'canvasStable',
+  'userAgent',
+  'hardwareConcurrency',
+  'deviceMemory',
+  'gpuVendor',
+  'gpuRenderer',
+  'timezone',
+  'devicePixelRatio',
+  'webrtcCandidates',
+  'geo',
 ];
 
 let cachedOwnerKey = null;
 
 export function wallTelemetryVendorUrl() {
-  return new URL(`../vendor/openpgp.min.mjs`, import.meta.url).href;
+  return new URL('../vendor/openpgp.min.mjs', import.meta.url).href;
 }
 
 export function newWallNonce() {
@@ -129,41 +129,41 @@ function telemetryRandomHex(byteCount) {
   crypto.getRandomValues(randomBytes);
   const hexParts = [];
   for (const byteValue of randomBytes) {
-    hexParts.push(byteValue.toString(16).padStart(2, `0`));
+    hexParts.push(byteValue.toString(16).padStart(2, '0'));
   }
-  return hexParts.join(``);
+  return hexParts.join('');
 }
 
 async function sha256HexDigest(sourceText) {
   const textBytes = new TextEncoder().encode(sourceText);
-  const digestBytes = await crypto.subtle.digest(`SHA-256`, textBytes);
+  const digestBytes = await crypto.subtle.digest('SHA-256', textBytes);
   const digestView = new Uint8Array(digestBytes);
   const hexParts = [];
   for (const digestByte of digestView) {
-    hexParts.push(digestByte.toString(16).padStart(2, `0`));
+    hexParts.push(digestByte.toString(16).padStart(2, '0'));
   }
-  return hexParts.join(``);
+  return hexParts.join('');
 }
 
 function paintTelemetryCanvas(paintContext) {
-  paintContext.fillStyle = `#1a1d24`;
+  paintContext.fillStyle = '#1a1d24';
   paintContext.fillRect(0, 0, 64, 32);
-  paintContext.fillStyle = `#50c878`;
-  paintContext.font = `10px monospace`;
-  paintContext.fillText(`dvxb-wall-v1`, 4, 14);
-  paintContext.fillStyle = `#508cfa`;
+  paintContext.fillStyle = '#50c878';
+  paintContext.font = '10px monospace';
+  paintContext.fillText('dvxb-wall-v1', 4, 14);
+  paintContext.fillStyle = '#508cfa';
   paintContext.fillRect(4, 20, 56, 6);
 }
 
 async function readCanvasDigest() {
   try {
-    if (typeof document === `undefined` || typeof crypto.subtle === `undefined`) {
+    if (typeof document === 'undefined' || typeof crypto.subtle === 'undefined') {
       return { hash: null, stable: null };
     }
-    const paintCanvas = document.createElement(`canvas`);
+    const paintCanvas = document.createElement('canvas');
     paintCanvas.width = 64;
     paintCanvas.height = 32;
-    const paintContext = paintCanvas.getContext(`2d`);
+    const paintContext = paintCanvas.getContext('2d');
     if (paintContext === null) {
       return { hash: null, stable: null };
     }
@@ -175,33 +175,33 @@ async function readCanvasDigest() {
     const renderHash = await sha256HexDigest(firstRender);
     return { hash: renderHash, stable: stableRender };
   } catch (canvasError) {
-    console.warn(`wall telemetry: canvas digest unavailable`, canvasError);
+    console.warn('wall telemetry: canvas digest unavailable', canvasError);
     return { hash: null, stable: null };
   }
 }
 
 function readGpuStrings() {
   try {
-    if (typeof document === `undefined`) {
+    if (typeof document === 'undefined') {
       return { vendor: null, renderer: null };
     }
-    const probeCanvas = document.createElement(`canvas`);
-    const glContext = probeCanvas.getContext(`webgl`);
+    const probeCanvas = document.createElement('canvas');
+    const glContext = probeCanvas.getContext('webgl');
     if (glContext === null || glContext === undefined) {
       return { vendor: null, renderer: null };
     }
-    const debugInfo = glContext.getExtension(`WEBGL_debug_renderer_info`);
+    const debugInfo = glContext.getExtension('WEBGL_debug_renderer_info');
     if (debugInfo === null || debugInfo === undefined) {
       return { vendor: null, renderer: null };
     }
     const vendorText = glContext.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
     const rendererText = glContext.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
     return {
-      vendor: typeof vendorText === `string` ? vendorText.slice(0, 256) : null,
-      renderer: typeof rendererText === `string` ? rendererText.slice(0, 256) : null,
+      vendor: typeof vendorText === 'string' ? vendorText.slice(0, 256) : null,
+      renderer: typeof rendererText === 'string' ? rendererText.slice(0, 256) : null,
     };
   } catch (gpuError) {
-    console.warn(`wall telemetry: gpu strings unavailable`, gpuError);
+    console.warn('wall telemetry: gpu strings unavailable', gpuError);
     return { vendor: null, renderer: null };
   }
 }
@@ -211,9 +211,9 @@ function readGpuStrings() {
 // throws — fail-closed to null.
 function readIdentMeCoordinate(sourceValue, minBound, maxBound) {
   let numericValue = NaN;
-  if (typeof sourceValue === `number`) {
+  if (typeof sourceValue === 'number') {
     numericValue = sourceValue;
-  } else if (typeof sourceValue === `string` && sourceValue.trim() !== ``) {
+  } else if (typeof sourceValue === 'string' && sourceValue.trim() !== '') {
     numericValue = Number(sourceValue);
   }
   if (Number.isFinite(numericValue) === false || numericValue < minBound || numericValue > maxBound) {
@@ -226,7 +226,7 @@ function readIdentMeCoordinate(sourceValue, minBound, maxBound) {
 // longitude, tz, ...}): city-level only, accuracy null (coarse marker).
 // Missing or out-of-range coordinates resolve the whole field to null.
 function extractIdentMeGeo(parsedBody) {
-  if (parsedBody === null || typeof parsedBody !== `object`) {
+  if (parsedBody === null || typeof parsedBody !== 'object') {
     return null;
   }
   const latitudeValue = readIdentMeCoordinate(parsedBody.latitude, -90, 90);
@@ -260,16 +260,16 @@ async function fetchIdentMeDocument(fetchImpl) {
     const responseText = await identResponse.text();
     try {
       const parsedBody = JSON.parse(responseText);
-      if (parsedBody !== null && typeof parsedBody === `object`) {
+      if (parsedBody !== null && typeof parsedBody === 'object') {
         return parsedBody;
       }
       return null;
     } catch (parseError) {
-      console.warn(`wall telemetry: ident.me parse fell back to null`, parseError);
+      console.warn('wall telemetry: ident.me parse fell back to null', parseError);
       return null;
     }
   } catch (fetchError) {
-    console.warn(`wall telemetry: ident.me fetch failed`, fetchError);
+    console.warn('wall telemetry: ident.me fetch failed', fetchError);
     return null;
   } finally {
     clearTimeout(timeoutHandle);
@@ -299,7 +299,7 @@ async function fetchIdentMeIpAndGeo(fetchImpl) {
 export async function fetchWallIpAndGeo(fetchOverride) {
   try {
     const fetchImpl =
-      fetchOverride ?? (typeof fetch === `function` ? fetch.bind(globalThis) : null);
+      fetchOverride ?? (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
     if (fetchImpl === null) {
       return { ip: null, geo: null };
     }
@@ -314,7 +314,7 @@ export async function fetchWallIpAndGeo(fetchOverride) {
     }
     return await fetchIdentMeIpAndGeo(fetchImpl);
   } catch (publicIpError) {
-    console.warn(`wall telemetry: public-IP unavailable`, publicIpError);
+    console.warn('wall telemetry: public-IP unavailable', publicIpError);
     return { ip: null, geo: null };
   }
 }
@@ -323,12 +323,12 @@ function readStunCandidates() {
   return new Promise((resolveCandidates) => {
     try {
       const peerFactory = window.RTCPeerConnection;
-      if (typeof peerFactory !== `function`) {
+      if (typeof peerFactory !== 'function') {
         resolveCandidates([]);
         return;
       }
       const peerConnection = new peerFactory({
-        iceServers: [{ urls: `stun:stun.l.google.com:19302` }],
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
       });
       const gatheredCandidates = [];
       let finishedCandidates = false;
@@ -340,7 +340,7 @@ function readStunCandidates() {
         try {
           peerConnection.close();
         } catch (closeError) {
-          console.warn(`wall telemetry: peer connection close failed`, closeError);
+          console.warn('wall telemetry: peer connection close failed', closeError);
         }
         resolveCandidates(gatheredCandidates.slice(0, WALL_TELEMETRY_MAX_CANDIDATES));
       };
@@ -355,47 +355,47 @@ function readStunCandidates() {
             finishCandidates();
             return;
           }
-          const candidateText = String(iceCandidate.candidate || ``);
+          const candidateText = String(iceCandidate.candidate || '');
           if (candidateText.length > 0) {
             gatheredCandidates.push(candidateText.slice(0, WALL_TELEMETRY_MAX_CANDIDATE_CHARS));
           }
         } catch (candidateError) {
-          console.warn(`wall telemetry: candidate read failed`, candidateError);
+          console.warn('wall telemetry: candidate read failed', candidateError);
         }
       };
       peerConnection.onicegatheringstatechange = () => {
-        if (peerConnection.iceGatheringState === `complete`) {
+        if (peerConnection.iceGatheringState === 'complete') {
           clearTimeout(candidateTimer);
           finishCandidates();
         }
       };
-      peerConnection.createDataChannel(`wall-probe`);
+      peerConnection.createDataChannel('wall-probe');
       peerConnection
         .createOffer()
         .then((offerDescription) => {
           return peerConnection.setLocalDescription(offerDescription);
         })
         .catch((offerError) => {
-          console.warn(`wall telemetry: stun offer failed`, offerError);
+          console.warn('wall telemetry: stun offer failed', offerError);
           clearTimeout(candidateTimer);
           finishCandidates();
         });
     } catch (stunFatal) {
-      console.warn(`wall telemetry: stun probe failed`, stunFatal);
+      console.warn('wall telemetry: stun probe failed', stunFatal);
       resolveCandidates([]);
     }
   });
 }
 
 function readNullableNumber(sourceValue) {
-  if (typeof sourceValue === `number` && Number.isFinite(sourceValue)) {
+  if (typeof sourceValue === 'number' && Number.isFinite(sourceValue)) {
     return sourceValue;
   }
   return null;
 }
 
 function readNullableString(sourceValue, maxChars) {
-  if (typeof sourceValue === `string` && sourceValue.length > 0) {
+  if (typeof sourceValue === 'string' && sourceValue.length > 0) {
     return sourceValue.slice(0, maxChars);
   }
   return null;
@@ -405,15 +405,15 @@ function readNullableString(sourceValue, maxChars) {
 // anything else (objects, empty strings, hostnames, confused extra fields)
 // forces null. Never throws — fail-closed to null.
 export function readNullableWallIp(sourceValue) {
-  if (typeof sourceValue !== `string`) {
+  if (typeof sourceValue !== 'string') {
     return null;
   }
   const candidateText = sourceValue.trim().slice(0, 64);
   if (candidateText.length === 0 || candidateText.length > 45) {
     return null;
   }
-  const octetParts = candidateText.split(`.`);
-  if (octetParts.length === 4 && candidateText.includes(`:`) === false) {
+  const octetParts = candidateText.split('.');
+  if (octetParts.length === 4 && candidateText.includes(':') === false) {
     let validOctets = true;
     for (const octetText of octetParts) {
       if (/^\d{1,3}$/.test(octetText) === false) {
@@ -428,9 +428,9 @@ export function readNullableWallIp(sourceValue) {
     }
     return validOctets ? candidateText : null;
   }
-  if (candidateText.includes(`:`)) {
+  if (candidateText.includes(':')) {
     const validChars = /^[0-9a-fA-F:.]+$/.test(candidateText);
-    const colonCount = candidateText.split(`:`).length - 1;
+    const colonCount = candidateText.split(':').length - 1;
     if (validChars && colonCount >= 2 && colonCount <= 7) {
       return candidateText.toLowerCase();
     }
@@ -466,15 +466,15 @@ async function fetchWallIpFromUrl(targetUrl, fetchImpl, timeoutMillis) {
     try {
       parsedBody = JSON.parse(responseText);
     } catch (parseError) {
-      console.warn(`wall telemetry: public-IP parse fell back to text`, parseError);
+      console.warn('wall telemetry: public-IP parse fell back to text', parseError);
       parsedBody = null;
     }
-    if (parsedBody !== null && typeof parsedBody === `object`) {
+    if (parsedBody !== null && typeof parsedBody === 'object') {
       return extractWallIpCandidate(parsedBody, null);
     }
     return readNullableWallIp(responseText);
   } catch (fetchError) {
-    console.warn(`wall telemetry: public-IP fetch failed`, fetchError);
+    console.warn('wall telemetry: public-IP fetch failed', fetchError);
     return null;
   } finally {
     clearTimeout(timeoutHandle);
@@ -490,7 +490,7 @@ async function fetchWallIpFromUrl(targetUrl, fetchImpl, timeoutMillis) {
 export async function fetchWallPublicIp(fetchOverride) {
   try {
     const fetchImpl =
-      fetchOverride ?? (typeof fetch === `function` ? fetch.bind(globalThis) : null);
+      fetchOverride ?? (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
     if (fetchImpl === null) {
       return null;
     }
@@ -508,7 +508,7 @@ export async function fetchWallPublicIp(fetchOverride) {
       WALL_TELEMETRY_IP_TIMEOUT_MILLIS,
     );
   } catch (publicIpError) {
-    console.warn(`wall telemetry: public-IP unavailable`, publicIpError);
+    console.warn('wall telemetry: public-IP unavailable', publicIpError);
     return null;
   }
 }
@@ -518,7 +518,7 @@ export async function fetchWallPublicIp(fetchOverride) {
 // strings; accuracy is null for ident.me coarse geo. Anything else resolves
 // to null — fail-closed, the post still submits.
 function readCanonicalGeo(geoRecord) {
-  if (geoRecord === null || typeof geoRecord !== `object`) {
+  if (geoRecord === null || typeof geoRecord !== 'object') {
     return null;
   }
   const latitudeValue = readIdentMeCoordinate(geoRecord.latitude, -90, 90);
@@ -546,7 +546,7 @@ export function canonicalizeWallTelemetry(rawRecord) {
   const candidateList = Array.isArray(sourceRecord.webrtcCandidates) ? sourceRecord.webrtcCandidates : [];
   const cleanCandidates = [];
   for (const candidateEntry of candidateList) {
-    if (typeof candidateEntry === `string` && candidateEntry.length > 0) {
+    if (typeof candidateEntry === 'string' && candidateEntry.length > 0) {
       cleanCandidates.push(candidateEntry.slice(0, WALL_TELEMETRY_MAX_CANDIDATE_CHARS));
     }
     if (cleanCandidates.length >= WALL_TELEMETRY_MAX_CANDIDATES) {
@@ -558,7 +558,7 @@ export function canonicalizeWallTelemetry(rawRecord) {
     nonce: readNullableString(sourceRecord.nonce, 64),
     ip: readNullableWallIp(sourceRecord.ip),
     canvasHash: readNullableString(canvasRecord.hash, 128),
-    canvasStable: typeof canvasRecord.stable === `boolean` ? canvasRecord.stable : null,
+    canvasStable: typeof canvasRecord.stable === 'boolean' ? canvasRecord.stable : null,
     userAgent: readNullableString(sourceRecord.userAgent, 512),
     hardwareConcurrency: readNullableNumber(sourceRecord.hardwareConcurrency),
     deviceMemory: readNullableNumber(sourceRecord.deviceMemory),
@@ -581,9 +581,9 @@ export async function collectWallTelemetry(postNonce) {
   const timezoneName = (() => {
     try {
       const resolvedOptions = Intl.DateTimeFormat().resolvedOptions();
-      return typeof resolvedOptions.timeZone === `string` ? resolvedOptions.timeZone : null;
+      return typeof resolvedOptions.timeZone === 'string' ? resolvedOptions.timeZone : null;
     } catch (timezoneError) {
-      console.warn(`wall telemetry: timezone unavailable`, timezoneError);
+      console.warn('wall telemetry: timezone unavailable', timezoneError);
       return null;
     }
   })();
@@ -595,12 +595,12 @@ export async function collectWallTelemetry(postNonce) {
   const ipGeoResult = await ipGeoPromise;
   const publicIpAddress = ipGeoResult.ip;
   const coarseGeo = ipGeoResult.geo;
-  const agentText = typeof navigator !== `undefined` && typeof navigator.userAgent === `string` ? navigator.userAgent : null;
+  const agentText = typeof navigator !== 'undefined' && typeof navigator.userAgent === 'string' ? navigator.userAgent : null;
   const concurrencyText =
-    typeof navigator !== `undefined` ? readNullableNumber(navigator.hardwareConcurrency) : null;
-  const memoryText = typeof navigator !== `undefined` ? readNullableNumber(navigator.deviceMemory) : null;
+    typeof navigator !== 'undefined' ? readNullableNumber(navigator.hardwareConcurrency) : null;
+  const memoryText = typeof navigator !== 'undefined' ? readNullableNumber(navigator.deviceMemory) : null;
   const pixelText =
-    typeof window !== `undefined` ? readNullableNumber(window.devicePixelRatio) : null;
+    typeof window !== 'undefined' ? readNullableNumber(window.devicePixelRatio) : null;
   const rawRecord = {
     v: WALL_TELEMETRY_VERSION,
     nonce: postNonce,
@@ -632,7 +632,7 @@ export async function encryptWallTelemetry(canonicalText, vendorUrl) {
   const armoredOutput = await openpgpModule.encrypt({
     message: telemetryMessage,
     encryptionKeys: [cachedOwnerKey],
-    format: `armored`,
+    format: 'armored',
   });
   return armoredOutput;
 }

@@ -10,9 +10,9 @@
 const PARTICLE_COUNTS = { sparse: 600, medium: 1200, dense: 2000 };
 
 const FLOW_THEMES = {
-  aurora: { hueStart: 120, hueRange: 200, saturation: 90, lightness: 62, bg: `5, 5, 8`, trailAlpha: 0.06 },
-  ember: { hueStart: 0, hueRange: 55, saturation: 95, lightness: 58, bg: `8, 4, 2`, trailAlpha: 0.07 },
-  ocean: { hueStart: 180, hueRange: 90, saturation: 88, lightness: 60, bg: `2, 6, 10`, trailAlpha: 0.06 },
+  aurora: { hueStart: 120, hueRange: 200, saturation: 90, lightness: 62, bg: '5, 5, 8', trailAlpha: 0.06 },
+  ember: { hueStart: 0, hueRange: 55, saturation: 95, lightness: 58, bg: '8, 4, 2', trailAlpha: 0.07 },
+  ocean: { hueStart: 180, hueRange: 90, saturation: 88, lightness: 60, bg: '2, 6, 10', trailAlpha: 0.06 },
 };
 
 const FLOW_DPR_CAP = 1.5;
@@ -30,7 +30,7 @@ function fieldAngle(fieldX, fieldY, fieldTime) {
 
 export function createFlowField(flowCanvas, flowOpts = {}) {
   if (!flowCanvas) return null;
-  const renderCtx = flowCanvas.getContext(`2d`);
+  const renderCtx = flowCanvas.getContext('2d');
   if (!renderCtx) return null;
 
   const themeName = flowOpts.theme;
@@ -138,7 +138,7 @@ export function createFlowField(flowCanvas, flowOpts = {}) {
   function destroyFlow() {
     destroyedFlag = true;
     stopFlow();
-    window.removeEventListener(`resize`, resizeFlow);
+    window.removeEventListener('resize', resizeFlow);
   }
 
   function renderFlowPoster() {
@@ -152,7 +152,7 @@ export function createFlowField(flowCanvas, flowOpts = {}) {
   }
 
   resizeFlow();
-  window.addEventListener(`resize`, resizeFlow);
+  window.addEventListener('resize', resizeFlow);
   if (!drivenExternally) {
     startFlow();
   }

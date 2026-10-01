@@ -14,7 +14,7 @@ const RAG_COSINE_THRESHOLD = 0.30;
 // no cosine to compare, so it gates on the keyword score instead: one text
 // hit scores 0.20, one title hit 0.40 (see computeKeywordScore).
 const RAG_KEYWORD_FLOOR = 0.20;
-const RAG_THRESHOLD_KEY = `dvxb_rag_threshold_v1`;
+const RAG_THRESHOLD_KEY = 'dvxb_rag_threshold_v1';
 // Retrieve-wide (8) then rerank down to at most 4 — never top-4-regardless:
 // below-threshold queries return NO_MATCH with an empty context.
 const RAG_WIDE_COUNT = 8;
@@ -76,12 +76,12 @@ async function getEmbedder(term) {
   embedderLoading = true;
 
   try {
-    if (term) term.writeln(`\x1b[2mLoading RAG embedder (BAAI/bge-small-en-v1.5)...\x1b[0m`);
+    if (term) term.writeln('\x1b[2mLoading RAG embedder (BAAI/bge-small-en-v1.5)...\x1b[0m');
     const { pipeline } = await import('@huggingface/transformers');
     embedderPipeline = await pipeline('feature-extraction', 'Xenova/bge-small-en-v1.5', {
       dtype: 'fp32',
     });
-    if (term) term.writeln(`\x1b[32mRAG embedder loaded\x1b[0m`);
+    if (term) term.writeln('\x1b[32mRAG embedder loaded\x1b[0m');
     return embedderPipeline;
   } catch (e) {
     console.warn('Vector embedder load notice:', e.message);
@@ -164,7 +164,7 @@ export async function retrieveContext(userQuery, term) {
 export async function retrieveRankedContext(userQuery, term, rankOptions) {
   const keywordOnly = Boolean(rankOptions?.keywordOnly);
   const contextData = await loadContextData();
-  if (!contextData.length) return { verdict: `NO_MATCH`, contextText: ``, sourceList: [] };
+  if (!contextData.length) return { verdict: 'NO_MATCH', contextText: '', sourceList: [] };
 
   if (!keywordOnly) {
     try {
@@ -189,7 +189,7 @@ export async function retrieveRankedContext(userQuery, term, rankOptions) {
         const reranked = rerankChunks(userQuery, scored.slice(0, RAG_WIDE_COUNT));
         const thresholdValue = effectiveCosineThreshold();
         const matched = reranked.filter((chunk) => chunk.cosine >= thresholdValue).slice(0, RAG_TOP_COUNT);
-        return formatRankedResult(matched, `cosine`);
+        return formatRankedResult(matched, 'cosine');
       }
     } catch (embedError) {
       console.warn(`Vector embedding search fallback to keyword: ${embedError.message}`);
@@ -205,18 +205,18 @@ export async function retrieveRankedContext(userQuery, term, rankOptions) {
   scored.sort((first, second) => second.score - first.score);
   const reranked = rerankChunks(userQuery, scored.slice(0, RAG_WIDE_COUNT));
   const matched = reranked.filter((chunk) => chunk.rerankScore >= RAG_KEYWORD_FLOOR).slice(0, RAG_TOP_COUNT);
-  return formatRankedResult(matched, `keyword`);
+  return formatRankedResult(matched, 'keyword');
 }
 
 function formatRankedResult(matchedChunks, scoreKind) {
-  if (!matchedChunks.length) return { verdict: `NO_MATCH`, contextText: ``, sourceList: [] };
+  if (!matchedChunks.length) return { verdict: 'NO_MATCH', contextText: '', sourceList: [] };
   const sourceList = matchedChunks.map((chunk, chunkIndex) => {
     const marker = `[${chunkIndex + 1}]`;
-    const displayScore = scoreKind === `cosine` ? chunk.cosine : chunk.rerankScore;
+    const displayScore = scoreKind === 'cosine' ? chunk.cosine : chunk.rerankScore;
     return { marker, title: chunk.title, text: chunk.text, score: displayScore, scoreKind };
   });
-  const contextText = sourceList.map((source) => `${source.marker} ${source.title}\n${source.text}`).join(`\n\n`);
-  return { verdict: `MATCH`, contextText, sourceList };
+  const contextText = sourceList.map((source) => `${source.marker} ${source.title}\n${source.text}`).join('\n\n');
+  return { verdict: 'MATCH', contextText, sourceList };
 }
 
 export { RAG_COSINE_THRESHOLD, RAG_KEYWORD_FLOOR, effectiveCosineThreshold, readThresholdOverride, setThresholdOverride, clearThresholdOverride };

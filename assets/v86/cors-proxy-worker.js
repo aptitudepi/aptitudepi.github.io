@@ -44,7 +44,7 @@ const CORS_HEADERS = {
 // anywhere. Delete tokens are random 128-bit values returned once at submit;
 // the server stores ONLY a salted SHA-256 hash beside the public record and
 // verifies deletes without decrypting the blob.
-const WALL_OWNER_KEY_FINGERPRINT = `7301fa8f5d533ef7940695fcdfc72721be0bdde2`;
+const WALL_OWNER_KEY_FINGERPRINT = '7301fa8f5d533ef7940695fcdfc72721be0bdde2';
 const WALL_POSTS_MAX = 50;
 const WALL_MESSAGE_MAX = 280;
 const WALL_LINK_MAX = 2;
@@ -52,12 +52,12 @@ const WALL_RATE_LIMIT_MAX = 10;
 const WALL_RATE_LIMIT_TTL_SECONDS = 3600;
 
 const WALL_HANDLE_ADJECTIVES = [
-  `amber`, `brisk`, `calm`, `dapple`, `eager`, `fable`, `glint`, `harbor`,
-  `ivory`, `juniper`, `kindred`, `lumen`, `mossy`, `nimble`, `opal`, `prism`,
+  'amber', 'brisk', 'calm', 'dapple', 'eager', 'fable', 'glint', 'harbor',
+  'ivory', 'juniper', 'kindred', 'lumen', 'mossy', 'nimble', 'opal', 'prism',
 ];
 const WALL_HANDLE_NOUNS = [
-  `fox`, `heron`, `ibis`, `jay`, `koala`, `lark`, `moth`, `newt`,
-  `otter`, `pipit`, `quail`, `raven`, `stoat`, `tern`, `urchin`, `wren`,
+  'fox', 'heron', 'ibis', 'jay', 'koala', 'lark', 'moth', 'newt',
+  'otter', 'pipit', 'quail', 'raven', 'stoat', 'tern', 'urchin', 'wren',
 ];
 
 function wallRandomHex(byteCount) {
@@ -65,47 +65,47 @@ function wallRandomHex(byteCount) {
   crypto.getRandomValues(randomBytes);
   const hexParts = [];
   for (const randomByte of randomBytes) {
-    hexParts.push(randomByte.toString(16).padStart(2, `0`));
+    hexParts.push(randomByte.toString(16).padStart(2, '0'));
   }
-  return hexParts.join(``);
+  return hexParts.join('');
 }
 
 async function wallSha256Hex(sourceText) {
   const textBytes = new TextEncoder().encode(sourceText);
-  const digestBytes = await crypto.subtle.digest(`SHA-256`, textBytes);
+  const digestBytes = await crypto.subtle.digest('SHA-256', textBytes);
   const digestView = new Uint8Array(digestBytes);
   const hexParts = [];
   for (const digestByte of digestView) {
-    hexParts.push(digestByte.toString(16).padStart(2, `0`));
+    hexParts.push(digestByte.toString(16).padStart(2, '0'));
   }
-  return hexParts.join(``);
+  return hexParts.join('');
 }
 
 async function wallHmacHex(secretText, valueText) {
   const textEncoder = new TextEncoder();
   const hmacKey = await crypto.subtle.importKey(
-    `raw`,
+    'raw',
     textEncoder.encode(secretText),
-    { name: `HMAC`, hash: `SHA-256` },
+    { name: 'HMAC', hash: 'SHA-256' },
     false,
-    [`sign`],
+    ['sign'],
   );
-  const signatureBytes = await crypto.subtle.sign(`HMAC`, hmacKey, textEncoder.encode(valueText));
+  const signatureBytes = await crypto.subtle.sign('HMAC', hmacKey, textEncoder.encode(valueText));
   const signatureView = new Uint8Array(signatureBytes);
   const hexParts = [];
   for (const signatureByte of signatureView) {
-    hexParts.push(signatureByte.toString(16).padStart(2, `0`));
+    hexParts.push(signatureByte.toString(16).padStart(2, '0'));
   }
-  return hexParts.join(``);
+  return hexParts.join('');
 }
 
 function wallStripHtml(rawText) {
-  return String(rawText ?? ``).replace(/<[^>]*>/g, ``);
+  return String(rawText ?? '').replace(/<[^>]*>/g, '');
 }
 
 function wallStripAnsi(rawText) {
-  const sourceText = String(rawText ?? ``);
-  let cleanText = ``;
+  const sourceText = String(rawText ?? '');
+  let cleanText = '';
   for (const glyph of sourceText) {
     const codePoint = glyph.codePointAt(0);
     const isBadControl =
@@ -143,9 +143,9 @@ async function wallRateLimitExceeded(observedIp, requestAgent, env) {
   }
   const dayString = new Date().toISOString().slice(0, 10);
   const rateSecret =
-    typeof env.RATE_LIMIT_SECRET === `string` && env.RATE_LIMIT_SECRET.length > 0
+    typeof env.RATE_LIMIT_SECRET === 'string' && env.RATE_LIMIT_SECRET.length > 0
       ? env.RATE_LIMIT_SECRET
-      : `dvxb-wall-fallback-salt`;
+      : 'dvxb-wall-fallback-salt';
   const digestInput = `${dayString}|${observedIp}|${requestAgent}`;
   const digestHex = await wallHmacHex(rateSecret, digestInput);
   const counterKey = `wall:rl:${dayString}:${digestHex.slice(0, 32)}`;
@@ -184,17 +184,17 @@ function wallTimingEqual(firstHex, secondHex) {
 function queueWallTelemetryStore(postId, createdAt, armoredBlob, env, ctx) {
   const persistTask = (async () => {
     try {
-      if (typeof armoredBlob !== `string` || armoredBlob.startsWith(`-----BEGIN PGP MESSAGE-----`) === false) {
+      if (typeof armoredBlob !== 'string' || armoredBlob.startsWith('-----BEGIN PGP MESSAGE-----') === false) {
         return;
       }
       if (armoredBlob.length > 131072) {
-        console.warn(`wall telemetry: blob oversize, dropped`);
+        console.warn('wall telemetry: blob oversize, dropped');
         return;
       }
       const postIdText = String(postId);
       if (env !== null && env !== undefined && env.TELEMETRY !== undefined) {
         await env.TELEMETRY.put(`telemetry/${postIdText}.asc`, armoredBlob, {
-          httpMetadata: { contentType: `application/pgp-encrypted`, cacheControl: `private, no-store` },
+          httpMetadata: { contentType: 'application/pgp-encrypted', cacheControl: 'private, no-store' },
           customMetadata: { postId: postIdText, createdAt, fpHash: WALL_OWNER_KEY_FINGERPRINT },
         });
         return;
@@ -205,15 +205,15 @@ function queueWallTelemetryStore(postId, createdAt, armoredBlob, env, ctx) {
         });
       }
     } catch (storeError) {
-      console.warn(`wall telemetry: blob store failed`, storeError);
+      console.warn('wall telemetry: blob store failed', storeError);
     }
   })();
-  if (ctx !== null && ctx !== undefined && typeof ctx.waitUntil === `function`) {
+  if (ctx !== null && ctx !== undefined && typeof ctx.waitUntil === 'function') {
     ctx.waitUntil(persistTask);
     return;
   }
   persistTask.catch((waitError) => {
-    console.warn(`wall telemetry: blob store failed`, waitError);
+    console.warn('wall telemetry: blob store failed', waitError);
   });
 }
 
@@ -246,12 +246,12 @@ function sanitizeWallName(rawName) {
 // when the observed IP is missing or unparsable, so the moniker falls back
 // to the bare visitor@... shape. A full IP never enters the moniker.
 function maskWallIp(observedIp) {
-  const candidateText = String(observedIp ?? ``).trim().toLowerCase().slice(0, 64);
+  const candidateText = String(observedIp ?? '').trim().toLowerCase().slice(0, 64);
   if (candidateText.length === 0) {
     return null;
   }
-  const octetParts = candidateText.split(`.`);
-  if (octetParts.length === 4 && candidateText.includes(`:`) === false) {
+  const octetParts = candidateText.split('.');
+  if (octetParts.length === 4 && candidateText.includes(':') === false) {
     const octetNumbers = [];
     for (const octetText of octetParts) {
       if (/^\d{1,3}$/.test(octetText) === false) {
@@ -265,12 +265,12 @@ function maskWallIp(observedIp) {
     }
     return `${octetNumbers[0]}.${octetNumbers[1]}.xx.xx`;
   }
-  if (candidateText.includes(`:`)) {
+  if (candidateText.includes(':')) {
     if (/^[0-9a-f:.]+$/.test(candidateText) === false) {
       return null;
     }
-    const hextetParts = candidateText.split(`:`);
-    const firstHextet = String(hextetParts[0] ?? ``).replace(/[^0-9a-f]/g, ``).slice(0, 4);
+    const hextetParts = candidateText.split(':');
+    const firstHextet = String(hextetParts[0] ?? '').replace(/[^0-9a-f]/g, '').slice(0, 4);
     if (firstHextet.length === 0) {
       return null;
     }
@@ -299,7 +299,7 @@ async function handleRequest(request, env, ctx) {
   if (url.pathname === '/ai' || (url.pathname === '/' && request.method === 'POST' && !url.searchParams.get('url'))) {
     try {
       const body = await request.json();
-      const apiKey = (env && env.GROQ_API_KEY) || (typeof GROQ_API_KEY !== 'undefined' ? GROQ_API_KEY : '');
+      const apiKey = (env?.GROQ_API_KEY) || (typeof GROQ_API_KEY !== 'undefined' ? GROQ_API_KEY : '');
       if (!apiKey) {
         return new Response(JSON.stringify({ error: 'GROQ_API_KEY secret missing in Cloudflare worker configuration' }), {
           status: 500,
@@ -371,7 +371,7 @@ async function handleRequest(request, env, ctx) {
             const uParam = new URLSearchParams(rawUrl.split('?')[1]).get('uddg');
             if (uParam) cleanUrl = decodeURIComponent(uParam);
           } catch (uddgError) {
-            console.warn(`search: uddg unwrap failed`, uddgError);
+            console.warn('search: uddg unwrap failed', uddgError);
           }
         }
 
@@ -421,12 +421,12 @@ async function handleRequest(request, env, ctx) {
   if (url.pathname === '/wall') {
     if (request.method === 'GET') {
       let posts = WALL_POSTS;
-      if (env && env.WALL_KV) {
+      if (env?.WALL_KV) {
         try {
           const stored = await env.WALL_KV.get('posts', { type: 'json' });
           if (stored) posts = stored;
         } catch (readError) {
-          console.warn(`wall: kv read failed`, readError);
+          console.warn('wall: kv read failed', readError);
         }
       }
       return new Response(JSON.stringify({ posts }), {
@@ -453,11 +453,11 @@ async function handleRequest(request, env, ctx) {
         try {
           limitedVisitor = await wallRateLimitExceeded(observedIp, requestAgent, env);
         } catch (limitError) {
-          console.warn(`wall: rate-limit check failed open`, limitError);
+          console.warn('wall: rate-limit check failed open', limitError);
           limitedVisitor = false;
         }
         if (limitedVisitor) {
-          return new Response(JSON.stringify({ error: `The guestbook is catching its breath — please try again in a little while.` }), { status: 429, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+          return new Response(JSON.stringify({ error: 'The guestbook is catching its breath — please try again in a little while.' }), { status: 429, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
         }
 
         const rawMessage = typeof body.message === 'string' ? body.message : '';
@@ -470,7 +470,7 @@ async function handleRequest(request, env, ctx) {
         const cloudCity = request.cf && typeof request.cf.city === 'string' ? request.cf.city : '';
         const citySlug = slugWallSegment(cloudCity);
         const maskedIp = maskWallIp(observedIp);
-        const visitorPrefix = maskedIp === null ? `visitor` : `visitor-${maskedIp}`;
+        const visitorPrefix = maskedIp === null ? 'visitor' : `visitor-${maskedIp}`;
         const monikerName = citySlug
           ? `${visitorPrefix}@${citySlug}`.slice(0, 64)
           : `${visitorPrefix}@${wallRandomHandle()}`;
@@ -492,19 +492,19 @@ async function handleRequest(request, env, ctx) {
         // fresh isolate), so load the KV copy first — otherwise this POST
         // overwrites everyone else's posts with only the new one.
         let currentPosts = WALL_POSTS;
-        if (env && env.WALL_KV) {
+        if (env?.WALL_KV) {
           try {
             const storedPosts = await env.WALL_KV.get('posts', { type: 'json' });
             if (Array.isArray(storedPosts)) currentPosts = storedPosts;
-          } catch (readError) { console.warn(`wall: kv read failed`, readError); }
+          } catch (readError) { console.warn('wall: kv read failed', readError); }
         }
         currentPosts.unshift(newPost);
         if (currentPosts.length > WALL_POSTS_MAX) currentPosts.length = WALL_POSTS_MAX;
         WALL_POSTS = currentPosts;
         globalThis._WALL_POSTS = currentPosts;
 
-        if (env && env.WALL_KV) {
-          try { await env.WALL_KV.put('posts', JSON.stringify(currentPosts)); } catch (persistError) { console.warn(`wall: kv put failed`, persistError); }
+        if (env?.WALL_KV) {
+          try { await env.WALL_KV.put('posts', JSON.stringify(currentPosts)); } catch (persistError) { console.warn('wall: kv put failed', persistError); }
         }
 
         // Delete token: random 128-bit, returned once; the server stores
@@ -516,8 +516,8 @@ async function handleRequest(request, env, ctx) {
         const tokenHash = await wallSha256Hex(`${tokenSalt}:${deleteToken}`);
         const tokenKey = `wall:deltoken:${String(postId)}`;
         const tokenRecord = JSON.stringify({ salt: tokenSalt, hash: tokenHash });
-        if (env && env.WALL_KV) {
-          try { await env.WALL_KV.put(tokenKey, tokenRecord); } catch (tokenError) { console.warn(`wall: delete-token put failed`, tokenError); }
+        if (env?.WALL_KV) {
+          try { await env.WALL_KV.put(tokenKey, tokenRecord); } catch (tokenError) { console.warn('wall: delete-token put failed', tokenError); }
         } else {
           globalThis._WALL_DELTOKENS[tokenKey] = tokenRecord;
         }
@@ -544,12 +544,12 @@ async function handleRequest(request, env, ctx) {
   // one-time delete token verifies against the stored salted hash.
   if (url.pathname === '/api/guestbook' && request.method === 'GET') {
     let apiPosts = WALL_POSTS;
-    if (env && env.WALL_KV) {
+    if (env?.WALL_KV) {
       try {
         const storedPosts = await env.WALL_KV.get('posts', { type: 'json' });
         if (storedPosts) apiPosts = storedPosts;
       } catch (apiReadError) {
-        console.warn(`wall: api kv read failed`, apiReadError);
+        console.warn('wall: api kv read failed', apiReadError);
       }
     }
     return new Response(JSON.stringify({ posts: apiPosts }), {
@@ -569,40 +569,40 @@ async function handleRequest(request, env, ctx) {
           suppliedToken = deleteBody.token;
         }
       } catch (bodyError) {
-        console.warn(`wall: delete body unreadable, trying query token`, bodyError);
+        console.warn('wall: delete body unreadable, trying query token', bodyError);
       }
       if (!suppliedToken) {
-        return new Response(JSON.stringify({ error: `Delete token required — contact the site owner for manual review if it was lost.` }), { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'Delete token required — contact the site owner for manual review if it was lost.' }), { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
       }
       const tokenKey = `wall:deltoken:${targetId}`;
       let storedRecord = null;
-      if (env && env.WALL_KV) {
+      if (env?.WALL_KV) {
         try {
           storedRecord = await env.WALL_KV.get(tokenKey, { type: 'json' });
         } catch (tokenReadError) {
-          console.warn(`wall: delete-token read failed`, tokenReadError);
+          console.warn('wall: delete-token read failed', tokenReadError);
         }
       } else if (globalThis._WALL_DELTOKENS[tokenKey]) {
         try {
           storedRecord = JSON.parse(globalThis._WALL_DELTOKENS[tokenKey]);
         } catch (parseError) {
-          console.warn(`wall: in-memory token parse failed`, parseError);
+          console.warn('wall: in-memory token parse failed', parseError);
         }
       }
       if (storedRecord === null || storedRecord === undefined || typeof storedRecord.salt !== 'string' || typeof storedRecord.hash !== 'string') {
-        return new Response(JSON.stringify({ error: `Unknown or expired delete token — contact the site owner for manual review.` }), { status: 404, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'Unknown or expired delete token — contact the site owner for manual review.' }), { status: 404, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
       }
       const candidateHash = await wallSha256Hex(`${storedRecord.salt}:${suppliedToken}`);
       if (wallTimingEqual(candidateHash, storedRecord.hash) === false) {
-        return new Response(JSON.stringify({ error: `Unknown or expired delete token — contact the site owner for manual review.` }), { status: 404, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'Unknown or expired delete token — contact the site owner for manual review.' }), { status: 404, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
       }
       let currentPosts = WALL_POSTS;
-      if (env && env.WALL_KV) {
+      if (env?.WALL_KV) {
         try {
           const storedPosts = await env.WALL_KV.get('posts', { type: 'json' });
           if (storedPosts) currentPosts = storedPosts;
         } catch (listError) {
-          console.warn(`wall: delete list read failed`, listError);
+          console.warn('wall: delete list read failed', listError);
         }
       }
       const keptPosts = currentPosts.filter((keptPost) => String(keptPost.id) !== targetId);
@@ -610,7 +610,7 @@ async function handleRequest(request, env, ctx) {
       globalThis._WALL_POSTS = keptPosts;
       const cleanupTask = (async () => {
         try {
-          if (env && env.WALL_KV) {
+          if (env?.WALL_KV) {
             await env.WALL_KV.put('posts', JSON.stringify(keptPosts));
             await env.WALL_KV.delete(tokenKey);
             await env.WALL_KV.delete(`telemetry:${targetId}.asc`);
@@ -621,10 +621,10 @@ async function handleRequest(request, env, ctx) {
             await env.TELEMETRY.delete(`telemetry/${targetId}.asc`);
           }
         } catch (cleanupError) {
-          console.warn(`wall: delete cleanup failed`, cleanupError);
+          console.warn('wall: delete cleanup failed', cleanupError);
         }
       })();
-      if (ctx !== null && ctx !== undefined && typeof ctx.waitUntil === `function`) {
+      if (ctx !== null && ctx !== undefined && typeof ctx.waitUntil === 'function') {
         ctx.waitUntil(cleanupTask);
       } else {
         await cleanupTask;

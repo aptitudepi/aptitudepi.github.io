@@ -53,15 +53,15 @@ import {
 } from './matrix-rain.js';
 import { createFlowField } from './flow-field.js';
 
-const BACKGROUND_MODES = [`off`, `static`, `ambient`, `expressive`];
-const BACKGROUND_STORAGE_KEY = `dvxb.background`;
-const DEFAULT_BACKGROUND_MODE = `ambient`;
+const BACKGROUND_MODES = ['off', 'static', 'ambient', 'expressive'];
+const BACKGROUND_STORAGE_KEY = 'dvxb.background';
+const DEFAULT_BACKGROUND_MODE = 'ambient';
 const FALLBACK_TOPO_SPEED = 0.25;
 const AMBIENT_SYNC_CADENCE = 30;
 const EXPRESSIVE_SYNC_CADENCE = 5;
 const PARTICLE_READY_RETRIES = 60;
 const PARTICLE_READY_DELAY_MILLIS = 50;
-const STATIC_GRADIENT_TEXT = `linear-gradient(135deg, #0b0e1a 0%, #141b2e 55%, #1d2440 100%)`;
+const STATIC_GRADIENT_TEXT = 'linear-gradient(135deg, #0b0e1a 0%, #141b2e 55%, #1d2440 100%)';
 
 let requestedMode = DEFAULT_BACKGROUND_MODE;
 let effectiveMode = DEFAULT_BACKGROUND_MODE;
@@ -85,7 +85,7 @@ function normalizeBackgroundMode(rawMode) {
 
 function readStoredBackgroundMode() {
   try {
-    if (typeof window === `undefined` || !window.localStorage) return null;
+    if (typeof window === 'undefined' || !window.localStorage) return null;
     return normalizeBackgroundMode(window.localStorage.getItem(BACKGROUND_STORAGE_KEY));
   } catch (storageError) {
     console.warn(`[backgrounds] stored mode read skipped: ${storageError.message}`);
@@ -95,7 +95,7 @@ function readStoredBackgroundMode() {
 
 function persistBackgroundMode(modeText) {
   try {
-    if (typeof window === `undefined` || !window.localStorage) return;
+    if (typeof window === 'undefined' || !window.localStorage) return;
     window.localStorage.setItem(BACKGROUND_STORAGE_KEY, modeText);
   } catch (persistError) {
     console.warn(`[backgrounds] stored mode persist skipped: ${persistError.message}`);
@@ -105,17 +105,17 @@ function persistBackgroundMode(modeText) {
 // The motion policy (js/motion.js) always wins: anything but an explicit off
 // collapses to static while reduced-motion / Data-Saver / slow-link holds.
 function resolveEffectiveMode() {
-  if (requestedMode === `off`) return `off`;
+  if (requestedMode === 'off') return `off`;
   if (!isMotionOK()) return `static`;
   return requestedMode;
 }
 
 function isLoopMode(modeText) {
-  return modeText === `ambient` || modeText === `expressive`;
+  return modeText === 'ambient' || modeText === 'expressive';
 }
 
 function currentTopoMult() {
-  if (effectiveMode === `expressive`) return 1;
+  if (effectiveMode === 'expressive') return 1;
   try {
     const configuredSpeed = Number(window.ParticleDev?.getTopoSpeed?.());
     if (Number.isFinite(configuredSpeed) && configuredSpeed > 0) return configuredSpeed;
@@ -126,7 +126,7 @@ function currentTopoMult() {
 }
 
 function currentSyncCadence() {
-  return effectiveMode === `expressive` ? EXPRESSIVE_SYNC_CADENCE : AMBIENT_SYNC_CADENCE;
+  return effectiveMode === 'expressive' ? EXPRESSIVE_SYNC_CADENCE : AMBIENT_SYNC_CADENCE;
 }
 
 function clampTickDelta(nowMillis) {
@@ -159,22 +159,22 @@ function hideFlowLayer() {
     }
   }
   if (flowCanvasNode) {
-    flowCanvasNode.style.display = `none`;
+    flowCanvasNode.style.display = 'none';
   }
 }
 
 function showFlowLayer() {
   if (!flowCanvasNode) {
-    const hostCanvas = document.getElementById(`flow-field`);
+    const hostCanvas = document.getElementById('flow-field');
     if (!hostCanvas) return;
     flowCanvasNode = hostCanvas;
-    flowHandle = createFlowField(flowCanvasNode, { driven: true, density: `sparse` });
+    flowHandle = createFlowField(flowCanvasNode, { driven: true, density: 'sparse' });
     if (!flowHandle) {
       flowCanvasNode = null;
       return;
     }
   }
-  flowCanvasNode.style.display = ``;
+  flowCanvasNode.style.display = '';
 }
 
 // Static = one frame per layer as a poster, then no loop. Missing pieces fall
@@ -202,7 +202,7 @@ function paintStaticMode() {
     }
   }
   if (!paintedParticleFrame && !isParticleAvailable()) {
-    const particleCanvas = document.getElementById(`c`);
+    const particleCanvas = document.getElementById('c');
     if (particleCanvas) {
       particleCanvas.style.background = STATIC_GRADIENT_TEXT;
     }
@@ -211,7 +211,7 @@ function paintStaticMode() {
 }
 
 function applyBackgroundMode() {
-  if (effectiveMode === `off`) {
+  if (effectiveMode === 'off') {
     pauseOwnerLoop();
     stopMatrixRain();
     setParticleVisible(false);
@@ -221,14 +221,14 @@ function applyBackgroundMode() {
   }
   setParticleVisible(true);
   setTopoVisible(true);
-  if (effectiveMode === `static`) {
+  if (effectiveMode === 'static') {
     pauseOwnerLoop();
     stopMatrixRain();
     hideFlowLayer();
     paintStaticMode();
     return;
   }
-  if (effectiveMode === `expressive`) {
+  if (effectiveMode === 'expressive') {
     showFlowLayer();
   } else {
     hideFlowLayer();
@@ -253,7 +253,7 @@ function tickBackground(nowMillis) {
     if (colorSyncCounter % currentSyncCadence() === 0) {
       stepTopoColorSync();
     }
-    if (effectiveMode === `expressive` && flowHandle) {
+    if (effectiveMode === 'expressive' && flowHandle) {
       flowHandle.step();
     }
     if (isMatrixActive()) {
@@ -288,8 +288,8 @@ function refreshScreenState() {
 function syncScreenStateNow() {
   try {
     const layerNodes = [
-      document.getElementById(`c`),
-      document.getElementById(`topo-host`),
+      document.getElementById('c'),
+      document.getElementById('topo-host'),
     ].filter((candidateNode) => candidateNode !== null);
     if (layerNodes.length === 0) {
       layersOnScreen = true;
@@ -298,7 +298,7 @@ function syncScreenStateNow() {
     screenStateById.clear();
     for (const layerNode of layerNodes) {
       const layerRect = layerNode.getBoundingClientRect();
-      const nodeOnScreen = layerNode.style.display !== `none` && layerRect.width > 0 && layerRect.height > 0;
+      const nodeOnScreen = layerNode.style.display !== 'none' && layerRect.width > 0 && layerRect.height > 0;
       screenStateById.set(layerNode.id, nodeOnScreen);
     }
     layersOnScreen = Array.from(screenStateById.values()).includes(true);
@@ -309,10 +309,10 @@ function syncScreenStateNow() {
 
 function watchLayerVisibility() {
   try {
-    if (typeof IntersectionObserver === `undefined`) return;
+    if (typeof IntersectionObserver === 'undefined') return;
     const observedNodes = [
-      document.getElementById(`c`),
-      document.getElementById(`topo-host`),
+      document.getElementById('c'),
+      document.getElementById('topo-host'),
     ].filter((candidateNode) => candidateNode !== null);
     if (observedNodes.length === 0) return;
     const screenObserver = new IntersectionObserver((entryList) => {
@@ -330,7 +330,7 @@ function watchLayerVisibility() {
 }
 
 function handleVisibilityChange() {
-  pageVisible = typeof document === `undefined` ? true : !document.hidden;
+  pageVisible = typeof document === 'undefined' ? true : !document.hidden;
   if (pageVisible) {
     syncScreenStateNow();
     resumeOwnerLoop();
@@ -349,7 +349,7 @@ function handleMotionPolicyChange() {
 function setBackgroundMode(modeName) {
   const normalizedMode = normalizeBackgroundMode(modeName);
   if (!normalizedMode) {
-    console.warn(`[backgrounds] ignoring invalid mode, expected off|static|ambient|expressive`);
+    console.warn('[backgrounds] ignoring invalid mode, expected off|static|ambient|expressive');
     return null;
   }
   requestedMode = normalizedMode;
@@ -389,10 +389,10 @@ function finishBackgroundInit() {
   backgroundsReady = true;
   // The boot-time static poster may have gradient-fallbacked before
   // ParticleDev existed; repaint now that the real renderer is up.
-  if (effectiveMode === `static`) {
+  if (effectiveMode === 'static') {
     applyBackgroundMode();
   }
-  if (typeof window !== `undefined`) {
+  if (typeof window !== 'undefined') {
     window.Backgrounds = {
       getMode: getBackgroundMode,
       setMode: setBackgroundMode,
@@ -404,7 +404,7 @@ function finishBackgroundInit() {
 }
 
 function pollParticleApi(retriesLeft) {
-  const particleApiReady = typeof window !== `undefined` && Boolean(window.ParticleDev);
+  const particleApiReady = typeof window !== 'undefined' && Boolean(window.ParticleDev);
   if (particleApiReady || retriesLeft <= 0) {
     finishBackgroundInit();
     return;
@@ -422,7 +422,7 @@ function initBackgrounds() {
     requestedMode = storedMode;
   }
   effectiveMode = resolveEffectiveMode();
-  pageVisible = typeof document === `undefined` ? true : !document.hidden;
+  pageVisible = typeof document === 'undefined' ? true : !document.hidden;
 
   // Take ownership BEFORE any layer schedules: with the flags set, layer
   // boot paths never self-schedule and no transient second loop appears.
@@ -432,7 +432,7 @@ function initBackgrounds() {
   takeMatrixLoop();
 
   try {
-    document.addEventListener(`visibilitychange`, handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
   } catch (visibilityError) {
     console.warn(`[backgrounds] visibility watch skipped: ${visibilityError.message}`);
   }

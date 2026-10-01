@@ -25,61 +25,61 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const TOOL_DIRECTORY = dirname(fileURLToPath(import.meta.url));
-const SITE_ROOT = join(TOOL_DIRECTORY, `..`);
-const GOLDEN_ROOT = join(SITE_ROOT, `logs`, `terminal-goldens`);
-const SERVER_PORT = Number(process.env.SNAPSHOT_PORT || `8901`);
+const SITE_ROOT = join(TOOL_DIRECTORY, '..');
+const GOLDEN_ROOT = join(SITE_ROOT, 'logs', 'terminal-goldens');
+const SERVER_PORT = Number(process.env.SNAPSHOT_PORT || '8901');
 const SNAPSHOT_ORIGIN = `http://127.0.0.1:${SERVER_PORT}`;
-const DEBUG_PORT = Number(process.env.SNAPSHOT_DEBUG_PORT || `9001`);
-const BOOT_TIMEOUT_MILLIS = Number(process.env.SNAPSHOT_BOOT_TIMEOUT || `60000`);
-const COMMAND_TIMEOUT_MILLIS = Number(process.env.SNAPSHOT_COMMAND_TIMEOUT || `20000`);
-const QUIET_MILLIS = Number(process.env.SNAPSHOT_QUIET_MILLIS || `500`);
+const DEBUG_PORT = Number(process.env.SNAPSHOT_DEBUG_PORT || '9001');
+const BOOT_TIMEOUT_MILLIS = Number(process.env.SNAPSHOT_BOOT_TIMEOUT || '60000');
+const COMMAND_TIMEOUT_MILLIS = Number(process.env.SNAPSHOT_COMMAND_TIMEOUT || '20000');
+const QUIET_MILLIS = Number(process.env.SNAPSHOT_QUIET_MILLIS || '500');
 const POLL_MILLIS = 100;
 const VIEW_WIDTH = 1280;
 const VIEW_HEIGHT = 800;
 const FIXED_EPOCH_MILLIS = Date.UTC(2026, 8, 7, 12, 0, 0);
-const SEARCH_STUB_HOST = `0.supernovadkb.workers.dev`;
+const SEARCH_STUB_HOST = '0.supernovadkb.workers.dev';
 
 const SESSION_LIST = [
-  { commandText: `help`, goldenFile: `help.ans` },
-  { commandText: `unknown-cmd`, goldenFile: `unknown-cmd.ans` },
-  { commandText: `whoami`, goldenFile: `whoami.ans` },
-  { commandText: `date`, goldenFile: `date.ans` },
-  { commandText: `neofetch`, goldenFile: `neofetch.ans` },
-  { commandText: `about`, goldenFile: `about.ans` },
-  { commandText: `ls`, goldenFile: `ls.ans` },
-  { commandText: `cat`, goldenFile: `cat.ans` },
-  { commandText: `history`, goldenFile: `history.ans` },
-  { commandText: `ai-models`, goldenFile: `ai-models.ans` },
-  { commandText: `weather --help`, goldenFile: `weather-help.ans` },
-  { commandText: `search --help`, goldenFile: `search-help.ans` },
-  { commandText: `hn --help`, goldenFile: `hn-help.ans` },
-  { commandText: `cat resume.md`, goldenFile: `cat-resume.ans` },
-  { commandText: `projects`, goldenFile: `projects.ans` },
-  { commandText: `projects python`, goldenFile: `projects-filter.ans` },
-  { commandText: `projects --json`, goldenFile: `projects-json.ans` },
-  { commandText: `case pcpg`, goldenFile: `case-pcpg.ans` },
-  { commandText: `skills`, goldenFile: `skills.ans` },
-  { commandText: `timeline`, goldenFile: `timeline.ans` },
-  { commandText: `export about`, goldenFile: `export-about.ans` },
-  { commandText: `md https://bad.invalid/post.md`, goldenFile: `md-fallback.ans` },
+  { commandText: 'help', goldenFile: 'help.ans' },
+  { commandText: 'unknown-cmd', goldenFile: 'unknown-cmd.ans' },
+  { commandText: 'whoami', goldenFile: 'whoami.ans' },
+  { commandText: 'date', goldenFile: 'date.ans' },
+  { commandText: 'neofetch', goldenFile: 'neofetch.ans' },
+  { commandText: 'about', goldenFile: 'about.ans' },
+  { commandText: 'ls', goldenFile: 'ls.ans' },
+  { commandText: 'cat', goldenFile: 'cat.ans' },
+  { commandText: 'history', goldenFile: 'history.ans' },
+  { commandText: 'ai-models', goldenFile: 'ai-models.ans' },
+  { commandText: 'weather --help', goldenFile: 'weather-help.ans' },
+  { commandText: 'search --help', goldenFile: 'search-help.ans' },
+  { commandText: 'hn --help', goldenFile: 'hn-help.ans' },
+  { commandText: 'cat resume.md', goldenFile: 'cat-resume.ans' },
+  { commandText: 'projects', goldenFile: 'projects.ans' },
+  { commandText: 'projects python', goldenFile: 'projects-filter.ans' },
+  { commandText: 'projects --json', goldenFile: 'projects-json.ans' },
+  { commandText: 'case pcpg', goldenFile: 'case-pcpg.ans' },
+  { commandText: 'skills', goldenFile: 'skills.ans' },
+  { commandText: 'timeline', goldenFile: 'timeline.ans' },
+  { commandText: 'export about', goldenFile: 'export-about.ans' },
+  { commandText: 'md https://bad.invalid/post.md', goldenFile: 'md-fallback.ans' },
   // WAVE 10 trustworthy-AI goldens: all local-only (no network), read-only
   // (no mode/memory/threshold mutation), so the shared page state stays
   // clean for the sessions after them.
-  { commandText: `ai details`, goldenFile: `ai-details.ans` },
-  { commandText: `ai-memory`, goldenFile: `ai-memory.ans` },
-  { commandText: `ai-memory --json`, goldenFile: `ai-memory-json.ans` },
-  { commandText: `ai sources pcpg analyzer`, goldenFile: `ai-sources.ans` },
+  { commandText: 'ai details', goldenFile: 'ai-details.ans' },
+  { commandText: 'ai-memory', goldenFile: 'ai-memory.ans' },
+  { commandText: 'ai-memory --json', goldenFile: 'ai-memory-json.ans' },
+  { commandText: 'ai sources pcpg analyzer', goldenFile: 'ai-sources.ans' },
   // WAVE 12 unified-background goldens: read-only status plus a static round
   // trip and restore (all deterministic text). Placed before `md --help`,
   // which runs last because its viewer iframe intercepts terminal clicks.
-  { commandText: `background`, goldenFile: `background.ans` },
-  { commandText: `background static`, goldenFile: `background-static.ans` },
-  { commandText: `background ambient`, goldenFile: `background-ambient.ans` },
-  { commandText: `man background`, goldenFile: `man-background.ans` },
+  { commandText: 'background', goldenFile: 'background.ans' },
+  { commandText: 'background static', goldenFile: 'background-static.ans' },
+  { commandText: 'background ambient', goldenFile: 'background-ambient.ans' },
+  { commandText: 'man background', goldenFile: 'man-background.ans' },
   // `md --help` opens the fullscreen viewer iframe (legacy golden pin), so
   // it runs last: the iframe would intercept terminal clicks for any later
   // session.
-  { commandText: `md --help`, goldenFile: `md-help.ans` },
+  { commandText: 'md --help', goldenFile: 'md-help.ans' },
 ];
 
 function sleepMillis(durationMillis) {
@@ -95,27 +95,27 @@ function countPrompts(streamText) {
 
 function maskTiming(streamText) {
   const escChar = String.fromCharCode(27);
-  const clockPattern = new RegExp(`System clock: [^${escChar}\\n]*`, `g`);
+  const clockPattern = new RegExp(`System clock: [^${escChar}\\n]*`, 'g');
   const durationPattern = /\d+ days?, \d+ hours?, \d+ minutes?/g;
   const datePattern = new RegExp(
     `(Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \\d{1,2} \\d{4} \\d{2}:\\d{2}:\\d{2}[^${escChar}\\n]*`,
-    `g`,
+    'g',
   );
-  const searchErrorPattern = new RegExp(`Search error: [^${escChar}\\n]*`, `g`);
-  let masked = streamText.replace(clockPattern, `System clock: <MASKED-CLOCK>`);
-  masked = masked.replace(durationPattern, `<MASKED-DURATION>`);
-  masked = masked.replace(datePattern, `<MASKED-DATE>`);
-  masked = masked.replace(searchErrorPattern, `Search error: <MASKED-NETWORK>`);
+  const searchErrorPattern = new RegExp(`Search error: [^${escChar}\\n]*`, 'g');
+  let masked = streamText.replace(clockPattern, 'System clock: <MASKED-CLOCK>');
+  masked = masked.replace(durationPattern, '<MASKED-DURATION>');
+  masked = masked.replace(datePattern, '<MASKED-DATE>');
+  masked = masked.replace(searchErrorPattern, 'Search error: <MASKED-NETWORK>');
   return masked;
 }
 
 function sha256Hex(payload) {
-  return createHash(`sha256`).update(payload, `utf8`).digest(`hex`);
+  return createHash('sha256').update(payload, 'utf8').digest('hex');
 }
 
 function readCommitSha() {
   try {
-    const rawOutput = execFileSync(`git`, [`rev-parse`, `HEAD`], { cwd: SITE_ROOT, encoding: `utf8` });
+    const rawOutput = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: SITE_ROOT, encoding: 'utf8' });
     return rawOutput.trim();
   } catch (gitError) {
     process.stderr.write(`snapshot: git rev-parse failed: ${gitError.message}\n`);
@@ -132,13 +132,13 @@ function shouldAllowUrl(targetUrl) {
     return false;
   }
   const hostName = parsedUrl.hostname;
-  return hostName === `127.0.0.1` || hostName === `localhost` || hostName === `cdn.jsdelivr.net`;
+  return hostName === '127.0.0.1' || hostName === 'localhost' || hostName === 'cdn.jsdelivr.net';
 }
 
 function isSearchStubUrl(targetUrl) {
   try {
     const parsedUrl = new URL(targetUrl);
-    return parsedUrl.hostname === SEARCH_STUB_HOST && parsedUrl.pathname.startsWith(`/search`);
+    return parsedUrl.hostname === SEARCH_STUB_HOST && parsedUrl.pathname.startsWith('/search');
   } catch (stubMatchError) {
     process.stderr.write(`snapshot: search-stub match failed: ${stubMatchError.message}\n`);
     return false;
@@ -147,8 +147,8 @@ function isSearchStubUrl(targetUrl) {
 
 function playwrightPresent() {
   return (
-    existsSync(join(SITE_ROOT, `node_modules`, `playwright`)) ||
-    existsSync(join(SITE_ROOT, `node_modules`, `playwright-core`))
+    existsSync(join(SITE_ROOT, 'node_modules', 'playwright')) ||
+    existsSync(join(SITE_ROOT, 'node_modules', 'playwright-core'))
   );
 }
 
@@ -240,7 +240,7 @@ async function waitForServerReady() {
     }
     if (ready === false) {
       if (Date.now() > deadline) {
-        throw new Error(`snapshot: static server did not become ready`);
+        throw new Error('snapshot: static server did not become ready');
       }
       await sleepMillis(150);
     }
@@ -248,11 +248,11 @@ async function waitForServerReady() {
 }
 
 async function startStaticServer() {
-  const serverProcess = spawn(`python3`, [`-m`, `http.server`, `${SERVER_PORT}`, `--bind`, `127.0.0.1`], {
+  const serverProcess = spawn('python3', ['-m', 'http.server', `${SERVER_PORT}`, '--bind', '127.0.0.1'], {
     cwd: SITE_ROOT,
-    stdio: `ignore`,
+    stdio: 'ignore',
   });
-  serverProcess.on(`error`, (spawnError) => {
+  serverProcess.on('error', (spawnError) => {
     process.stderr.write(`snapshot: static server process error: ${spawnError.message}\n`);
   });
   await waitForServerReady();
@@ -263,7 +263,7 @@ async function waitForSegment(driver, sliceStart, timeoutMillis) {
   const startedAt = Date.now();
   let lastLength = sliceStart;
   let quietSince = Date.now();
-  let currentSlice = ``;
+  let currentSlice = '';
   let settled = false;
   while (settled === false) {
     const snapshotLength = await driver.snapshotLength();
@@ -286,7 +286,7 @@ async function waitForSegment(driver, sliceStart, timeoutMillis) {
 }
 
 function writeGolden(fileName, payload) {
-  writeFileSync(join(GOLDEN_ROOT, fileName), payload, `utf8`);
+  writeFileSync(join(GOLDEN_ROOT, fileName), payload, 'utf8');
 }
 
 function buildManifest(sessionEntries) {
@@ -296,15 +296,15 @@ function buildManifest(sessionEntries) {
   }
   const manifestObject = {
     version: 1,
-    tool: `tools/snapshot-terminal.mjs`,
+    tool: 'tools/snapshot-terminal.mjs',
     commit: readCommitSha(),
     origin: `${SNAPSHOT_ORIGIN}/`,
     viewport: { width: VIEW_WIDTH, height: VIEW_HEIGHT },
     masked: [
-      `System clock: <MASKED-CLOCK>`,
-      `uptime durations: <MASKED-DURATION>`,
-      `Date().toString(): <MASKED-DATE>`,
-      `search network errors: <MASKED-NETWORK>`,
+      'System clock: <MASKED-CLOCK>',
+      'uptime durations: <MASKED-DURATION>',
+      'Date().toString(): <MASKED-DATE>',
+      'search network errors: <MASKED-NETWORK>',
     ],
     sessions: sessionEntries,
     totalPrompts: promptTotal,
@@ -315,57 +315,57 @@ function buildManifest(sessionEntries) {
 async function createPlaywrightDriver(initScriptText, serverOrigin) {
   let playwrightPackage = null;
   try {
-    playwrightPackage = await import(`playwright`);
+    playwrightPackage = await import('playwright');
   } catch (playwrightError) {
     process.stderr.write(`snapshot: playwright import failed, trying playwright-core (${playwrightError.message})\n`);
-    playwrightPackage = await import(`playwright-core`);
+    playwrightPackage = await import('playwright-core');
   }
   const browser = await playwrightPackage.chromium.launch({
     headless: true,
     args: [
-      `--disable-background-timer-throttling`,
-      `--disable-backgrounding-occluded-windows`,
-      `--disable-renderer-backgrounding`,
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
     ],
   });
   const browserContext = await browser.newContext({ viewport: { width: VIEW_WIDTH, height: VIEW_HEIGHT } });
   await browserContext.addInitScript(initScriptText);
   const page = await browserContext.newPage();
-  page.on(`crash`, () => {
-    process.stderr.write(`snapshot: page crashed\n`);
+  page.on('crash', () => {
+    process.stderr.write('snapshot: page crashed\n');
   });
-  page.on(`close`, () => {
-    process.stderr.write(`snapshot: page closed\n`);
+  page.on('close', () => {
+    process.stderr.write('snapshot: page closed\n');
   });
   await page.bringToFront();
-  await page.route(`**/*`, async (route) => {
+  await page.route('**/*', async (route) => {
     const requestUrl = route.request().url();
     if (shouldAllowUrl(requestUrl)) {
       await route.continue();
       return;
     }
     if (isSearchStubUrl(requestUrl)) {
-      await route.fulfill({ status: 200, contentType: `application/json`, body: `{"results":[]}` });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{"results":[]}' });
       return;
     }
-    await route.abort(`blockedbyclient`);
+    await route.abort('blockedbyclient');
   });
-  await page.goto(`${serverOrigin}/`, { waitUntil: `domcontentloaded`, timeout: 30000 });
-  const terminalLocator = page.locator(`#terminal-container`);
+  await page.goto(`${serverOrigin}/`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  const terminalLocator = page.locator('#terminal-container');
   return {
-    driverName: `playwright`,
+    driverName: 'playwright',
     async snapshotLength() {
       return Number(await page.evaluate(() => window.__snapshotChunks.length));
     },
     async snapshotSlice(sliceStart) {
       return String(
-        await page.evaluate((sliceOffset) => window.__snapshotChunks.slice(sliceOffset).join(``), sliceStart),
+        await page.evaluate((sliceOffset) => window.__snapshotChunks.slice(sliceOffset).join(''), sliceStart),
       );
     },
     async typeLine(lineText) {
       await terminalLocator.click();
       await page.keyboard.type(lineText);
-      await page.keyboard.press(`Enter`);
+      await page.keyboard.press('Enter');
     },
     async close() {
       await browser.close();
@@ -375,38 +375,38 @@ async function createPlaywrightDriver(initScriptText, serverOrigin) {
 
 async function createFallbackDriver(initScriptText, serverOrigin) {
   const candidateBinaries = [
-    process.env.SNAPSHOT_CHROMIUM || ``,
-    `/usr/bin/chromium`,
-    `/usr/bin/chromium-browser`,
-    `/usr/bin/google-chrome`,
+    process.env.SNAPSHOT_CHROMIUM || '',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/google-chrome',
   ];
-  let browserBinary = ``;
+  let browserBinary = '';
   for (const candidateBinary of candidateBinaries) {
-    if (candidateBinary !== `` && existsSync(candidateBinary)) {
+    if (candidateBinary !== '' && existsSync(candidateBinary)) {
       browserBinary = candidateBinary;
       break;
     }
   }
-  if (browserBinary === ``) {
-    throw new Error(`snapshot: no system chromium binary found; set SNAPSHOT_CHROMIUM`);
+  if (browserBinary === '') {
+    throw new Error('snapshot: no system chromium binary found; set SNAPSHOT_CHROMIUM');
   }
-  const profileRoot = await mkdtemp(join(tmpdir(), `snapshot-chromium-`));
+  const profileRoot = await mkdtemp(join(tmpdir(), 'snapshot-chromium-'));
   const debugOrigin = `http://127.0.0.1:${DEBUG_PORT}`;
   const browserArgs = [
-    `--headless`,
-    `--disable-gpu`,
-    `--no-sandbox`,
-    `--disable-dev-shm-usage`,
-    `--disable-background-timer-throttling`,
-    `--disable-backgrounding-occluded-windows`,
-    `--disable-renderer-backgrounding`,
+    '--headless',
+    '--disable-gpu',
+    '--no-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
     `--window-size=${VIEW_WIDTH},${VIEW_HEIGHT}`,
     `--remote-debugging-port=${DEBUG_PORT}`,
     `--user-data-dir=${profileRoot}`,
-    `about:blank`,
+    'about:blank',
   ];
-  const browserProcess = spawn(browserBinary, browserArgs, { stdio: `ignore` });
-  browserProcess.on(`error`, (browserError) => {
+  const browserProcess = spawn(browserBinary, browserArgs, { stdio: 'ignore' });
+  browserProcess.on('error', (browserError) => {
     process.stderr.write(`snapshot: chromium spawn failed: ${browserError.message}\n`);
   });
 
@@ -419,7 +419,7 @@ async function createFallbackDriver(initScriptText, serverOrigin) {
       const listResponse = await fetch(`${debugOrigin}/json/list`);
       const targetList = await listResponse.json();
       for (const targetEntry of targetList) {
-        if (targetEntry.type === `page`) {
+        if (targetEntry.type === 'page') {
           pageTarget = targetEntry;
           break;
         }
@@ -431,14 +431,14 @@ async function createFallbackDriver(initScriptText, serverOrigin) {
       }
     }
     if (pageTarget === null && Date.now() > debugDeadline) {
-      throw new Error(`snapshot: chromium debug port did not appear`);
+      throw new Error('snapshot: chromium debug port did not appear');
     }
   }
 
   const debugSocket = new WebSocket(pageTarget.webSocketDebuggerUrl);
   await new Promise((resolveSocket, rejectSocket) => {
-    debugSocket.addEventListener(`open`, () => resolveSocket(undefined), { once: true });
-    debugSocket.addEventListener(`error`, (socketError) => rejectSocket(socketError), { once: true });
+    debugSocket.addEventListener('open', () => resolveSocket(undefined), { once: true });
+    debugSocket.addEventListener('error', (socketError) => rejectSocket(socketError), { once: true });
   });
 
   let nextCommandId = 0;
@@ -458,26 +458,26 @@ async function createFallbackDriver(initScriptText, serverOrigin) {
     const pausedUrl = pausedParams.request.url;
     try {
       if (shouldAllowUrl(pausedUrl)) {
-        await sendCommand(`Fetch.continueRequest`, { requestId: pausedId });
+        await sendCommand('Fetch.continueRequest', { requestId: pausedId });
         return;
       }
       if (isSearchStubUrl(pausedUrl)) {
-        const stubBody = Buffer.from(`{"results":[]}`, `utf8`).toString(`base64`);
-        await sendCommand(`Fetch.fulfillRequest`, {
+        const stubBody = Buffer.from('{"results":[]}', 'utf8').toString('base64');
+        await sendCommand('Fetch.fulfillRequest', {
           requestId: pausedId,
           responseCode: 200,
-          responseHeaders: [{ name: `Content-Type`, value: `application/json` }],
+          responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
           body: stubBody,
         });
         return;
       }
-      await sendCommand(`Fetch.failRequest`, { requestId: pausedId, errorReason: `BlockedByClient` });
+      await sendCommand('Fetch.failRequest', { requestId: pausedId, errorReason: 'BlockedByClient' });
     } catch (pausedError) {
       process.stderr.write(`snapshot: paused-request handling failed for ${pausedUrl}: ${pausedError.message}\n`);
     }
   }
 
-  debugSocket.addEventListener(`message`, (socketEvent) => {
+  debugSocket.addEventListener('message', (socketEvent) => {
     let incoming = null;
     try {
       incoming = JSON.parse(String(socketEvent.data));
@@ -485,7 +485,7 @@ async function createFallbackDriver(initScriptText, serverOrigin) {
       process.stderr.write(`snapshot: CDP message parse failed: ${parseError.message}\n`);
       return;
     }
-    if (typeof incoming.id === `number`) {
+    if (typeof incoming.id === 'number') {
       const waiter = pendingCommands.get(incoming.id);
       if (waiter !== undefined) {
         pendingCommands.delete(incoming.id);
@@ -497,7 +497,7 @@ async function createFallbackDriver(initScriptText, serverOrigin) {
       }
       return;
     }
-    if (incoming.method === `Fetch.requestPaused`) {
+    if (incoming.method === 'Fetch.requestPaused') {
       handlePausedRequest(incoming.params).catch((pauseError) => {
         process.stderr.write(`snapshot: pause handler failed: ${pauseError.message}\n`);
       });
@@ -505,7 +505,7 @@ async function createFallbackDriver(initScriptText, serverOrigin) {
   });
 
   async function evaluateValue(expressionText) {
-    const commandResult = await sendCommand(`Runtime.evaluate`, {
+    const commandResult = await sendCommand('Runtime.evaluate', {
       expression: expressionText,
       awaitPromise: true,
       returnByValue: true,
@@ -516,52 +516,52 @@ async function createFallbackDriver(initScriptText, serverOrigin) {
     return commandResult.result.value;
   }
 
-  await sendCommand(`Fetch.enable`, { patterns: [{ urlPattern: `*` }] });
-  await sendCommand(`Page.addScriptToEvaluateOnNewDocument`, { source: initScriptText });
-  await sendCommand(`Page.navigate`, { url: `${serverOrigin}/` });
+  await sendCommand('Fetch.enable', { patterns: [{ urlPattern: '*' }] });
+  await sendCommand('Page.addScriptToEvaluateOnNewDocument', { source: initScriptText });
+  await sendCommand('Page.navigate', { url: `${serverOrigin}/` });
 
   async function focusTerminal() {
     const boxJson = await evaluateValue(
-      `JSON.stringify(document.getElementById('terminal-container').getBoundingClientRect())`,
+      'JSON.stringify(document.getElementById(\'terminal-container\').getBoundingClientRect())',
     );
     const boundingBox = JSON.parse(boxJson);
     const clickX = boundingBox.x + boundingBox.width / 2;
     const clickY = boundingBox.y + boundingBox.height / 2;
-    await sendCommand(`Input.dispatchMouseEvent`, {
-      type: `mousePressed`,
+    await sendCommand('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
       x: clickX,
       y: clickY,
-      button: `left`,
+      button: 'left',
       clickCount: 1,
     });
-    await sendCommand(`Input.dispatchMouseEvent`, {
-      type: `mouseReleased`,
+    await sendCommand('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
       x: clickX,
       y: clickY,
-      button: `left`,
+      button: 'left',
       clickCount: 1,
     });
   }
 
   return {
-    driverName: `system-chromium-cdp`,
+    driverName: 'system-chromium-cdp',
     async snapshotLength() {
-      return Number(await evaluateValue(`window.__snapshotChunks.length`));
+      return Number(await evaluateValue('window.__snapshotChunks.length'));
     },
     async snapshotSlice(sliceStart) {
       return String(await evaluateValue(`window.__snapshotChunks.slice(${sliceStart}).join('')`));
     },
     async typeLine(lineText) {
       await focusTerminal();
-      await sendCommand(`Input.insertText`, { text: lineText });
-      await sendCommand(`Input.dispatchKeyEvent`, {
-        type: `rawKeyDown`,
-        key: `Enter`,
-        code: `Enter`,
+      await sendCommand('Input.insertText', { text: lineText });
+      await sendCommand('Input.dispatchKeyEvent', {
+        type: 'rawKeyDown',
+        key: 'Enter',
+        code: 'Enter',
         windowsVirtualKeyCode: 13,
-        text: `\r`,
+        text: '\r',
       });
-      await sendCommand(`Input.dispatchKeyEvent`, { type: `keyUp`, key: `Enter`, code: `Enter`, windowsVirtualKeyCode: 13 });
+      await sendCommand('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
     },
     async close() {
       try {
@@ -580,8 +580,8 @@ async function createFallbackDriver(initScriptText, serverOrigin) {
   };
 }
 
-async function createDriver(initScriptText, serverOrigin) {
-  const forceFallback = process.env.SNAPSHOT_FORCE_CDP === `1`;
+function createDriver(initScriptText, serverOrigin) {
+  const forceFallback = process.env.SNAPSHOT_FORCE_CDP === '1';
   if (forceFallback === false && playwrightPresent()) {
     return createPlaywrightDriver(initScriptText, serverOrigin);
   }
@@ -599,13 +599,13 @@ async function main() {
 
     const bootSlice = await waitForSegment(driver, 0, BOOT_TIMEOUT_MILLIS);
     const bootMasked = maskTiming(bootSlice);
-    writeGolden(`boot.ans`, bootMasked);
+    writeGolden('boot.ans', bootMasked);
     const manifestSessions = [
       {
-        command: `(boot)`,
-        file: `boot.ans`,
+        command: '(boot)',
+        file: 'boot.ans',
         sha256: sha256Hex(bootMasked),
-        bytes: Buffer.byteLength(bootMasked, `utf8`),
+        bytes: Buffer.byteLength(bootMasked, 'utf8'),
         prompts: countPrompts(bootMasked),
       },
     ];
@@ -620,14 +620,14 @@ async function main() {
         command: session.commandText,
         file: session.goldenFile,
         sha256: sha256Hex(maskedSlice),
-        bytes: Buffer.byteLength(maskedSlice, `utf8`),
+        bytes: Buffer.byteLength(maskedSlice, 'utf8'),
         prompts: countPrompts(maskedSlice),
       });
       sliceCursor = await driver.snapshotLength();
       process.stdout.write(`snapshot: ${session.commandText} -> ${session.goldenFile}\n`);
     }
 
-    writeGolden(`manifest.json`, buildManifest(manifestSessions));
+    writeGolden('manifest.json', buildManifest(manifestSessions));
     process.stdout.write(`snapshot: wrote ${manifestSessions.length} goldens to ${GOLDEN_ROOT}\n`);
   } finally {
     if (driver !== null) {

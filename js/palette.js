@@ -105,6 +105,19 @@ function moveHighlight(step) {
   renderPaletteList();
 }
 
+function wirePaletteRow(rowButton, entry) {
+  rowButton.addEventListener('click', () => {
+    highlightedEntryName = entry.name;
+    submitPalette(entry);
+  });
+  rowButton.addEventListener('mousemove', () => {
+    if (highlightedEntryName !== entry.name) {
+      highlightedEntryName = entry.name;
+      renderPaletteList();
+    }
+  });
+}
+
 function renderPaletteList() {
   paletteList.textContent = '';
   const groups = [
@@ -136,16 +149,7 @@ function renderPaletteList() {
       commandSpan.textContent = usageSpec;
       rowButton.appendChild(titleSpan);
       rowButton.appendChild(commandSpan);
-      rowButton.addEventListener('click', () => {
-        highlightedEntryName = entry.name;
-        submitPalette(entry);
-      });
-      rowButton.addEventListener('mousemove', () => {
-        if (highlightedEntryName !== entry.name) {
-          highlightedEntryName = entry.name;
-          renderPaletteList();
-        }
-      });
+      wirePaletteRow(rowButton, entry);
       paletteList.appendChild(rowButton);
     }
   }
