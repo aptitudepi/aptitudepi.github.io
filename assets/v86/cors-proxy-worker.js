@@ -488,11 +488,23 @@ async function handleRequest(request, env, ctx) {
           timestamp: createdAt
         };
 
-        WALL_POSTS.unshift(newPost);
-        if (WALL_POSTS.length > WALL_POSTS_MAX) WALL_POSTS.pop();
+        // Read-before-write: WALL_POSTS is per-isolate memory (empty on a
+        // fresh isolate), so load the KV copy first — otherwise this POST
+        // overwrites everyone else's posts with only the new one.
+        let currentPosts = WALL_POSTS;
+        if (env && env.WALL_KV) {
+          try {
+            const storedPosts = await env.WALL_KV.get('posts', { type: 'json' });
+            if (Array.isArray(storedPosts)) currentPosts = storedPosts;
+          } catch (readError) { console.warn(`wall: kv read failed`, readError); }
+        }
+        currentPosts.unshift(newPost);
+        if (currentPosts.length > WALL_POSTS_MAX) currentPosts.length = WALL_POSTS_MAX;
+        WALL_POSTS = currentPosts;
+        globalThis._WALL_POSTS = currentPosts;
 
         if (env && env.WALL_KV) {
-          try { await env.WALL_KV.put('posts', JSON.stringify(WALL_POSTS)); } catch (persistError) { console.warn(`wall: kv put failed`, persistError); }
+          try { await env.WALL_KV.put('posts', JSON.stringify(currentPosts)); } catch (persistError) { console.warn(`wall: kv put failed`, persistError); }
         }
 
         // Delete token: random 128-bit, returned once; the server stores
@@ -626,10 +638,37 @@ async function handleRequest(request, env, ctx) {
     }
   }
 
+  // ── 4. Public IP / ping endpoint (/ip) ──
+  // Serves js/commands.js runMyipCommand, which expects JSON
+  // {ip, city, country, continent, asOrganization, asn, ray}.
+  // Derived server-side from the Cloudflare edge (cf-connecting-ip +
+  // request.cf) — never trusts client input. CORS headers included so
+  // browser fetches never surface as opaque CORS failures.
+  if (url.pathname === '/ip') {
+    const observedIp = request.headers.get('cf-connecting-ip') || '';
+    const edgeInfo = request.cf || {};
+    const ipPayload = {
+      ip: observedIp,
+      city: typeof edgeInfo.city === 'string' ? edgeInfo.city : '',
+      country: typeof edgeInfo.country === 'string' ? edgeInfo.country : '',
+      continent: typeof edgeInfo.continent === 'string' ? edgeInfo.continent : '',
+      asOrganization: typeof edgeInfo.asOrganization === 'string' ? edgeInfo.asOrganization : '',
+      asn: edgeInfo.asn !== undefined && edgeInfo.asn !== null ? String(edgeInfo.asn) : '',
+      ray: request.headers.get('cf-ray') || '',
+    };
+    return new Response(JSON.stringify(ipPayload), {
+      status: 200,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    });
+  }
+
   // ── 2. Existing v86 CORS Proxy Handler (?url=...) ──
   const target = url.searchParams.get('url');
   if (!target) {
-    return new Response('Missing ?url= parameter or /ai endpoint', { status: 400 });
+    return new Response('Missing ?url= parameter or /ai endpoint', {
+      status: 400,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'text/plain' },
+    });
   }
 
   const headers = new Headers(request.headers);

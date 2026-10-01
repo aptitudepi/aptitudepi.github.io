@@ -102,7 +102,7 @@ inside the Pages artifact.
 - Uses the V86 constructor with WASM, a 64MB heap, NE2000 network via `fetch` backend, 9p filesystem from a static JSON manifest, and BIOS/VGA BIOS/kernel images.
 - Serial I/O: `serial0-output-byte` callback writes to xterm, `serial0-input` sends keystrokes (including control characters) from the terminal.
 - Ctrl+C, Ctrl+D, and other control codes pass through to the VM's serial port.
-- The 9p `host9p on /mnt` boot message is cosmetic — the mount succeeds despite the duplicate-attempt warning.
+- The 9p `host9p on /mnt` boot message is cosmetic — the mount succeeds despite the duplicate-attempt warning. Inside the guest, re-mount idempotently: `mountpoint -q /mnt || mount -t 9p host9p /mnt` (a bare re-mount prints `Device or resource busy`).
 
 ### Networking
 

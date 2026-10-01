@@ -40,8 +40,14 @@ export function getStoredHistory() {
 }
 
 export function appendHistoryTurn(role, content) {
+  if (role !== `user` && role !== `assistant`) return;
+  const cleanContent = typeof content === `string` ? content.trim() : ``;
+  // Real-only: empty streams, whitespace-only chunks and non-string payloads
+  // are never stored — they render as blank ASSISTANT lines in `ai-memory`
+  // and inject bare `ASSISTANT:` lines into the next prompt.
+  if (cleanContent.length === 0) return;
   const history = getStoredHistory();
-  history.push({ role, content, timestamp: new Date().toISOString() });
+  history.push({ role, content: cleanContent, timestamp: new Date().toISOString() });
   if (history.length > 10) history.shift(); // Retain last 10 turns
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
@@ -89,8 +95,9 @@ export function buildMemoryPromptContext() {
   if (mem.facts.length) {
     contextStr += `[Saved User Memory Facts]\n${mem.facts.map(f => `- ${f}`).join('\n')}\n\n`;
   }
-  if (history.length) {
-    contextStr += `[Recent Conversation History]\n${history.map(h => `${h.role.toUpperCase()}: ${h.content}`).join('\n')}\n\n`;
+  const realTurns = history.filter((h) => h && typeof h.content === `string` && h.content.trim().length > 0);
+  if (realTurns.length) {
+    contextStr += `[Recent Conversation History]\n${realTurns.map(h => `${h.role.toUpperCase()}: ${String(h.content).trim()}`).join('\n')}\n\n`;
   }
   return contextStr;
 }

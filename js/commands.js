@@ -1337,9 +1337,16 @@ async function runAiMemoryCommand(term, args, runSignal) {
   if (!storedHistory.length) {
     term.writeln(`${SITE_MUTED}No conversation history stored.${ANSI_RESET}`);
   } else {
-    for (let turnIndex = 0; turnIndex < storedHistory.length; turnIndex++) {
-      const turn = storedHistory[turnIndex];
-      term.writeln(`  ${SITE_FAINT}[${turnIndex + 1}] ${turn.role.toUpperCase()}:${ANSI_RESET} ${sanitizeTerminalText(turn.content)}`);
+    // Real-only view: legacy empty/whitespace turns (stored before the
+    // append guard) are hidden, never rendered as blank lines.
+    const realTurns = storedHistory.filter((t) => t && typeof t.content === `string` && t.content.trim().length > 0);
+    if (!realTurns.length) {
+      term.writeln(`${SITE_MUTED}No conversation history stored.${ANSI_RESET}`);
+    } else {
+      for (let turnIndex = 0; turnIndex < realTurns.length; turnIndex++) {
+        const turn = realTurns[turnIndex];
+        term.writeln(`  ${SITE_FAINT}[${turnIndex + 1}] ${turn.role.toUpperCase()}:${ANSI_RESET} ${sanitizeTerminalText(String(turn.content).trim())}`);
+      }
     }
   }
   term.writeln(`${SITE_MUTED}Cloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download${ANSI_RESET}`);

@@ -7,9 +7,9 @@
 // function directly, so a guided button and the typed command are the same
 // code path by construction.
 
-import { resolveCommand, SITE_MUTED, SITE_GREEN, SITE_WHITE, ANSI_RESET } from './commands.js';
+import { resolveCommand, SITE_MUTED, ANSI_RESET } from './commands.js';
 import { executeCommand } from './shell.js';
-import { getMode, getTerm, isBootDone } from './terminal.js';
+import { getMode, getTerm, isBootDone, injectAndSubmitLine } from './terminal.js';
 
 const GUIDED_MODE_KEY = 'dvxb.terminalMode';
 
@@ -60,12 +60,11 @@ function applyMode(nextMode) {
   }
 }
 
-// Narrated echo: intent line, then the raw command line, then the real
-// output. A guided run of `ls links` differs from typing it only by these
-// two narration lines. Gated states never fail silently: a pre-boot or
-// Linux-mode click narrates why it did not run (first-time visitors land
-// in Guided mode and click fast, so a dead button reads as "AI is broken").
-function runGuidedCommand(commandLine, intentText) {
+// Guided runs inject the exact command onto the live prompt and submit it
+// — byte-identical to typing it or picking it from Explore (palette), which
+// uses injectAndSubmitLine too. No narration lines: the transcript shows the
+// single `❯ <command>` prompt line plus output on every path by construction.
+function runGuidedCommand(commandLine) {
   const activeTerm = getTerm();
   if (!activeTerm) return false;
   if (!isBootDone()) {
@@ -78,9 +77,9 @@ function runGuidedCommand(commandLine, intentText) {
   }
   const lineTokens = String(commandLine).trim().split(/\s+/);
   if (!resolveCommand(lineTokens[0] ?? '')) return false;
-  activeTerm.writeln(`${SITE_MUTED}◈ ${intentText}${ANSI_RESET}`);
-  activeTerm.writeln(`${SITE_GREEN}❯${ANSI_RESET} ${SITE_WHITE}${commandLine}${ANSI_RESET}`);
-  executeCommand(commandLine, activeTerm);
+  if (injectAndSubmitLine(commandLine) === false) {
+    executeCommand(commandLine, activeTerm);
+  }
   return true;
 }
 

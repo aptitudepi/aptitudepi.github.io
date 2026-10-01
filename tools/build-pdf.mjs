@@ -40,6 +40,18 @@ function stripPdfTexOnly(src) {
   return `\\def\\XeTeXLink@font{}\n` + filtered;
 }
 
+// Public PDFs must not carry phone numbers or email addresses (the .tex
+// source keeps them for print). Scrubbed here so both local and CI builds
+// produce clean PDFs without touching the private Full-CV source.
+function stripPrivateContact(src) {
+  return src
+    .replace(/\(\d{3}\)\s*[-.]?\s*\d{3}\s*[-.]?\s*\d{4}/g, '')
+    .replace(/\b\d{3}\s*[-.]\s*\d{3}\s*[-.]\s*\d{4}\b/g, '')
+    .replace(/\\href\{mailto:[^}]*\}\{[^}]*\}/gi, '')
+    .replace(/\\url\{mailto:[^}]*\}/gi, '')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '');
+}
+
 // Compile with Tectonic. Tectonic fetches fonts/packages from its remote
 // bundle on demand; transient failures are retried. NO `continue-on-errors`:
 // a missing font must abort the build so a torn PDF can never be produced.
@@ -65,7 +77,7 @@ mkdirSync(OUT_DIR, { recursive: true });
 
 for (const job of JOBS) {
   const texPath = join(FULL_CV, job.tex);
-  const cleaned = stripPdfTexOnly(readFileSync(texPath, 'utf8'));
+  const cleaned = stripPrivateContact(stripPdfTexOnly(readFileSync(texPath, 'utf8')));
   const tmpTex = join(BUILD_DIR, job.tex);
   writeFileSync(tmpTex, cleaned);
 
