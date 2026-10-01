@@ -486,7 +486,7 @@ async function streamLocal(pipelineHandle, prompt, context, term, runSignal) {
   // baseline + history + tool docs bury the retrieved CV chunks.
   const fullPrompt = `<|im_start|>system\n${LOCAL_SYSTEM_PROMPT}\n\nRetrieved Context:\n${context}<|im_end|>\n<|im_start|>user\n${prompt}<|im_end|>\n<|im_start|>assistant\n`;
 
-  await p(fullPrompt, {
+  await pipelineHandle(fullPrompt, {
     max_new_tokens: 256,
     temperature: 0.4,
     do_sample: true,

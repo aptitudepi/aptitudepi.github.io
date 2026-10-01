@@ -40,8 +40,8 @@ export function getStoredHistory() {
 }
 
 export function appendHistoryTurn(role, content) {
-  if (role !== `user` && role !== `assistant`) return;
-  const cleanContent = typeof content === `string` ? content.trim() : ``;
+  if (role !== 'user' && role !== 'assistant') return;
+  const cleanContent = typeof content === 'string' ? content.trim() : '';
   // Real-only: empty streams, whitespace-only chunks and non-string payloads
   // are never stored — they render as blank ASSISTANT lines in `ai-memory`
   // and inject bare `ASSISTANT:` lines into the next prompt.
@@ -71,7 +71,7 @@ export function isMemoryEnabled() {
   try {
     const storedFlag = localStorage.getItem(MEMORY_ENABLED_KEY);
     if (storedFlag === null) return true;
-    return storedFlag !== `0`;
+    return storedFlag !== '0';
   } catch (storageError) {
     console.warn(`memory flag read skipped: ${storageError.message}`);
     return true;
@@ -80,7 +80,7 @@ export function isMemoryEnabled() {
 
 export function setMemoryEnabled(enabledFlag) {
   try {
-    localStorage.setItem(MEMORY_ENABLED_KEY, enabledFlag ? `1` : `0`);
+    localStorage.setItem(MEMORY_ENABLED_KEY, enabledFlag ? '1' : '0');
   } catch (storageError) {
     console.warn(`memory flag write skipped: ${storageError.message}`);
   }
@@ -95,7 +95,7 @@ export function buildMemoryPromptContext() {
   if (mem.facts.length) {
     contextStr += `[Saved User Memory Facts]\n${mem.facts.map(f => `- ${f}`).join('\n')}\n\n`;
   }
-  const realTurns = history.filter((h) => h && typeof h.content === `string` && h.content.trim().length > 0);
+  const realTurns = history.filter((h) => h && typeof h.content === 'string' && h.content.trim().length > 0);
   if (realTurns.length) {
     contextStr += `[Recent Conversation History]\n${realTurns.map(h => `${h.role.toUpperCase()}: ${String(h.content).trim()}`).join('\n')}\n\n`;
   }

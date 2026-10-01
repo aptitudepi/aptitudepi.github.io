@@ -27,7 +27,7 @@ let guidedAiInput = null;
 let guidedAiRow = null;
 let guidedAskButton = null;
 
-const GUIDED_AI_ROW_ID = `guided-ai-row`;
+const GUIDED_AI_ROW_ID = 'guided-ai-row';
 const GUIDED_DROPDOWN_CLOSE_MILLIS = 260;
 
 function readStoredMode() {
@@ -98,18 +98,18 @@ function revealAiPicker() {
 }
 
 function isAiRowOpen() {
-  return Boolean(guidedAiRow) && guidedAiRow.hidden === false && guidedAiRow.classList.contains(`is-open`);
+  return Boolean(guidedAiRow) && guidedAiRow.hidden === false && guidedAiRow.classList.contains('is-open');
 }
 
 function isDropdownMotionAllowed() {
   try {
-    const reduceMatcher = window.matchMedia(`(prefers-reduced-motion: reduce)`);
+    const reduceMatcher = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (reduceMatcher.matches) return false;
   } catch (matcherError) {
     console.warn(`guided dropdown motion check skipped: ${matcherError.message}`);
   }
   try {
-    if (document.documentElement.dataset.motion === `off`) return false;
+    if (document.documentElement.dataset.motion === 'off') return false;
   } catch (datasetError) {
     console.warn(`guided dropdown motion dataset skipped: ${datasetError.message}`);
   }
@@ -125,20 +125,20 @@ function setAiRowOpen(openRequested) {
     // tokens in css/wave7.css). Without it the open transition never runs.
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
-        if (guidedAiRow) guidedAiRow.classList.add(`is-open`);
+        if (guidedAiRow) guidedAiRow.classList.add('is-open');
       });
     });
-    if (guidedAskButton) guidedAskButton.setAttribute(`aria-expanded`, `true`);
+    if (guidedAskButton) guidedAskButton.setAttribute('aria-expanded', 'true');
     if (guidedAiInput) guidedAiInput.focus();
     return;
   }
-  guidedAiRow.classList.remove(`is-open`);
-  if (guidedAskButton) guidedAskButton.setAttribute(`aria-expanded`, `false`);
+  guidedAiRow.classList.remove('is-open');
+  if (guidedAskButton) guidedAskButton.setAttribute('aria-expanded', 'false');
   const rowNode = guidedAiRow;
   const askButtonNode = guidedAskButton;
   if (isDropdownMotionAllowed()) {
     window.setTimeout(() => {
-      if (rowNode && rowNode.classList.contains(`is-open`) === false) rowNode.hidden = true;
+      if (rowNode && rowNode.classList.contains('is-open') === false) rowNode.hidden = true;
       if (askButtonNode) askButtonNode.focus();
     }, GUIDED_DROPDOWN_CLOSE_MILLIS);
   } else {
@@ -172,7 +172,7 @@ function submitGuidedAsk() {
     // removes the chip bar) leaves a one-click resume instead of forcing a
     // retype. Once a mode exists the prompt streams immediately, so clear.
     if (modeChosen) guidedAiInput.value = '';
-    runGuidedCommand(`ai ${promptText}`, 'Asking the portfolio AI assistant');
+    runGuidedCommand(`ai ${promptText}`);
     if (!modeChosen) revealAiPicker();
   }).catch((importError) => {
     console.warn(`guided ask-ai skipped: ${importError.message}`);
@@ -203,12 +203,12 @@ function buildGuidedPanel() {
     actionButton.textContent = guidedAction.label;
     if (isAskAction) {
       guidedAskButton = actionButton;
-      guidedAskButton.setAttribute(`aria-expanded`, `false`);
-      guidedAskButton.setAttribute(`aria-controls`, GUIDED_AI_ROW_ID);
+      guidedAskButton.setAttribute('aria-expanded', 'false');
+      guidedAskButton.setAttribute('aria-controls', GUIDED_AI_ROW_ID);
     }
     if (!isAskAction) {
       actionButton.addEventListener('click', () => {
-        runGuidedCommand(guidedAction.command, guidedAction.intent);
+        runGuidedCommand(guidedAction.command);
       });
     }
     buttonRow.appendChild(actionButton);
@@ -227,8 +227,8 @@ function buildGuidedPanel() {
   guidedAiInput.className = 'guided-ai-input';
   guidedAiInput.placeholder = 'Ask AI anything…';
   guidedAiInput.setAttribute('aria-label', 'Ask the portfolio AI assistant');
-  guidedAiInput.addEventListener(`keydown`, (keyboardEvent) => {
-    if (keyboardEvent.key === `Escape`) {
+  guidedAiInput.addEventListener('keydown', (keyboardEvent) => {
+    if (keyboardEvent.key === 'Escape') {
       keyboardEvent.preventDefault();
       keyboardEvent.stopPropagation();
       setAiRowOpen(false);

@@ -1339,7 +1339,7 @@ async function runAiMemoryCommand(term, args, runSignal) {
   } else {
     // Real-only view: legacy empty/whitespace turns (stored before the
     // append guard) are hidden, never rendered as blank lines.
-    const realTurns = storedHistory.filter((t) => t && typeof t.content === `string` && t.content.trim().length > 0);
+    const realTurns = storedHistory.filter((t) => t && typeof t.content === 'string' && t.content.trim().length > 0);
     if (!realTurns.length) {
       term.writeln(`${SITE_MUTED}No conversation history stored.${ANSI_RESET}`);
     } else {
