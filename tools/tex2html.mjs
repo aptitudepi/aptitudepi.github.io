@@ -366,11 +366,16 @@ function handleInlineCommand(p, cmd) {
       const url = p.readGroup();
       const disp = p.readGroup();
       if (url == null || disp == null) throw new TexParseError('\\href missing arguments');
+      // Public site never publishes email links: mailto anchors (and bare
+      // email displays) are dropped so resume/cv HTML cannot leak addresses.
+      if (/^\s*mailto:/i.test(url.trim())) return '';
+      if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(disp)) return '';
       return `<a href="${escapeHtml(url.trim())}" target="_blank" rel="noopener noreferrer">${renderInline(disp)}</a>`;
     }
     case 'url': {
       const url = p.readGroup();
       if (url == null) throw new TexParseError('\\url missing argument');
+      if (/^\s*mailto:/i.test(url) || /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(url)) return '';
       return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
     }
     case 'textless': return '&lt;';
@@ -464,12 +469,20 @@ function renderHeader(content) {
   const inner = renderInline(content);
   const parts = inner.split('<br>').map((s) => s.trim()).filter(Boolean);
   const name = parts[0] || '';
-  const contact = parts.slice(1).join('  ·  ');
+  // Public site never publishes phone numbers or email addresses: strip them
+  // from the contact line (TeX source keeps them for the PDF/print build).
+  // Handles (979)-326-8107, 979-326-8107, 979.326.8107 forms plus any email.
+  const scrubbed = parts.slice(1).join('  ·  ')
+    .replace(/\(\d{3}\)\s*[-.]?\s*\d{3}\s*[-.]?\s*\d{4}/g, '')
+    .replace(/\b\d{3}\s*[-.]\s*\d{3}\s*[-.]\s*\d{4}\b/g, '')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '')
+    .split('·').map((s) => s.trim()).filter(Boolean).join('  ·  ');
+  const contact = scrubbed;
   const nameHtml = name.replace(/^<strong>(.*)<\/strong>$/, '<strong>$1</strong>');
-  return `<div class="resume-header">` +
+  return '<div class="resume-header">' +
     `<h1 class="resume-name">${nameHtml}</h1>` +
     (contact ? `<p class="resume-contact">${contact}</p>` : '') +
-    `</div>`;
+    '</div>';
 }
 
 function parseBlocks(src) {
@@ -502,7 +515,7 @@ function parseBlocks(src) {
           throw new TexParseError('\\resumeSubheading expects 4 arguments');
         }
         let html = p.closePlain() + p.closeEntry();
-        html += `<li class="resume-entry">`;
+        html += '<li class="resume-entry">';
         html += `<div class="entry-row"><span class="entry-title"><strong>${renderInline(a)}</strong></span><span class="entry-date">${renderInline(b)}</span></div>`;
         html += `<div class="entry-row muted"><span class="entry-org"><em>${renderInline(c)}</em></span><span class="entry-loc"><em>${renderInline(d)}</em></span></div>`;
         p.openEntry = true;
@@ -513,7 +526,7 @@ function parseBlocks(src) {
         const b = p.readGroup();
         if (a == null || b == null) throw new TexParseError('\\resumeSubSubheading expects 2 arguments');
         let html = p.closePlain() + p.closeEntry();
-        html += `<li class="resume-entry">`;
+        html += '<li class="resume-entry">';
         html += `<div class="entry-row muted"><span class="entry-org"><em>${renderInline(a)}</em></span><span class="entry-loc"><em>${renderInline(b)}</em></span></div>`;
         p.openEntry = true;
         return html;
@@ -523,7 +536,7 @@ function parseBlocks(src) {
         const b = p.readGroup();
         if (a == null || b == null) throw new TexParseError('\\resumeProjectHeading expects 2 arguments');
         let html = p.closePlain() + p.closeEntry();
-        html += `<li class="resume-entry project">`;
+        html += '<li class="resume-entry project">';
         html += `<div class="entry-row"><span class="entry-title">${renderInline(a)}</span><span class="entry-date">${renderInline(b)}</span></div>`;
         p.openEntry = true;
         return html;

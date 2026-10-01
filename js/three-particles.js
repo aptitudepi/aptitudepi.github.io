@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import perf from './perf.js';
+import perf, { createFlipGuard } from './perf.js';
+import { isMotionOK } from './motion.js';
 let uRainbow = 0;
 
 function detectHz(cb) {
@@ -61,6 +62,7 @@ function buildTrailFrag(w, h) {
   return `precision highp float;
 uniform sampler2D uPrev,uParts;
 uniform float uTime,uDecay;
+uniform vec3 uHeat;
 uniform vec4 uModeW;
 ${CURL}
 void main(){
@@ -71,7 +73,8 @@ void main(){
   vec2 src=clamp(uv-vel,.001,.999);
   vec4 prev=texture2D(uPrev,src)*uDecay;
   vec4 parts=texture2D(uParts,uv);
-  gl_FragColor=max(prev,parts*1.25);
+  vec4 combined=max(prev,parts*1.25);
+  gl_FragColor=vec4(combined.rgb*uHeat,combined.a);
 }`;
 }
 
@@ -97,10 +100,63 @@ float blackScholes(vec2 pos, float uTime){
 `;
 
 let animFrameId = null;
+// WAVE 12 single-owner flag: while true the background owner
+// (js/backgrounds.js) steps the particle frame via stepParticleFrame() and
+// this module never schedules its own rAF, so exactly one background loop
+// runs at a time. Flipped by takeParticleLoop() before or after init.
+let schedulerOwned = false;
+// False when WebGL construction fails: initParticles bails after painting a
+// static gradient poster, and the owner renders static instead of stepping.
+let particleAvailable = false;
+let particleCanvasNode = null;
+let particleDriver = null;
+
+// Static-gradient fallback for WebGL-disabled browsers (acceptance: no
+// exception, still a calm poster). Never touches WebGL.
+function paintStaticGradient(fallbackCanvas) {
+  if (!fallbackCanvas) return;
+  fallbackCanvas.style.background = 'linear-gradient(135deg, #0b0e1a 0%, #141b2e 55%, #1d2440 100%)';
+}
+
+// WAVE 12 ownership: hand scheduling to the single background owner. Any
+// pending standalone frame is cancelled so only the owner loop remains.
+function takeParticleLoop() {
+  schedulerOwned = true;
+  if (animFrameId !== null) {
+    cancelAnimationFrame(animFrameId);
+    animFrameId = null;
+  }
+}
+
+// One owner tick worth of particles. No-op before init or when WebGL failed.
+function stepParticleFrame(frameTimestamp) {
+  if (particleDriver) {
+    particleDriver.step(frameTimestamp);
+  }
+}
+
+function isParticleAvailable() {
+  return particleAvailable;
+}
+
+function isParticleOwned() {
+  return schedulerOwned;
+}
+
+function isParticleSelfScheduled() {
+  return animFrameId !== null && !schedulerOwned;
+}
+
+function setParticleVisible(visibleValue) {
+  if (particleCanvasNode) {
+    particleCanvasNode.style.display = visibleValue ? '' : 'none';
+  }
+}
 
 function initParticles() {
   const canvas = document.getElementById('c');
   if (!canvas) return;
+  particleCanvasNode = canvas;
 
   // Fresh device-pixel-ratio read, capped at 2. Always re-read live (never
   // cached): browser zoom / monitor moves change it under us.
@@ -111,11 +167,15 @@ function initParticles() {
   let displayHz = 60;                // native refresh, learned once via detectHz
   let targetInterval = 1000 / 60;    // frame budget, derived from quality + displayHz
   let lastFrameTime = 0;
-  let scrollOffset = 0;
   let syncTopo = true;               // dev default: particle clock drives topo
   let currentT = 0;                  // latest particle elapsed time (for topo sync)
   let topoSpeedMult = 0.25;          // topo evolves at this fraction of particle speed
   let topoPausedForSync = false;     // topo's own loop paused once sync takes over
+  // Phase-5 offscreen pause flags (mirror topo/badge/orb): declared up front
+  // so the scheduler gate above reads initialized state on every call.
+  let particleOnScreen = true;
+  let particlePageVisible = typeof document === 'undefined' ? true : !document.hidden;
+  let particlePaused = false;
 
   // How much of the 256×256 field actually draws (phase-2 tier ladder owns
   // this; see TIER_TABLE below) and the chromatic-aberration strength in the
@@ -128,6 +188,15 @@ function initParticles() {
   // modulates decay with hover (`decayOverride ?? (0.8 - hP * 0.04)`).
   // setTrailDecay(number) pins; setTrailDecay(null) restores auto.
   let decayOverride = null;
+  // Heat-trail colorcycle sync (UI batch): mirrors js/dev.js topo sync —
+  // read --nav-cycle, lerp toward it at 0.25 saturation, push to the trail
+  // uHeat multiplier. Base is white (not topo glass #C9B8E8) so the
+  // additive pipeline keeps brightness; the saturation + read pattern match
+  // topo exactly. Piggbacks frame(), no new loop. Static when motion is off.
+  const HEAT_SYNC_SATURATION = 0.25;
+  const HEAT_SYNC_CADENCE = 30;
+  const HEAT_STATIC_TINT = [0.75, 0.75, 1];
+  let lastHeatCycle = '';
   // Manual pins (dev sidebar): a setCount/setCA/setScanline/setVignette/
   // setParticleSize call pins that knob and the auto ladder stops touching
   // it; clearManualPins() releases every pin back to auto. The devtools panel
@@ -151,6 +220,66 @@ function initParticles() {
   // particle-elapsed-driven.
   let topoEvery = 2;
   let frameCount = 0;
+  // Intelligent instanceCount for 120fps: instead of fixing the count at the
+  // tier value (65k ultra), an in-frame cost probe (performance.now() around
+  // the GL work, EMA-smoothed, 60-frame warmup) steps instanceCount along the
+  // COUNT_LADDER rungs toward the largest count sustaining a 120fps ceiling
+  // (8.33ms/frame: step up only below 6.0ms EMA, step down above 8.0ms, dead
+  // band between). Tier-owned factors (topoEvery, dprCap, chroma/scanline,
+  // size/alpha) stay exactly per tier — only instanceCount moves, clamped to
+  // the ladder bounds [8192, 65536], one rung per decision, 2 agreeing votes
+  // (hysteresis) per step, and at most 3 flips per 10s via the shared
+  // perf flip guard. Manual pins (dev setCount, ?quality tier/slider pins)
+  // always win: the probe stays inert while manualCount or perf.isManual().
+  const COUNT_LADDER = [8192, 16384, 32768, 65536];
+  const PROBE_WARMUP_DRAWN = 60;
+  const PROBE_EVAL_EVERY = 90;
+  const PROBE_STEP_UP_MS = 6.0;
+  const PROBE_STEP_DOWN_MS = 8.0;
+  const PROBE_AGREE_VOTES = 2;
+  let tierBaselineCount = N_MAX;
+  let adaptiveCount = N_MAX;
+  let adaptiveSeedTier = -1;
+  let probeWarmupFrames = 0;
+  let probeEvalFrames = 0;
+  let probeVoteUp = 0;
+  let probeVoteDown = 0;
+  let probeCostEmaMs = 0;
+  const adaptiveFlipGuard = createFlipGuard(3, 10000);
+  // One probe decision: vote on the EMA cost, step one ladder rung on two
+  // agreeing votes and a free flip-guard slot. No-ops while manual pins hold.
+  let triGeo = null;
+  function stepAdaptiveCount(nowMs) {
+    if (manualCount || perf.isManual()) return;
+    if (!isMotionOK()) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    if (probeCostEmaMs <= PROBE_STEP_UP_MS) {
+      probeVoteUp += 1;
+      probeVoteDown = 0;
+    } else if (probeCostEmaMs >= PROBE_STEP_DOWN_MS) {
+      probeVoteDown += 1;
+      probeVoteUp = 0;
+    } else {
+      probeVoteUp = 0;
+      probeVoteDown = 0;
+      return;
+    }
+    if (probeVoteUp < PROBE_AGREE_VOTES && probeVoteDown < PROBE_AGREE_VOTES) return;
+    const stepDirection = probeVoteUp >= PROBE_AGREE_VOTES ? 1 : -1;
+    probeVoteUp = 0;
+    probeVoteDown = 0;
+    let rungIndex = COUNT_LADDER.indexOf(adaptiveCount);
+    if (rungIndex === -1) {
+      rungIndex = COUNT_LADDER.indexOf(tierBaselineCount);
+      if (rungIndex === -1) rungIndex = 2;
+    }
+    const targetRung = Math.max(0, Math.min(COUNT_LADDER.length - 1, rungIndex + stepDirection));
+    if (targetRung === rungIndex) return;
+    if (!adaptiveFlipGuard.tryFlip(nowMs)) return;
+    adaptiveCount = COUNT_LADDER[targetRung];
+    activeCount = adaptiveCount;
+    if (triGeo) triGeo.instanceCount = activeCount;
+  }
   // Overlay visibility: skip the density feed while the topo host is
   // off-screen (IntersectionObserver flips this; defaults to visible).
   let topoOnScreen = true;
@@ -158,22 +287,41 @@ function initParticles() {
   // restored → onResize() rebuilds targets and the loop restarts.
   let particleContextLost = false;
 
-  window.addEventListener('scroll', () => { scrollOffset = window.scrollY; }, { passive: true });
-
   const W = () => window.innerWidth;
   const H = () => window.innerHeight;
 
-  const R = new THREE.WebGLRenderer({
-    canvas, antialias: false, alpha: false, powerPreference: 'high-performance'
-  });
-  R.setPixelRatio(PR);
-  R.setSize(W(), H());
-  R.autoClear = false;
+  // Schedules the next particle frame unless the single background owner
+  // drives (WAVE 12) or the GL context is lost — both cases must never leave
+  // a second loop behind. Phase-5 pause also gates here: while off-screen or
+  // hidden nothing is scheduled (resume restarts through the same rebase).
+  function scheduleParticleFrame() {
+    if (schedulerOwned || particleContextLost) return;
+    if (particlePaused || !particleOnScreen || !particlePageVisible) return;
+    animFrameId = requestAnimationFrame(frame);
+  }
+
+  const renderer = (() => {
+    try {
+      const rendererInstance = new THREE.WebGLRenderer({
+        canvas, antialias: false, alpha: false, powerPreference: 'high-performance'
+      });
+      particleAvailable = true;
+      return rendererInstance;
+    } catch (rendererError) {
+      console.warn(`[particles] WebGL unavailable, static gradient poster: ${rendererError.message}`);
+      paintStaticGradient(canvas);
+      return null;
+    }
+  })();
+  if (!renderer) return;
+  renderer.setPixelRatio(PR);
+  renderer.setSize(W(), H());
+  renderer.autoClear = false;
   // Phase-3 telemetry owns the info counters: with autoReset the totals reset
   // on every render() call (a frame does five), so the 1Hz sampler would only
   // ever see the final blit pass. Manual reset once per frame() keeps true
   // per-frame totals for the sampler below.
-  R.info.autoReset = false;
+  renderer.info.autoReset = false;
 
   // Map the shared quality scalar to this system's knobs (hybrid §7: the
   // discrete tier owns the structural knobs, the continuous scalar keeps
@@ -182,7 +330,6 @@ function initParticles() {
   //   • frame budget — continuous cap 30 (q=0) … native-but-≤90 (q=1)
   //   • count / post / topo cadence — discrete per-tier steps (TIER_TABLE)
   // Called once up front and again every time quality drifts meaningfully.
-  let triGeo = null;
   // Quantized DPR steps so applied DPR never churns resizes/FBOs per frame.
   const PR_QUANTUM = 0.05;
   // Max DPR travel per apply: big quality swings settle over a few notifies
@@ -241,13 +388,26 @@ function initParticles() {
     const nextPR = Math.min(rawPR, PR + clampedStep);
     if (Math.abs(nextPR - PR) > PR_QUANTUM) {
       PR = nextPR;
-      R.setPixelRatio(PR);
+      renderer.setPixelRatio(PR);
       onResize();
     }
   }
-  function applyTierCount(tierEntry) {
+  function applyTierCount(tierEntry, tierIndex) {
+    // The tier owns the baseline; the 120fps adaptive probe then moves only
+    // instanceCount within the ladder bounds (reseeding here on tier change
+    // so a stale adapted value never survives a tier move). Tier factors
+    // (post/density/topoEvery/dprCap) are applied by their own appliers.
+    tierBaselineCount = tierEntry.count;
     if (manualCount) return;
-    activeCount = tierEntry.count;
+    if (tierIndex !== adaptiveSeedTier) {
+      adaptiveSeedTier = tierIndex;
+      adaptiveCount = tierEntry.count;
+      probeWarmupFrames = 0;
+      probeEvalFrames = 0;
+      probeVoteUp = 0;
+      probeVoteDown = 0;
+    }
+    activeCount = adaptiveCount;
     if (triGeo) triGeo.instanceCount = activeCount;
   }
   // applyTierPost + applyTierDensity live below the material definitions:
@@ -265,13 +425,13 @@ function initParticles() {
     if (tierIndex >= currentTierIndex) {
       applyTierDpr(qualityValue, tierEntry);
       applyTierPost(tierEntry);
-      applyTierCount(tierEntry);
+      applyTierCount(tierEntry, tierIndex);
       applyTierDensity(tierEntry);
       topoEvery = tierEntry.topoEvery;
     } else {
       topoEvery = tierEntry.topoEvery;
       applyTierDensity(tierEntry);
-      applyTierCount(tierEntry);
+      applyTierCount(tierEntry, tierIndex);
       applyTierPost(tierEntry);
       applyTierDpr(qualityValue, tierEntry);
     }
@@ -284,7 +444,11 @@ function initParticles() {
     }
     currentTierIndex = tierIndex;
 
-    const fpsCap = Math.round(30 + 60 * qualityValue);              // 30 … 90
+    // Frame budget follows the quality scalar up to a 120fps ceiling: the
+    // adaptive count probe above owns the instanceCount side, this owns the
+    // vsync-side cap (min(displayHz, quality-cap)) so a 120Hz+ panel with
+    // headroom can actually reach 120fps instead of parking at 90.
+    const fpsCap = Math.round(30 + 90 * qualityValue);              // 30 … 120
     const target = Math.min(displayHz, fpsCap);
     targetInterval = 1000 / target;
   }
@@ -463,7 +627,7 @@ void main(){
   const trailMat = new THREE.ShaderMaterial({
     uniforms: {
       uPrev: { value: trailA.texture }, uParts: { value: outRT.texture },
-      uTime: { value: 0 }, uDecay: { value: 0.8 }, uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
+      uTime: { value: 0 }, uDecay: { value: 0.8 }, uHeat: { value: new THREE.Vector3(1, 1, 1) }, uModeW: { value: new THREE.Vector4(1, 0, 0, 0) }
     },
     vertexShader: 'void main(){gl_Position=vec4(position,1.);}',
     fragmentShader: buildTrailFrag(iW, iH)
@@ -574,9 +738,9 @@ void main(){
     const freshPR = readRawPR();
     if (freshPR < PR) {
       PR = freshPR;
-      R.setPixelRatio(PR);
+      renderer.setPixelRatio(PR);
     }
-    R.setSize(W(), H());
+    renderer.setSize(W(), H());
     camMain.aspect = W() / H();
     camMain.updateProjectionMatrix();
     pMat.uniforms.uRez.value.set(W(), H());
@@ -613,10 +777,10 @@ void main(){
     // buffer left untouched). RGBA/FLOAT is the spec-required baseline.
     if (!_fBuf || _fBuf.length < len) _fBuf = new Float32Array(len);
     if (!_pxBuf || _pxBuf.length < len) _pxBuf = new Uint8Array(len);
-    const gl = R.getContext();
-    R.setRenderTarget(postOut);
-    gl.readPixels(0, 0, pw, ph, gl.RGBA, gl.FLOAT, _fBuf);
-    R.setRenderTarget(null);
+    const glContext = renderer.getContext();
+    renderer.setRenderTarget(postOut);
+    glContext.readPixels(0, 0, pw, ph, glContext.RGBA, glContext.FLOAT, _fBuf);
+    renderer.setRenderTarget(null);
     for (let i = 0; i < len; i++) {
       const scaled = _fBuf[i] * 255;
       _pxBuf[i] = scaled < 0 ? 0 : (scaled > 255 ? 255 : scaled);
@@ -652,30 +816,147 @@ void main(){
     return influence > 0.001;
   }
 
+  function parseHeatRGB(colorText) {
+    try {
+      const heatColor = new THREE.Color(colorText);
+      return [heatColor.r, heatColor.g, heatColor.b];
+    } catch (parseError) {
+      console.warn(`[particles] heat color parse skipped: ${parseError.message}`);
+      return null;
+    }
+  }
+
+  function readScopedCycleColor() {
+    try {
+      const scopedNode = document.querySelector('.doc-nav-home') || document.querySelector('.doc-nav');
+      if (!scopedNode) return '';
+      return getComputedStyle(scopedNode).getPropertyValue('--nav-cycle').trim();
+    } catch (cycleReadError) {
+      console.warn(`[particles] heat cycle read skipped: ${cycleReadError.message}`);
+      return '';
+    }
+  }
+
+  // One heat-sync step: lerp white toward --nav-cycle at 0.25 (same
+  // saturation + read pattern as js/dev.js runColorSyncStep, white base to
+  // preserve additive brightness). Called from frame() on the existing tick,
+  // throttled by HEAT_SYNC_CADENCE — no new loop. Static tint when motion
+  // is off or the clock is unreadable.
+  function stepHeatTintSync() {
+    if (!trailMat) return;
+    if (!isMotionOK()) {
+      trailMat.uniforms.uHeat.value.set(HEAT_STATIC_TINT[0], HEAT_STATIC_TINT[1], HEAT_STATIC_TINT[2]);
+      lastHeatCycle = 'static';
+      return;
+    }
+    const cycleColorText = readScopedCycleColor();
+    if (!cycleColorText || cycleColorText === lastHeatCycle) return;
+    const navRGB = parseHeatRGB(cycleColorText);
+    if (!navRGB) return;
+    const mixRatio = HEAT_SYNC_SATURATION;
+    const heatRed = 1 + (navRGB[0] - 1) * mixRatio;
+    const heatGreen = 1 + (navRGB[1] - 1) * mixRatio;
+    const heatBlue = 1 + (navRGB[2] - 1) * mixRatio;
+    trailMat.uniforms.uHeat.value.set(heatRed, heatGreen, heatBlue);
+    lastHeatCycle = cycleColorText;
+  }
+
   const clock = new THREE.Clock();
   let prevT = 0, ever = false;
+
+  // Phase-5 offscreen pause transitions (mirror topo/badge/orb). pause freezes
+  // the swaps and parks the standalone RAF plus the coupled perf scaler;
+  // resume rebases the clock and restarts exactly one RAF only when visible,
+  // unhidden, and motion-OK.
+  //
+  // Freeze mechanism: a pause-shift offset, NOT THREE.Clock.stop/start —
+  // Clock.start() zeroes elapsedTime (r158 semantics), so a stop/start pair
+  // would teleport the field back to t=0. Instead the clock keeps running as
+  // a wall reference while paused and each pause's wall span is folded into
+  // pauseShiftSeconds; frame() reads (elapsed - shift), so the first resumed
+  // frame continues the timeline instead of jumping.
+  let pauseShiftSeconds = 0;
+  let pauseStartElapsed = 0;
+  function isParticleLoopAllowed() {
+    return particleOnScreen && particlePageVisible && !particleContextLost;
+  }
+
+  function pauseParticleLoop() {
+    if (particlePaused) return;
+    particlePaused = true;
+    // Mark the wall span now opening; the clock itself keeps running so its
+    // elapsed stays a valid reference (see the shift note above).
+    try {
+      pauseStartElapsed = clock.getElapsedTime();
+    } catch (clockReadError) {
+      console.warn(`[particles] pause clock read skipped: ${clockReadError.message}`);
+    }
+    if (animFrameId !== null) {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+    }
+    try {
+      perf.suspendLoop();
+    } catch (suspendError) {
+      console.warn(`[particles] perf suspend skipped: ${suspendError.message}`);
+    }
+  }
+
+  function resumeParticleLoop() {
+    if (!particlePaused) return;
+    if (!particleOnScreen) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    if (!isMotionOK()) return;
+    particlePaused = false;
+    // Fold the paused wall span into the shift so the timeline continues.
+    try {
+      pauseShiftSeconds += clock.getElapsedTime() - pauseStartElapsed;
+    } catch (clockShiftError) {
+      console.warn(`[particles] resume clock shift skipped: ${clockShiftError.message}`);
+    }
+    prevT = currentT;
+    lastFrameTime = 0;
+    try {
+      perf.resumeLoop();
+    } catch (resumeError) {
+      console.warn(`[particles] perf resume skipped: ${resumeError.message}`);
+    }
+    if (!schedulerOwned && animFrameId === null && !particleContextLost) {
+      scheduleParticleFrame();
+    }
+  }
 
   function frame(ts) {
     // Context lost: stop rescheduling entirely; the restored handler below
     // rebuilds targets and restarts the loop.
     if (particleContextLost) return;
-    if (ts - lastFrameTime < targetInterval - 1) { requestAnimationFrame(frame); return; }
+    // Phase-5 pause: frozen while off-screen or hidden. Sim state lives in
+    // the GPU textures, so returning here freezes the rA/rB + trail swaps
+    // only — frameCount/ever/qualityUnsub/RTs are untouched. The standalone
+    // path stops rescheduling (resume restarts); the owner path returns
+    // through the same gate via stepParticleFrame.
+    if (particlePaused || !particleOnScreen || !particlePageVisible) return;
+    if (ts - lastFrameTime < targetInterval - 1) { scheduleParticleFrame(); return; }
     lastFrameTime = ts;
+    // 120fps probe clock: wall time around the GL work below (not the rAF
+    // delta, which the targetInterval gate above would pollute). Measures
+    // true per-frame render cost against the 8.33ms 120fps budget.
+    const probeStartMs = performance.now();
     // Reset the render counters once per drawn frame (see autoReset note at
     // renderer creation): skipped gate frames keep the last totals, which is
     // exactly what the 1Hz sampler should report.
-    R.info.reset();
+    renderer.info.reset();
 
-    const t = clock.getElapsedTime();
-    currentT = t;
-    const dt = Math.min(t - prevT, 0.05);
-    prevT = t;
+    const elapsed = clock.getElapsedTime() - pauseShiftSeconds;
+    currentT = elapsed;
+    const deltaTime = Math.min(elapsed - prevT, 0.05);
+    prevT = elapsed;
 
-    const kH = 1 - Math.pow(0.94, dt * 60);
-    hP += ((mouse.active ? 1 : 0) - hP) * kH;
+    const kHover = 1 - Math.pow(0.94, deltaTime * 60);
+    hP += ((mouse.active ? 1 : 0) - hP) * kHover;
 
     const period = 4 * (HOLD + BLEND);
-    const phase = t % period;
+    const phase = elapsed % period;
     const slot = Math.floor(phase / (HOLD + BLEND));
     const slotT = phase % (HOLD + BLEND);
     const blend = slotT < HOLD ? 0.0 : (slotT - HOLD) / BLEND;
@@ -683,54 +964,55 @@ void main(){
     const tw = [0, 0, 0, 0];
     tw[slot] = 1 - blend;
     tw[next] += blend;
-    const kM = 1 - Math.pow(0.97, dt * 60);
-    modeW.x += (tw[0] - modeW.x) * kM;
-    modeW.y += (tw[1] - modeW.y) * kM;
-    modeW.z += (tw[2] - modeW.z) * kM;
-    modeW.w += (tw[3] - modeW.w) * kM;
+    const kMode = 1 - Math.pow(0.97, deltaTime * 60);
+    modeW.x += (tw[0] - modeW.x) * kMode;
+    modeW.y += (tw[1] - modeW.y) * kMode;
+    modeW.z += (tw[2] - modeW.z) * kMode;
+    modeW.w += (tw[3] - modeW.w) * kMode;
     [simMat, pMat, trailMat].forEach(m => m.uniforms.uModeW.value.copy(modeW));
 
     const mxw = mouse.x * Math.tan(25 * Math.PI / 180) * 2.8 * 0.36;
     const myw = mouse.y * Math.tan(25 * Math.PI / 180) * 2.8 * 0.36;
 
     simMat.uniforms.uPos.value = ever ? rA.texture : posTex;
-    simMat.uniforms.uTime.value = t;
-    simMat.uniforms.uDt.value = dt;
+    simMat.uniforms.uTime.value = elapsed;
+    simMat.uniforms.uDt.value = deltaTime;
     simMat.uniforms.uHover.value = hP;
     simMat.uniforms.uMouse.value.set(mxw, myw);
     simMat.uniforms.uMouseR.value = 0.18 + hP * 0.04;
-    R.setRenderTarget(rB);
-    R.clear();
-    R.render(simScene, flatCam);
+    renderer.setRenderTarget(rB);
+    renderer.clear();
+    renderer.render(simScene, flatCam);
 
     pMat.uniforms.uPos.value = rB.texture;
-    pMat.uniforms.uTime.value = t;
+    pMat.uniforms.uTime.value = elapsed;
     pMat.uniforms.uHover.value = hP;
     pMat.uniforms.uRainbow.value = uRainbow;
-    R.setRenderTarget(outRT);
-    R.clearColor();
-    R.render(scene, camMain);
+    renderer.setRenderTarget(outRT);
+    renderer.clearColor();
+    renderer.render(scene, camMain);
 
     trailMat.uniforms.uPrev.value = trailA.texture;
     trailMat.uniforms.uParts.value = outRT.texture;
-    trailMat.uniforms.uTime.value = t;
+    trailMat.uniforms.uTime.value = elapsed;
     trailMat.uniforms.uDecay.value = decayOverride ?? (0.8 - hP * 0.04);
-    R.setRenderTarget(trailB);
-    R.clear();
-    R.render(trailScene, flatCam);
+    if (frameCount % HEAT_SYNC_CADENCE === 0) stepHeatTintSync();
+    renderer.setRenderTarget(trailB);
+    renderer.clear();
+    renderer.render(trailScene, flatCam);
 
     postMat.uniforms.uTex.value = trailB.texture;
-    postMat.uniforms.uTime.value = t;
+    postMat.uniforms.uTime.value = elapsed;
     postMat.uniforms.uCA.value = caStrength;
-    R.setRenderTarget(postOut);
-    R.clear();
-    R.render(postScene, flatCam);
+    renderer.setRenderTarget(postOut);
+    renderer.clear();
+    renderer.render(postScene, flatCam);
 
     /* Blit postOut → screen */
     blitMat.uniforms.uTex.value = postOut.texture;
-    R.setRenderTarget(null);
-    R.clear();
-    R.render(blitScene, flatCam);
+    renderer.setRenderTarget(null);
+    renderer.clear();
+    renderer.render(blitScene, flatCam);
 
     /* Feed the hidden 2D canvas so the topo can sample particle density —
        throttled to every topoEvery-th frame and skipped entirely when the
@@ -744,12 +1026,14 @@ void main(){
     tmp = trailA; trailA = trailB; trailB = tmp;
     ever = true;
 
-    canvas.style.transform = `translateY(${-scrollOffset * 0.025}px)`;
+    /* Fixed canvas is viewport-sized: any upward shift leaves a bottom
+       gap. Field keeps its in-shader motion; dropping this per-frame
+       style write also saves a layout per tick. */
 
-    // Drive the topo from the particle clock when sync is on.
-    // The topo's own rAF is paused on first drive; setClock() renders it
-    // internally afterwards. topoSpeedMult slows the landscape vs particles.
-    if (syncTopo) {
+    // Drive the topo from the particle clock when sync is on — skipped while
+    // the single background owner drives the topo itself (WAVE 12), or the
+    // two clocks would fight and the topo would render twice per tick.
+    if (syncTopo && !schedulerOwned) {
       const topoInstance = window.TopoDev?.getTopo?.();
       if (topoInstance?.ok) {
         if (!topoPausedForSync && topoInstance.running) {
@@ -760,7 +1044,24 @@ void main(){
       }
     }
 
-    requestAnimationFrame(frame);
+    // 120fps adaptive-count probe: fold this frame's render cost into the EMA
+    // (warmup seeds it), then decide at most every PROBE_EVAL_EVERY drawn
+    // frames. Gated/paused frames return above, so only real work is timed.
+    const frameCostMs = performance.now() - probeStartMs;
+    if (probeWarmupFrames < PROBE_WARMUP_DRAWN) {
+      probeWarmupFrames += 1;
+      const warmupBlend = probeWarmupFrames === 1 ? 1 : 0.1;
+      probeCostEmaMs += (frameCostMs - probeCostEmaMs) * warmupBlend;
+    } else {
+      probeCostEmaMs += (frameCostMs - probeCostEmaMs) * 0.05;
+      probeEvalFrames += 1;
+      if (probeEvalFrames >= PROBE_EVAL_EVERY) {
+        probeEvalFrames = 0;
+        stepAdaptiveCount(performance.now());
+      }
+    }
+
+    scheduleParticleFrame();
   }
 
   // Phase-3 1Hz telemetry: snapshot renderer.info (calls/triangles/points/
@@ -798,7 +1099,7 @@ void main(){
   const perfHudNode = ensurePerfHud();
   function sampleRendererInfo() {
     try {
-      const renderInfo = R.info;
+      const renderInfo = renderer.info;
       if (!renderInfo || !renderInfo.render || !renderInfo.memory) return;
       samplerSnapshot.calls = renderInfo.render.calls;
       samplerSnapshot.triangles = renderInfo.render.triangles;
@@ -829,8 +1130,47 @@ void main(){
     onResize();
     particleContextLost = false;
     lastFrameTime = 0;
-    requestAnimationFrame(frame);
+    scheduleParticleFrame();
   });
+
+  // Offscreen + hidden gating (mirror topo/badge/orb): an IntersectionObserver
+  // on the canvas freezes swaps while scrolled off-screen, and
+  // visibilitychange freezes while the tab is hidden. Both funnel through the
+  // same pause/resume pair so the clock rebase + scaler coupling stay
+  // single-pathed and the standalone path never leaves a second RAF behind.
+  function handleParticleVisibilityChange() {
+    particlePageVisible = typeof document === 'undefined' ? true : !document.hidden;
+    if (particlePageVisible) {
+      resumeParticleLoop();
+    } else {
+      pauseParticleLoop();
+    }
+  }
+  try {
+    document.addEventListener('visibilitychange', handleParticleVisibilityChange);
+  } catch (visibilityWatchError) {
+    console.warn(`[particles] visibility watch skipped: ${visibilityWatchError.message}`);
+  }
+  try {
+    if (typeof IntersectionObserver !== 'undefined') {
+      const particleScreenObserver = new IntersectionObserver((entryList) => {
+        for (const screenEntry of entryList) {
+          particleOnScreen = screenEntry.isIntersecting;
+        }
+        if (particleOnScreen) {
+          resumeParticleLoop();
+        } else {
+          pauseParticleLoop();
+        }
+      });
+      particleScreenObserver.observe(canvas);
+    }
+  } catch (screenWatchError) {
+    console.warn(`[particles] screen watch skipped: ${screenWatchError.message}`);
+  }
+  // A hidden boot (background tab) starts parked: the first visible
+  // transition resumes through the same rebase path.
+  if (!particlePageVisible) pauseParticleLoop();
 
   // Learn the display's refresh rate once, seed the quality-driven knobs, then
   // let perf.onChange keep them in step with the live quality scalar. The FPS
@@ -844,7 +1184,7 @@ void main(){
     /* ── Dev API — exposed for dev sidebar (devmode) ──── */
     window.ParticleDev = {
       /* Expose internals for velocity-network and topo wiring */
-      getRenderer() { return R; },
+      getRenderer() { return renderer; },
       getScene() { return scene; },
       getRT() { return rB; },
       getPosTex() { return posTex; },
@@ -853,10 +1193,22 @@ void main(){
 
       setCount(countValue) {
         manualCount = true;
+        adaptiveSeedTier = -1;
         activeCount = Math.max(1024, Math.min(N_MAX, Math.round(countValue)));
         if (triGeo) triGeo.instanceCount = activeCount;
       },
       getCount() { return activeCount; },
+      /* Adaptive 120fps probe state ({ count, baseline, costMs, rung }): the
+         live instanceCount target, the current tier baseline, the EMA render
+         cost in ms, and the ladder rung index (or -1 while manual). */
+      getAdaptive() {
+        return {
+          count: adaptiveCount,
+          baseline: tierBaselineCount,
+          costMs: probeCostEmaMs,
+          rung: COUNT_LADDER.indexOf(adaptiveCount),
+        };
+      },
       setCA(caValue) {
         manualCA = true;
         caStrength = Math.max(0, Math.min(1, caValue));
@@ -957,7 +1309,9 @@ void main(){
       getTopoEvery() { return topoEvery; },
       getAlpha() { return pMat.uniforms.uAlpha.value; },
       /* Release every manual pin (count/CA/scanline/vignette/size) back to
-         the auto ladder and re-apply the live quality immediately. */
+         the auto ladder and re-apply the live quality immediately. The
+         120fps adaptive probe reseeds from the tier baseline (seed forced
+         stale here) and re-warms before its next decision. */
       clearManualPins() {
         manualCount = false;
         manualCA = false;
@@ -965,15 +1319,20 @@ void main(){
         manualVignette = false;
         manualSize = false;
         manualSizeMult = 1;
+        adaptiveSeedTier = -1;
         applyQuality(perf.quality());
       },
       /* Sync topo — particle clock drives topo's setClock(). Topo's own rAF
-         is paused; the particle loop renders it via setClock(t) each frame. */
-      setSyncTopo(on) {
-        syncTopo = on;
+         is paused; the particle loop renders it via setClock(t) each frame.
+         WAVE 12: while the single background owner drives, the owner owns the
+         topo clock — flipping the flag here must never resume topo's own
+         loop or two loops would drive it. */
+      setSyncTopo(syncOn) {
+        syncTopo = syncOn;
+        if (schedulerOwned) return;
         const topoInstance = window.TopoDev?.getTopo?.();
         if (!topoInstance?.ok) return;
-        if (on) {
+        if (syncOn) {
           topoInstance.pause();          // kill topo's own loop
           topoPausedForSync = true;
           topoInstance.setClock(currentT * topoSpeedMult); // seed from current particle time
@@ -985,8 +1344,34 @@ void main(){
       isSyncTopo() { return syncTopo; },
       /** Topo speed multiplier — fraction of particle time fed to topo clock.
        *  0.25 = topo evolves 4× slower than particles. */
-      setTopoSpeed(v) { topoSpeedMult = Math.max(0.01, Math.min(1, v)); },
+      setTopoSpeed(speedValue) { topoSpeedMult = Math.max(0.01, Math.min(1, speedValue)); },
       getTopoSpeed() { return topoSpeedMult; },
+      /* WAVE 12 owner hooks: the background owner drives frame() via
+         stepParticleFrame() and paints one static frame for static mode. */
+      takeLoop() { takeParticleLoop(); },
+      stepFrame(frameTimestamp) { frame(frameTimestamp); },
+      renderPoster() {
+        if (particleContextLost) return;
+        const posterBase = performance.now();
+        for (let warmIndex = 0; warmIndex < 6; warmIndex += 1) {
+          frame(posterBase + warmIndex * 50);
+        }
+      },
+      setVisible(visibleValue) { setParticleVisible(visibleValue); },
+      /* Phase-5 pause probes: frozen while off-screen/hidden (swaps only).
+         pauseLoop/resumeLoop are the same transitions the observers drive,
+         exposed for acceptance probing and owner use. */
+      isPaused() { return particlePaused; },
+      isLoopAllowed() { return isParticleLoopAllowed(); },
+      getFrameCount() { return frameCount; },
+      getClock() { return currentT; },
+      pauseLoop() { pauseParticleLoop(); },
+      resumeLoop() { resumeParticleLoop(); },
+    };
+    // Module-scope driver so the single background owner can step frames
+    // without reaching through window.
+    particleDriver = {
+      step(frameTimestamp) { frame(frameTimestamp); },
     };
 
     // Live boot matches the dev sidebar (particle influence 1.00): hand the
@@ -995,7 +1380,7 @@ void main(){
     const topoApi = window.TopoDev;
     if (topoApi?.getTopo?.()?.ok) topoApi.setParticleTex(window.ParticleDev.getParticleCanvas());
 
-    animFrameId = requestAnimationFrame(frame);
+    scheduleParticleFrame();
   });
 }
 
@@ -1003,4 +1388,4 @@ function setKonami(active) {
   uRainbow = active ? 1 : 0;
 }
 
-export { initParticles, setKonami };
+export { initParticles, setKonami, takeParticleLoop, stepParticleFrame, isParticleAvailable, isParticleOwned, isParticleSelfScheduled, setParticleVisible, paintStaticGradient };

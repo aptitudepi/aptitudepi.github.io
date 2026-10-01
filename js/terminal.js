@@ -1,4 +1,6 @@
-import { executeCommand, bootSequence, writePrompt, COMMANDS, vfs, SITE_FAINT, ANSI_RESET, CMD_HISTORY } from './shell.js';
+import { executeCommand, bootSequence, writePrompt, setHostRefreshRequester, vfs, CMD_HISTORY, stripAnsi } from './shell.js';
+import { COMMAND_COMPLETION_NAMES } from './commands.js';
+import { isForegroundBusy, requestForegroundCancel } from './foreground.js';
 
 let term = null;
 let fitAddon = null;
@@ -7,6 +9,22 @@ let inputBuffer = '';
 let bootDone = false;
 let v86InputHandler = null;
 let v86ExitBuffer = '';
+
+// WAVE 7 inline suggestions, ghost-only: fish-style ghost text is a pure DOM
+// overlay so the deterministic xterm golden snapshots stay byte-exact.
+// Sources are the command registry, VFS paths and history. Tab (or the
+// Right-arrow / Ctrl+F keys) accepts the ghost, Esc dismisses it (and exits
+// history search), typing refreshes it. There is deliberately no dropdown
+// listbox: Ctrl+R cycles history matches through the same ghost instead of
+// rendering a list.
+let suggestionMode = 'complete';
+let historyMatchIndex = -1;
+let ghostNode = null;
+let ghostRemainder = '';
+let ghostKind = 'token';
+let ghostFullLine = '';
+let lastCompleteBase = '';
+let cachedCellSize = null;
 
 function collectTabCandidates(partial, isPath) {
   const candidates = [];
@@ -26,13 +44,13 @@ function collectTabCandidates(partial, isPath) {
       if (base.startsWith(lastWord)) candidates.push(base);
     }
     if (!candidates.length) {
-      for (const c of COMMANDS) {
-        if (c.startsWith(lastWord)) candidates.push(c);
+      for (const candidate of COMMAND_COMPLETION_NAMES) {
+        if (candidate.startsWith(lastWord)) candidates.push(candidate);
       }
     }
   } else {
-    for (const c of COMMANDS) {
-      if (c.startsWith(partial)) candidates.push(c);
+    for (const candidate of COMMAND_COMPLETION_NAMES) {
+      if (candidate.startsWith(partial)) candidates.push(candidate);
     }
     if (!candidates.length) {
       for (const key of vfs.keys()) {
@@ -49,44 +67,332 @@ function applySingleCompletion(activeTerm, completion, completeBase) {
   const rest = completion.slice(completeBase.length);
   const addTrailing = !completion.endsWith('/') && !completion.endsWith('.txt') && !completion.endsWith('.md');
   const suffix = addTrailing ? ' ' : '';
-  for (const ch of `${rest}${suffix}`) { inputBuffer += ch; activeTerm.write(ch); }
+  for (const completionChar of `${rest}${suffix}`) { inputBuffer = `${inputBuffer}${completionChar}`; activeTerm.write(completionChar); }
 }
 
-function applyCompletionList(activeTerm, candidates, completeBase) {
-  const prefixLen = candidates.reduce((len, c) => {
-    let i = 0;
-    while (i < len && i < c.length && c[i] === candidates[0][i]) i++;
-    return i;
-  }, Infinity);
-  if (prefixLen > completeBase.length) {
-    const common = candidates[0].slice(completeBase.length, prefixLen);
-    for (const ch of common) { inputBuffer += ch; activeTerm.write(ch); }
+// Recent-first full-line history entries that extend the current buffer.
+function collectHistoryCandidates(partialLine) {
+  const historyMatches = [];
+  const seenHistoryLines = new Set();
+  for (let historyCursor = CMD_HISTORY.length - 1; historyCursor >= 0; historyCursor--) {
+    const historyEntry = stripAnsi(String(CMD_HISTORY[historyCursor] ?? ''));
+    if (historyEntry.length === 0 || seenHistoryLines.has(historyEntry)) continue;
+    seenHistoryLines.add(historyEntry);
+    const matchesQuery = partialLine === null || (historyEntry.toLowerCase().startsWith(partialLine) && historyEntry !== inputBuffer);
+    if (matchesQuery) {
+      historyMatches.push({ label: historyEntry, kind: 'history' });
+    }
+    if (historyMatches.length >= 8) break;
+  }
+  return historyMatches;
+}
+
+// Merged candidate list: history full lines first, then the registry/VFS
+// token completions from the Tab engine. In history-search mode only the
+// history source is shown.
+function collectAllCandidates() {
+  const partialLine = inputBuffer.trim().toLowerCase();
+  if (!partialLine) {
+    if (suggestionMode === 'history') return collectHistoryCandidates(null);
+    return [];
+  }
+  const mergedCandidates = [...collectHistoryCandidates(partialLine)];
+  if (suggestionMode === 'history') return mergedCandidates;
+  const pathFlag = partialLine.startsWith('./') || partialLine.startsWith('/') || partialLine.startsWith('~');
+  const tabResult = collectTabCandidates(partialLine, pathFlag);
+  lastCompleteBase = tabResult.completeBase;
+  const seenLabels = new Set(mergedCandidates.map((candidate) => candidate.label));
+  for (const tokenCandidate of tabResult.candidates) {
+    if (!seenLabels.has(tokenCandidate)) {
+      seenLabels.add(tokenCandidate);
+      mergedCandidates.push({ label: tokenCandidate, kind: 'token' });
+    }
+  }
+  return mergedCandidates.slice(0, 12);
+}
+
+function hideSuggestions() {
+  suggestionMode = 'complete';
+  historyMatchIndex = -1;
+  ghostRemainder = '';
+  ghostFullLine = '';
+  renderGhostText();
+}
+
+function closeSuggestions() {
+  const hadGhost = ghostRemainder.length > 0 || suggestionMode === 'history';
+  hideSuggestions();
+  return hadGhost;
+}
+
+function measureCellSize() {
+  if (cachedCellSize) return cachedCellSize;
+  const probeNode = document.createElement('div');
+  probeNode.textContent = 'M';
+  probeNode.style.cssText = 'position:absolute;visibility:hidden;font:13px "JetBrains Mono", monospace;line-height:1.5;';
+  document.body.appendChild(probeNode);
+  cachedCellSize = { width: probeNode.offsetWidth || 8, height: probeNode.offsetHeight || 20 };
+  probeNode.remove();
+  return cachedCellSize;
+}
+
+function ensureGhostNode() {
+  if (ghostNode) return ghostNode;
+  const hostNode = document.getElementById('terminal-container');
+  if (!hostNode) return null;
+  ghostNode = document.createElement('span');
+  ghostNode.id = 'terminal-ghost';
+  ghostNode.setAttribute('aria-hidden', 'true');
+  hostNode.appendChild(ghostNode);
+  return ghostNode;
+}
+
+function renderGhostText() {
+  const ghostElement = ensureGhostNode();
+  if (!ghostElement) return;
+  if (!ghostRemainder || mode !== 'local' || bootDone === false) {
+    ghostElement.textContent = '';
+    ghostElement.style.display = 'none';
+    return;
+  }
+  const cellSize = measureCellSize();
+  const activeBuffer = term.buffer.active;
+  ghostElement.textContent = ghostRemainder;
+  ghostElement.style.display = 'block';
+  ghostElement.style.left = `${8 + activeBuffer.cursorX * cellSize.width}px`;
+  ghostElement.style.top = `${8 + activeBuffer.cursorY * cellSize.height}px`;
+}
+
+function showCandidateAsGhost(topCandidate) {
+  if (topCandidate.kind === 'history') {
+    ghostKind = 'history';
+    ghostFullLine = topCandidate.label;
+    ghostRemainder = topCandidate.label.slice(inputBuffer.length);
   } else {
-    term.write('\r\n');
-    candidates.forEach(c => activeTerm.writeln(`${SITE_FAINT}${c}${ANSI_RESET}`));
-    writePrompt(activeTerm);
-    term.write(inputBuffer);
+    ghostKind = 'token';
+    ghostFullLine = '';
+    ghostRemainder = topCandidate.label.slice(lastCompleteBase.length);
+  }
+}
+
+function refreshSuggestions() {
+  if (!term || bootDone === false || mode !== 'local' || isForegroundBusy()) {
+    hideSuggestions();
+    return;
+  }
+  historyMatchIndex = -1;
+  const candidates = collectAllCandidates();
+  if (candidates.length > 0) {
+    showCandidateAsGhost(candidates[0]);
+  } else {
+    ghostRemainder = '';
+    ghostFullLine = '';
+  }
+  renderGhostText();
+}
+
+function acceptGhostText() {
+  if (!ghostRemainder || mode !== 'local' || bootDone === false || isForegroundBusy()) return false;
+  if (ghostKind === 'history' && ghostFullLine) {
+    inputBuffer = ghostFullLine;
+    redrawInputLine();
+  } else {
+    for (const ghostChar of ghostRemainder) {
+      inputBuffer = `${inputBuffer}${ghostChar}`;
+      term.write(ghostChar);
+    }
+  }
+  ghostRemainder = '';
+  ghostFullLine = '';
+  renderGhostText();
+  refreshSuggestions();
+  return true;
+}
+
+function acceptCandidate(candidate) {
+  if (candidate.kind === 'history') {
+    inputBuffer = candidate.label;
+    redrawInputLine();
+    return;
+  }
+  applySingleCompletion(term, candidate.label, lastCompleteBase);
+}
+
+function redrawInputLine() {
+  term.write('\r\x1b[K');
+  writePrompt(term);
+  term.write(inputBuffer);
+}
+
+// Option B gated redraw (instant host swap): repaint the live prompt line
+// the moment the async city identity resolves, preserving in-progress
+// input. Synchronous with fail-closed gates — returns true when the line
+// was repainted, false when deferred (a later prompt reads the new host
+// anyway). Never focuses, scrolls or refits; the ghost is re-anchored so
+// the overlay tracks the fresh prompt end. Blocked-network runs never call
+// this, so fallback goldens stay byte-identical.
+function isCommandPaletteOpen() {
+  try {
+    if (typeof document === 'undefined') return false;
+    const paletteDialog = document.getElementById('command-palette');
+    return Boolean(paletteDialog?.open);
+  } catch (dialogError) {
+    console.warn(`palette dialog check skipped: ${dialogError.message}`);
+    return true;
+  }
+}
+
+function requestTerminalHostRefresh() {
+  if (term === null || bootDone === false || mode !== 'local' || isForegroundBusy()) return false;
+  if (suggestionMode === 'history') return false;
+  if (isCommandPaletteOpen()) return false;
+  const savedInput = inputBuffer;
+  try {
+    term.write('\r\x1b[K');
+    writePrompt(term);
+    term.write(savedInput);
+    refreshSuggestions();
+  } catch (refreshError) {
+    console.warn(`host prompt refresh skipped: ${refreshError.message}`);
+    return false;
   }
   return true;
 }
 
-function handleTabCompletion(activeTerm) {
-  if (!bootDone || !inputBuffer.trim()) return;
-  const partial = inputBuffer.trim().toLowerCase();
-  const isPath = partial.startsWith('./') || partial.startsWith('/') || partial.startsWith('~');
-  const { candidates, completeBase } = collectTabCandidates(partial, isPath);
-  if (candidates.length === 1) {
-    applySingleCompletion(activeTerm, candidates[0], completeBase);
-  } else if (candidates.length > 1) {
-    applyCompletionList(activeTerm, candidates, completeBase);
-  } else {
-    activeTerm.write('\x07');
+setHostRefreshRequester(requestTerminalHostRefresh);
+
+function submitBufferLine() {
+  term.write('\r\n');
+  const commandLine = inputBuffer;
+  if (commandLine.trim()) {
+    CMD_HISTORY.push(commandLine);
+    CMD_HISTORY.idx = -1;
   }
+  inputBuffer = '';
+  hideSuggestions();
+  if (bootDone) executeCommand(commandLine, term);
+}
+
+// Ctrl+K palette injection: type a full command line onto the live prompt
+// and submit it, so the transcript shows the prompt line (❯ weather) before
+// the output — exactly as if typed. Same guards as typed input (boot done,
+// shell-local mode), history records the line, and the foreground runner
+// still owns busy refusal, so a palette submit while busy echoes first and
+// then prints the blocked line, matching typing-while-busy exactly.
+function injectAndSubmitLine(commandLine) {
+  if (!term || bootDone === false || mode !== 'local') return false;
+  const cleanLine = String(commandLine ?? '');
+  if (cleanLine.trim().length === 0) return false;
+  hideSuggestions();
+  term.write('\r\x1b[K');
+  writePrompt(term);
+  inputBuffer = cleanLine;
+  term.write(cleanLine);
+  submitBufferLine();
+  return true;
+}
+
+// Strip leading shell prompts ($, ❯, user@host) from pasted text so a
+// docs-site copy-paste runs instead of failing with "command not found".
+function cleanPastedLine(rawLine) {
+  const trimmedLine = String(rawLine).replace(/^\s+/, '').replace(/\s+$/, '');
+  const promptPatterns = [
+    /^db@\S+.*❯\s*/u,
+    /^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+:[^#$]*[#$]\s*/,
+    /^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+\s+[#$]\s*/,
+    /^\$[ \t]+/,
+    /^[❯>#][ \t]+/,
+  ];
+  for (const promptPattern of promptPatterns) {
+    if (promptPattern.test(trimmedLine)) return trimmedLine.replace(promptPattern, '');
+  }
+  return trimmedLine;
+}
+
+function looksLikePaste(chunk) {
+  return chunk.includes('\n') || chunk.length > 12;
+}
+
+function handlePaste(pastedText) {
+  const endsWithNewline = /(\r\n|\r|\n)$/.test(pastedText);
+  const rawLines = String(pastedText).split(/\r\n|\r|\n/);
+  const cleanedLines = rawLines.map(cleanPastedLine).filter((cleanedLine) => cleanedLine.length > 0);
+  cleanedLines.forEach((cleanedLine, lineIndex) => {
+    const isLastLine = lineIndex === cleanedLines.length - 1;
+    if (isLastLine && !endsWithNewline) {
+      inputBuffer = `${inputBuffer}${cleanedLine}`;
+      term.write(cleanedLine);
+      return;
+    }
+    inputBuffer = `${inputBuffer}${cleanedLine}`;
+    term.write(cleanedLine);
+    submitBufferLine();
+  });
+}
+
+function openHistorySearch() {
+  if (!bootDone || isForegroundBusy() || mode !== 'local') return;
+  suggestionMode = 'history';
+  historyMatchIndex = -1;
+  refreshSuggestions();
+}
+
+function handleTabCompletion(activeTerm) {
+  if (!bootDone || isForegroundBusy() || mode !== 'local') return;
+  // IDE-style: Tab accepts the visible ghost first; with no ghost it
+  // completes the single best match (or the shared token prefix) and the
+  // ghost confirms what changed. There is no list to pick from.
+  if (ghostRemainder) {
+    acceptGhostText();
+    return;
+  }
+  if (!inputBuffer.trim()) return;
+  const candidates = collectAllCandidates();
+  if (candidates.length === 0) {
+    activeTerm.write('\x07');
+    return;
+  }
+  if (candidates.length === 1) {
+    acceptCandidate(candidates[0]);
+    refreshSuggestions();
+    return;
+  }
+  const tokenLabels = candidates.filter((candidate) => candidate.kind === 'token').map((candidate) => candidate.label);
+  if (tokenLabels.length > 1) {
+    let sharedLength = tokenLabels[0].length;
+    for (const tokenLabel of tokenLabels.slice(1)) {
+      let cursor = 0;
+      while (cursor < sharedLength && cursor < tokenLabel.length && tokenLabel[cursor] === tokenLabels[0][cursor]) cursor++;
+      sharedLength = cursor;
+    }
+    if (sharedLength > lastCompleteBase.length) {
+      const sharedPrefix = tokenLabels[0].slice(0, sharedLength);
+      const missingPrefix = sharedPrefix.slice(lastCompleteBase.length);
+      for (const prefixChar of missingPrefix) {
+        inputBuffer = `${inputBuffer}${prefixChar}`;
+        activeTerm.write(prefixChar);
+      }
+    }
+  }
+  refreshSuggestions();
+}
+
+// Ctrl+R history search cycles matches through the ghost: Up/Down step
+// through history candidates, Tab (or →) accepts into the buffer, Esc
+// exits back to plain completion. No listbox is ever rendered.
+function cycleHistoryMatch(step) {
+  const candidates = collectAllCandidates();
+  if (candidates.length === 0) return;
+  historyMatchIndex = historyMatchIndex < 0
+    ? 0
+    : (historyMatchIndex + step + candidates.length) % candidates.length;
+  showCandidateAsGhost(candidates[historyMatchIndex]);
+  renderGhostText();
 }
 
 function handleInput(data) {
   if (mode === 'v86') {
-    v86ExitBuffer = (v86ExitBuffer + data.toLowerCase()).slice(-30);
+    v86ExitBuffer = `${v86ExitBuffer}${data.toLowerCase()}`.slice(-30);
     if (data === '\x1a' || v86ExitBuffer.includes('exit\r') || v86ExitBuffer.includes('exit\n')) {
       v86ExitBuffer = '';
       if (typeof window.exitVM === 'function') window.exitVM();
@@ -96,8 +402,22 @@ function handleInput(data) {
     return;
   }
 
+  if (data === '\x12') { openHistorySearch(); return; }
+  if (data === '\x06') {
+    if (acceptGhostText()) return;
+  }
+  if (data === '\x1b') {
+    if (closeSuggestions()) return;
+  }
+  if (data === '\x1b[C') {
+    if (acceptGhostText()) return;
+    return;
+  }
+  if (data === '\x1b[D') return;
+
   if (data === '\x1b[A') {
-    if (!bootDone) return;
+    if (!bootDone || isForegroundBusy()) return;
+    if (suggestionMode === 'history') { cycleHistoryMatch(-1); return; }
     if (CMD_HISTORY.idx < CMD_HISTORY.length - 1) {
       CMD_HISTORY.idx++;
       const entry = CMD_HISTORY[CMD_HISTORY.length - 1 - CMD_HISTORY.idx];
@@ -105,12 +425,14 @@ function handleInput(data) {
       term.write('\r\x1b[K');
       writePrompt(term);
       term.write(entry);
+      refreshSuggestions();
     }
     return;
   }
 
   if (data === '\x1b[B') {
-    if (!bootDone) return;
+    if (!bootDone || isForegroundBusy()) return;
+    if (suggestionMode === 'history') { cycleHistoryMatch(1); return; }
     if (CMD_HISTORY.idx >= 0) {
       CMD_HISTORY.idx--;
       if (CMD_HISTORY.idx >= 0) {
@@ -121,41 +443,50 @@ function handleInput(data) {
       term.write('\r\x1b[K');
       writePrompt(term);
       term.write(inputBuffer);
+      refreshSuggestions();
     }
     return;
   }
 
-  if (data === '\x1b[C' || data === '\x1b[D') return;
-
   if (data === '\t') { handleTabCompletion(term); return; }
+
+  if (looksLikePaste(data)) {
+    if (!bootDone || isForegroundBusy()) return;
+    handlePaste(data);
+    refreshSuggestions();
+    return;
+  }
 
   for (const char of data) {
     if (char === '\r') {
-      term.write('\r\n');
-      if (inputBuffer.trim()) {
-        CMD_HISTORY.push(inputBuffer);
-        CMD_HISTORY.idx = -1;
-      }
-      const cmd = inputBuffer;
-      inputBuffer = '';
-      if (bootDone) executeCommand(cmd, term);
+      submitBufferLine();
     } else if (char === '\x7f') {
       if (inputBuffer.length > 0) {
         inputBuffer = inputBuffer.slice(0, -1);
         term.write('\b \b');
       }
     } else if (char === '\x03') {
-      inputBuffer = '';
-      term.write('^C\r\n');
-      writePrompt(term);
+      if (isForegroundBusy()) {
+        inputBuffer = '';
+        hideSuggestions();
+        requestForegroundCancel();
+      } else {
+        inputBuffer = '';
+        hideSuggestions();
+        term.write('^C\r\n');
+        writePrompt(term);
+      }
     } else if (char >= ' ') {
-      inputBuffer += char;
+      inputBuffer = `${inputBuffer}${char}`;
       term.write(char);
     }
   }
+  refreshSuggestions();
 }
 
 function createTerminal(container) {
+  placeModePillByCrumb();
+  setMode(mode);
   term = new window.Terminal({
     cursorBlink: true,
     cursorStyle: 'block',
@@ -206,9 +537,16 @@ function createTerminal(container) {
   }
 
   const ro = new ResizeObserver(() => {
+    cachedCellSize = null;
     if (fitAddon) try { fitAddon.fit(); } catch (_) {}
   });
   ro.observe(container);
+
+  // Ghost text is cursor-anchored: hide it while the buffer scrolls under
+  // it so a stale overlay never floats over old output.
+  container.addEventListener('scroll', () => {
+    if (ghostNode) ghostNode.style.display = 'none';
+  }, true);
 
   // Touch-scroll fallback for the terminal buffer: xterm 6.0.0 broke native
   // touch scrolling upstream, and its canvas absorbs touches before any
@@ -238,6 +576,22 @@ function createTerminal(container) {
   return term;
 }
 
+// The mode pill reads shell|linux by the dvxb.io/terminal crumb (not by
+// the resume/man/cv links). Markup order is another surface's ownership,
+// so the pill is reparented here at runtime instead of moved in HTML.
+function placeModePillByCrumb() {
+  if (typeof document === 'undefined') return;
+  try {
+    const crumbNode = document.querySelector('.doc-crumb');
+    const modePill = document.getElementById('mode-pill');
+    if (!crumbNode || !modePill) return;
+    if (modePill.previousElementSibling === crumbNode) return;
+    crumbNode.insertAdjacentElement('afterend', modePill);
+  } catch (placeError) {
+    console.warn(`mode pill placement skipped: ${placeError.message}`);
+  }
+}
+
 function startBoot() {
   bootSequence(term, () => { bootDone = true; });
 }
@@ -247,9 +601,24 @@ function setV86InputHandler(handler) {
   if (handler) v86ExitBuffer = '';
 }
 
-function setMode(m) { mode = m; }
+function setMode(nextMode) {
+  mode = nextMode;
+  if (typeof document === 'undefined') return;
+  const modePill = document.getElementById('mode-pill');
+  if (modePill) {
+    const pillLabel = nextMode === 'v86' ? 'linux' : 'shell';
+    modePill.textContent = pillLabel;
+    modePill.dataset.mode = pillLabel;
+    // The pill always reads shell|linux (never hidden): it sits by the
+    // dvxb.io/terminal crumb as the shell indicator, flipping to linux
+    // inside the VM. Its colorcycle sync lives in css/motion.css.
+    modePill.hidden = false;
+  }
+  const exitButton = document.getElementById('exit-vm-button');
+  if (exitButton) exitButton.hidden = nextMode !== 'v86';
+}
 function getMode() { return mode; }
 function getTerm() { return term; }
 function isBootDone() { return bootDone; }
 
-export { createTerminal, startBoot, setMode, getMode, setV86InputHandler, getTerm, isBootDone };
+export { createTerminal, startBoot, setMode, getMode, setV86InputHandler, getTerm, isBootDone, injectAndSubmitLine, requestTerminalHostRefresh };

@@ -1,0 +1,243 @@
+{
+  "version": 1,
+  "tool": "tools/snapshot-terminal.mjs",
+  "commit": "4f3bf53f7413e9f4d64417dfae3f204cd5e073ea",
+  "origin": "http://127.0.0.1:8901/",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "masked": [
+    "System clock: <MASKED-CLOCK>",
+    "uptime durations: <MASKED-DURATION>",
+    "Date().toString(): <MASKED-DATE>",
+    "search network errors: <MASKED-NETWORK>"
+  ],
+  "sessions": [
+    {
+      "command": "(boot)",
+      "file": "boot.ans",
+      "sha256": "d5f70f44beb64a45521ac5fba8900e831386ccbe9a2036dd8d80ec5d8948a238",
+      "bytes": 3056,
+      "prompts": 1
+    },
+    {
+      "command": "help",
+      "file": "help.ans",
+      "sha256": "5e73a4333ac9fb29f11db3de6b83c514d43b5291588091e4979a26e1023cd199",
+      "bytes": 3322,
+      "prompts": 1
+    },
+    {
+      "command": "unknown-cmd",
+      "file": "unknown-cmd.ans",
+      "sha256": "c95ace47a69feb31e8404ad585edfca528a3f08f70d95953522bcf7729049bcd",
+      "bytes": 288,
+      "prompts": 1
+    },
+    {
+      "command": "whoami",
+      "file": "whoami.ans",
+      "sha256": "10e69085eadf99fec967d272aba7c01714ccad3caf6b0912d3658fb754c352b7",
+      "bytes": 188,
+      "prompts": 1
+    },
+    {
+      "command": "date",
+      "file": "date.ans",
+      "sha256": "9525e2305e4ce06bc55333f133187f24c737f825486a183c4feb521ea02e6dfa",
+      "bytes": 197,
+      "prompts": 1
+    },
+    {
+      "command": "neofetch",
+      "file": "neofetch.ans",
+      "sha256": "b21f36edfb7924fa04351d7e45ad2f372f3997e85f3233fbf48be67ff80cac70",
+      "bytes": 2126,
+      "prompts": 1
+    },
+    {
+      "command": "about",
+      "file": "about.ans",
+      "sha256": "e31e20fd088e63d6a1b2c3e12e8d173400c83ea72922e7cbb4fecb80920ebac7",
+      "bytes": 943,
+      "prompts": 1
+    },
+    {
+      "command": "ls",
+      "file": "ls.ans",
+      "sha256": "6db969b701b40894314dcd11bf0bad8d68591eee40ee3873034e1007720e694b",
+      "bytes": 253,
+      "prompts": 1
+    },
+    {
+      "command": "cat",
+      "file": "cat.ans",
+      "sha256": "2b2592c9329a8ba94a3796695aedc1aaac5789b6fd2b6d320f31084b5aeec73a",
+      "bytes": 202,
+      "prompts": 1
+    },
+    {
+      "command": "history",
+      "file": "history.ans",
+      "sha256": "79573a94d738bcb52b2b4a449726a52e766faec0f705219a66b43026f5d5d2da",
+      "bytes": 689,
+      "prompts": 1
+    },
+    {
+      "command": "ai-models",
+      "file": "ai-models.ans",
+      "sha256": "bdcde2c91826b2beb99742cd1704fac3dd7e5d7c1403f5ee3381bb915159c6da",
+      "bytes": 933,
+      "prompts": 1
+    },
+    {
+      "command": "weather --help",
+      "file": "weather-help.ans",
+      "sha256": "2bd7c96ccb09c9a516001ea9a148b62371491b94de70499d1fda58246853a4a7",
+      "bytes": 577,
+      "prompts": 1
+    },
+    {
+      "command": "search --help",
+      "file": "search-help.ans",
+      "sha256": "832d110a7dede341776eaad9ec763ad00f13d31e6833877f2b347e7d12f41b49",
+      "bytes": 353,
+      "prompts": 1
+    },
+    {
+      "command": "hn --help",
+      "file": "hn-help.ans",
+      "sha256": "a05cb78838ae2e7674a72b7fb361c5f687a653cdd897fc57d8b62aa8b21eae7e",
+      "bytes": 284,
+      "prompts": 1
+    },
+    {
+      "command": "cat resume.md",
+      "file": "cat-resume.ans",
+      "sha256": "f1c713f6edb0b5cb07687efde2db32f40e06e7d8ee490eb8cc889634b7977c71",
+      "bytes": 2380,
+      "prompts": 1
+    },
+    {
+      "command": "projects",
+      "file": "projects.ans",
+      "sha256": "b77906b3ecf8a7c17d846ca26ec804aefcab6b775029c300864a98cb763d6672",
+      "bytes": 1704,
+      "prompts": 1
+    },
+    {
+      "command": "projects python",
+      "file": "projects-filter.ans",
+      "sha256": "1281f43e316f9cc022526433b7fd3192e7e1175406572ad516666d4044a7ec57",
+      "bytes": 1041,
+      "prompts": 1
+    },
+    {
+      "command": "projects --json",
+      "file": "projects-json.ans",
+      "sha256": "1d3437026e3c7917b7bfc415cb615e9dcb0d3a81a96415c1ad351ccbe4306e83",
+      "bytes": 1349,
+      "prompts": 1
+    },
+    {
+      "command": "case pcpg",
+      "file": "case-pcpg.ans",
+      "sha256": "f302541c73839ea5e406a6ac6ef00e851c992f1efe3e5bf0477e884abefe8ca4",
+      "bytes": 928,
+      "prompts": 1
+    },
+    {
+      "command": "skills",
+      "file": "skills.ans",
+      "sha256": "95111765a05d02bd6034139cfe74e91d8f29def408cc593256b414a302028793",
+      "bytes": 1181,
+      "prompts": 1
+    },
+    {
+      "command": "timeline",
+      "file": "timeline.ans",
+      "sha256": "0be9dc591d781d0dc47b15b22db136f04d134249f433c2f76b5323de855e394a",
+      "bytes": 1562,
+      "prompts": 1
+    },
+    {
+      "command": "export about",
+      "file": "export-about.ans",
+      "sha256": "be37d7d36bf5f53f4e920bf25c2c13bc9e478de18e0626705762006d0f8e7dfc",
+      "bytes": 1110,
+      "prompts": 1
+    },
+    {
+      "command": "md https://bad.invalid/post.md",
+      "file": "md-fallback.ans",
+      "sha256": "42d1d64d76294cdd9a12fa7d8cd62de4caa2bc9128904b53ac2902ea3c2408cc",
+      "bytes": 551,
+      "prompts": 1
+    },
+    {
+      "command": "ai details",
+      "file": "ai-details.ans",
+      "sha256": "98dc07cc77db39cc9510922f0db5af5040164289d768c4573ad5330cd6180c87",
+      "bytes": 1346,
+      "prompts": 1
+    },
+    {
+      "command": "ai-memory",
+      "file": "ai-memory.ans",
+      "sha256": "ee2ee6a8e064a034b89ebbb54054799c437fa55265daab64f15b5fd24cf1706b",
+      "bytes": 622,
+      "prompts": 1
+    },
+    {
+      "command": "ai-memory --json",
+      "file": "ai-memory-json.ans",
+      "sha256": "bc433456e63f4949cb2a8a9ac853ad83b493938e2fe5abce6210689e1ba9f2cf",
+      "bytes": 213,
+      "prompts": 1
+    },
+    {
+      "command": "ai sources pcpg analyzer",
+      "file": "ai-sources.ans",
+      "sha256": "7ec66a5d7757d8c1efaba7950f4fa8847e959f09605cadfbd109f915b6e53632",
+      "bytes": 665,
+      "prompts": 1
+    },
+    {
+      "command": "background",
+      "file": "background.ans",
+      "sha256": "11ca47b9b1dfb5723c19b7d3ce9ede2ecb2749f93dc676b0af3e5b58fb11ec3a",
+      "bytes": 293,
+      "prompts": 1
+    },
+    {
+      "command": "background static",
+      "file": "background-static.ans",
+      "sha256": "af7d1f013a76167aca3b6166a80a3cf8aa698e1d4d19cc1b1d2a573d9a553047",
+      "bytes": 219,
+      "prompts": 1
+    },
+    {
+      "command": "background ambient",
+      "file": "background-ambient.ans",
+      "sha256": "bf597491ffd455ad8534835a893426f8006010f475d5bb2f41af7328b218c544",
+      "bytes": 221,
+      "prompts": 1
+    },
+    {
+      "command": "man background",
+      "file": "man-background.ans",
+      "sha256": "96ebeef6e96f0d0664df513d311dd323b1dfbcb6a2b9610a9020a5655f452bec",
+      "bytes": 673,
+      "prompts": 1
+    },
+    {
+      "command": "md --help",
+      "file": "md-help.ans",
+      "sha256": "076a5844e4e8ae1f7bab8be6c209e49175f1e0b06aa16f5521ccbb96660e88e7",
+      "bytes": 300,
+      "prompts": 1
+    }
+  ],
+  "totalPrompts": 32
+}

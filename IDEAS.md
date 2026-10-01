@@ -4227,3 +4227,8 @@ Append-only spray to round the structured-idea counter (excl. season-III micro-s
 - [Cloudflare Workers static assets](https://flaviocopes.com/cloudflare-workers-static-assets/) — same-origin files + API ceiling push.
 - [GlassLink-Bio](https://github.com/tokoios/GlassLink-Bio) / [Connect link hub](https://github.com/kdippan/Connect) — link-in-bio layout inspiration (restyle with dvxb glass+Three+orb).
 - Full-CV (`resume.tex` / `cv.tex`) — canonical role, labs, certs, awards for card + `?hire=` paths.
+
+## Palette Ask-AI section (Groq endpoint) — PROPOSAL, explicitly NOT implementing
+- **Idea:** an "Ask AI" section inside the Ctrl+K palette (`#command-palette`): a one-line ask box under the results list that streams Groq answers (same Worker proxy + RAG context as terminal `ai`) into a palette answer pane, with citations + `ai retry` parity.
+- **Why deferred:** needs endpoint UX thought (streaming inside a modal competes with the command list for space; focus/keyboard contract with arrow navigation unresolved) and cost thought (palette lowers the friction to fire cloud requests — accidental Enters cost real Groq tokens; needs explicit submit + rate guardrails before it exists).
+- **When to revisit:** after the guided Ask-AI first-run flow proves the picker→consent→stream path needs no more iteration; reuse its consent + retry copy verbatim.

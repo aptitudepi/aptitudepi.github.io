@@ -1,0 +1,13 @@
+ai-models
+[1mAI Models[0m
+[2m─────────[0m
+  [2m[0][0m [32m●[0m [36mqwen3.8-27b         [0m [37m0MB (Cloud) [0m[2mqwen3.8-27b + bge-small-en (default)[0m
+  [2m[1][0m [2m○[0m [36mSmolLM2-135M        [0m [37m135MB       [0m[2mlightweight local[0m
+  [2m[2][0m [2m○[0m [36mSmolLM2-360M        [0m [37m360MB       [0m[2mbalanced local[0m
+  [2m[3][0m [2m○[0m [36mQwen2.5-0.5B        [0m [37m350MB       [0m[2msmart local[0m
+  [2m[4][0m [2m○[0m [36mLlama-3.2-1B        [0m [37m1.1GB       [0m[2mhigh quality local[0m
+  [2m[5][0m [2m○[0m [36mDeepSeek-R1-1.5B    [0m [37m1.1GB       [0m[2mreasoning local[0m
+
+[2mUsage: ai <prompt>  —  ai-models to list, ai-model <id> to switch[0m
+
+[38;2;60;200;120mdb[0m[38;2;220;220;230m@[0m[38;2;60;190;220mdvxb.io[0m[38;2;140;140;155m [0m[38;2;80;140;250m~[0m[38;2;140;140;155m❯ [0m

@@ -17,8 +17,7 @@
 // quality drops — the effect stays present, just lighter.
 
 import perf from './perf.js';
-
-const prefersReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+import { isMotionOK, onMotionChange } from './motion.js';
 
 const BLEED = 32;
 const MAX_DPR = 2;
@@ -42,6 +41,23 @@ class SharedParticleField {
       this.canvas.remove();
       return;
     }
+
+    // Phase-5 context discipline (mirror topo/particles): lost → prevent the
+    // default teardown, stop the RAF and mark; restored → rebuild the program
+    // + buffers (all GL handles are invalid after a restore) and resume.
+    this.contextLost = false;
+    this.canvas.addEventListener('webglcontextlost', (lostEvent) => {
+      lostEvent.preventDefault();
+      this.contextLost = true;
+      this.pause();
+    });
+    this.canvas.addEventListener('webglcontextrestored', () => {
+      this.initShaders();
+      this.resize();
+      this.contextLost = false;
+      this.rectsDirty = true;
+      this.resume();
+    });
 
     this.initShaders();
     this.resize();
@@ -159,10 +175,14 @@ class SharedParticleField {
 
   addEmitter(el) {
     if (!this.gl) return;
-    const em = { el, rect: null, visible: false, hovering: false };
-    this.emitters.push(em);
-    el.addEventListener('mouseenter', () => { em.hovering = true; });
-    el.addEventListener('mouseleave', () => { em.hovering = false; });
+    const emitter = { el, rect: null, visible: false, hovering: false };
+    this.emitters.push(emitter);
+    el.addEventListener('mouseenter', () => { emitter.hovering = true; });
+    el.addEventListener('mouseleave', () => { emitter.hovering = false; });
+    // Keyboard focus counts as hovering so keyboard users get the same
+    // border reply as pointer users.
+    el.addEventListener('focusin', () => { emitter.hovering = true; });
+    el.addEventListener('focusout', () => { emitter.hovering = false; });
     this.io.observe(el);
     this.rectsDirty = true;
   }
@@ -241,6 +261,7 @@ class SharedParticleField {
   }
 
   syncLoopState() {
+    if (this.contextLost) return;
     const want = !document.hidden && this.emitters.some(e => e.visible);
     if (want && this.animFrame == null) {
       this.animFrame = requestAnimationFrame(this.render);
@@ -262,6 +283,12 @@ class SharedParticleField {
   }
 
   render() {
+    // Context lost: never reschedule behind pause() — the restored handler
+    // rebuilds and restarts.
+    if (this.contextLost) {
+      this.animFrame = null;
+      return;
+    }
     const gl = this.gl;
     if (!gl || !this.program) return;
 
@@ -326,12 +353,35 @@ class SharedParticleField {
 
 let field = null;
 
-export function initParticleBadges() {
-  if (prefersReduced) return;
-  const targets = document.querySelectorAll('.cert-badge, .spotlight-card');
-
+function mountBadgeField() {
+  if (field || !isMotionOK()) return;
+  const targets = document.querySelectorAll('.hero-explore-row .explore-button, .view-more-cta a, .resume-download a');
   field = new SharedParticleField();
-  targets.forEach(el => field.addEmitter(el));
-
+  targets.forEach((targetNode) => field.addEmitter(targetNode));
   if (!field.gl) field = null;
+  // Phase-5 acceptance probe: read-only handle to the shared field.
+  if (field && typeof window !== 'undefined') {
+    window.BadgeDev = {
+      getField() { return field; },
+      isContextLost() { return field ? field.contextLost === true : false; },
+    };
+  }
+}
+
+export function initParticleBadges() {
+  // Calm default: particle borders live on the hero CTAs only — the every-card
+  // emitter set is demoted. Keyboard-focusable CTAs double as the focus
+  // equivalent (see addEmitter focusin/focusout above).
+  mountBadgeField();
+
+  // Mid-session motion-off parks the shared field; flipping back on mounts
+  // (first on-boot) or resumes it without rebuilding the context.
+  onMotionChange((motionOff) => {
+    if (motionOff) {
+      if (field) field.pause();
+      return;
+    }
+    mountBadgeField();
+    if (field) field.resume();
+  });
 }

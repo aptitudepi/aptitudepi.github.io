@@ -1,0 +1,400 @@
+/* css/motion.css — WAVE 11 calm visual hierarchy + single motion policy.
+ *
+ * Calm default: no site-wide infinite CSS animations. Every always-on
+ * cycle below (text colour cycling, glitch, aura drift, nav clock, glow
+ * loops, spinning borders) is demoted to a static resting state, with one
+ * scoped exception: the contact-section wave (section E — social links +
+ * Contact heading only). This file beats the home stylesheets by prefixing
+ * every override with `html`, so no home file needs restructuring.
+ *
+ * Expressive opt-in: the full ambient set is restored only under
+ *   @media (prefers-reduced-motion: no-preference)
+ *   html[data-motion="on"][data-expressive="full"]
+ * (see js/motion.js — ?expressive=1, localStorage dvxb.expressive, or
+ * window.setExpressive(true)). Reduced motion always wins over the opt-in.
+ *
+ * Kill-switch: `html[data-motion="off"]` (set by js/motion.js on
+ * prefers-reduced-motion, saveData / slow-2g, or manual ?motion=off) freezes
+ * every CSS animation instantly — including mid-session flips, well under a
+ * second. The same blanket applies under prefers-reduced-motion: reduce for
+ * user agents without the JS policy. JS rAF loops (orb, topo, particles,
+ * favicon) park via the onMotionChange subscription instead —
+ * CSS cannot reach them.
+ *
+ * Kept systems (thermal portrait, particle sim, topology field, orb, CRT,
+ * devmode, matrix Easter egg) are canvas/rAF or static by nature; the matrix
+ * overlay stays strictly opt-in (terminal `matrix` command or the konami
+ * gesture) and stops itself when motion flips off mid-session.
+ */
+
+/* ── A. Calm defaults: demote always-on cycling to static ─────────── */
+/* Site-wide the continuous blue↔red cycling parks at a static resting ink
+ * (the contact-section wave in section E is the single scoped exception).
+ * Every rule here is beaten by an `html[data-motion="on"] #contact …`
+ * restore while the policy is on, and by the section-C kill-switch plus
+ * the reduced-motion blanket whenever motion is off. */
+
+/* RGB-split glitch ran forever on the crumb + terminal title. Now it only
+   answers a hover/focus on the crumb (the title is pointer-events:none, so
+   its glitch lives on through the expressive opt-in only). */
+html .doc-nav-crumb::before,
+html .doc-nav-crumb::after,
+html .terminal-title::before,
+html .terminal-title::after {
+  animation: none;
+  opacity: 0;
+}
+html .doc-nav-crumb:hover::before,
+html .doc-nav-crumb:focus-visible::before {
+  animation: docGlitch1 5s infinite;
+}
+html .doc-nav-crumb:hover::after,
+html .doc-nav-crumb:focus-visible::after {
+  animation: docGlitch2 4.7s infinite;
+}
+
+/* Continuous blue↔red text cycling → static resting ink. */
+html .gradient-text,
+html .section-header h2,
+html .section-divider,
+html .nav-dot.active,
+html #nav-dialog a:hover,
+html #nav-dialog a.active,
+html .spotlight-card,
+html .project-link,
+html .bento-card,
+html .view-more-cta a,
+html .view-more-cta a:hover,
+html .guided-button,
+html .guided-button:hover,
+html .cert-badge,
+html .social-link {
+  animation-name: none;
+}
+html #nav-dialog a:hover,
+html #nav-dialog a.active {
+  color: var(--color-text);
+}
+
+/* Glow loops → the resting (0% keyframe) shadow, frozen. */
+html .nav-dot.active {
+  box-shadow: 0 0 12px oklch(0.45 0.31 264 / 0.35);
+}
+html .view-more-cta a,
+html .guided-button,
+html .cert-badge {
+  box-shadow: 0 0 24px oklch(0.45 0.31 264 / 0.35);
+}
+html .view-more-cta a:hover,
+html .guided-button:hover {
+  box-shadow: 0 0 40px oklch(0.45 0.31 264 / 0.35);
+}
+
+/* Ambient aura drift → parked (the radial washes stay put, statically). */
+html [data-auras="1"]::before,
+html [data-auras="2"]::before,
+html [data-auras="2"]::after,
+html [data-auras="3"]::before,
+html [data-auras="3"]::after {
+  animation: none;
+}
+
+/* The nav-bar colour clock (--nav-cycle) → frozen at rest blue. Orb tint,
+   thermal flare and topo sync all read the same frozen value, so the whole
+   page holds one static hue instead of drifting. */
+html .doc-nav {
+  animation: none;
+}
+
+/* Spinning conic border on the about frame → static gradient. */
+html .about-image .frame::before {
+  animation: none;
+}
+
+/* Instant jumps while the policy is off: smooth scrolling is motion too. */
+html[data-motion="off"] {
+  scroll-behavior: auto;
+}
+
+/* ── B. Focus + tap equivalents for every hover-only reveal ──────────
+ * Hover glows/lifts now answer keyboard focus (focus-within on the card
+ * when its inner link takes focus, focus-visible on links/badges) and the
+ * .is-tapped class js/animations.js sets from touchstart/focus. Finite
+ * feedback, so it stays available under the kill-switch too. */
+
+html .spotlight-card:focus-within,
+html .spotlight-card.is-tapped {
+  border-color: currentColor;
+}
+html .spotlight-card:focus-within::before,
+html .spotlight-card.is-tapped::before {
+  opacity: 1;
+}
+html .spotlight-card:focus-within::after,
+html .spotlight-card.is-tapped::after {
+  opacity: 0.25;
+}
+html .bento-card:focus-within,
+html .bento-card.is-tapped {
+  border-color: currentColor;
+  box-shadow: 0 0 0 1px currentColor, 0 4px 24px currentColor;
+}
+html .bento-card:focus-within::after,
+html .bento-card.is-tapped::after {
+  opacity: 0.2;
+}
+html .cert-badge:focus-visible,
+html .cert-badge.is-tapped {
+  transform: translateY(-2px);
+  border-color: currentColor;
+}
+html .cert-badge:focus-visible::before,
+html .cert-badge.is-tapped::before {
+  opacity: 1;
+}
+html .cert-badge:focus-visible::after,
+html .cert-badge.is-tapped::after {
+  opacity: 0.25;
+}
+html .social-link:focus-visible {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  transform: translateY(-2px);
+}
+html .project-link:focus-visible {
+  gap: var(--space-3);
+}
+html .view-more-cta a:focus-visible {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  box-shadow: 0 0 40px oklch(0.45 0.31 264 / 0.35);
+}
+html .guided-button:focus-visible {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  box-shadow: 0 0 40px oklch(0.45 0.31 264 / 0.35);
+}
+html .nav-dot:focus-visible {
+  color: var(--color-text-muted);
+  background: color-mix(in oklch, var(--color-primary-dim) 50%, transparent);
+}
+html .bento-card .github-link:focus-visible {
+  color: currentColor;
+}
+
+/* ── C. Kill-switch: freeze every CSS animation, instantly ───────────
+ * Blanket + !important by design: this must win over every present and
+ * future infinite animation the moment the policy flips off mid-session.
+ * Finite transitions are untouched (they complete, they do not cycle).
+ * The loader spinner (.cyber-loader) also parks here — its adjacent text
+ * label (see task 3) carries the loading state instead. */
+
+html[data-motion="off"] *,
+html[data-motion="off"] *::before,
+html[data-motion="off"] *::after {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+  }
+}
+
+/* ── D. Expressive opt-in: restore the ambient set ───────────────────
+ * Only when the OS has no reduced-motion preference AND the policy is on
+ * AND the user explicitly opted in. Every rule mirrors the home-file
+ * declaration it re-enables, so opting out returns to the exact calm
+ * resting states from section A. */
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"][data-expressive="full"] .doc-nav {
+    animation: navCycle 6s ease-in-out infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .doc-nav-crumb::before {
+    animation: docGlitch1 5s infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .doc-nav-crumb::after {
+    animation: docGlitch2 4.7s infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .terminal-title::before {
+    animation: docGlitch1 5s infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .terminal-title::after {
+    animation: docGlitch2 4.7s infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .gradient-text,
+  html[data-motion="on"][data-expressive="full"] .section-header h2 {
+    animation: blueRedDrift 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"][data-expressive="full"] .section-divider,
+  html[data-motion="on"][data-expressive="full"] #nav-dialog a:hover,
+  html[data-motion="on"][data-expressive="full"] #nav-dialog a.active,
+  html[data-motion="on"][data-expressive="full"] .spotlight-card,
+  html[data-motion="on"][data-expressive="full"] .project-link,
+  html[data-motion="on"][data-expressive="full"] .bento-card,
+  html[data-motion="on"][data-expressive="full"] .social-link {
+    animation: blueRedColor 6s ease-in-out infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .nav-dot.active {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow12 6s ease-in-out infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] .view-more-cta a,
+  html[data-motion="on"][data-expressive="full"] .guided-button,
+  html[data-motion="on"][data-expressive="full"] .cert-badge {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"][data-expressive="full"] .view-more-cta a:hover,
+  html[data-motion="on"][data-expressive="full"] .guided-button:hover {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
+  }
+  html[data-motion="on"][data-expressive="full"] [data-auras="1"]::before {
+    animation: auraFloat 8s ease-in-out infinite alternate;
+  }
+  html[data-motion="on"][data-expressive="full"] [data-auras="2"]::before {
+    animation: auraFloat 10s ease-in-out infinite alternate;
+  }
+  html[data-motion="on"][data-expressive="full"] [data-auras="2"]::after {
+    animation: auraFloat 12s ease-in-out infinite alternate-reverse;
+  }
+  html[data-motion="on"][data-expressive="full"] [data-auras="3"]::before {
+    animation: auraFloat 9s ease-in-out infinite alternate;
+  }
+  html[data-motion="on"][data-expressive="full"] [data-auras="3"]::after {
+    animation: auraFloat 11s ease-in-out infinite alternate-reverse;
+  }
+  html[data-motion="on"][data-expressive="full"] .about-image .frame::before {
+    animation: spinGradient 4s linear infinite;
+  }
+}
+
+/* ── E. Contact-scoped color cycling ─────────────────────────────
+ * The calm demotion parked the blue↔red wave site-wide; the contact
+ * section keeps a tasteful scoped-down version: the social links and the
+ * Contact heading cycle in the SAME phase (shared --cycle-phase delay, one
+ * 6s period — synchronized, not the old staggered right-to-left wave).
+ * Only while the policy is on AND the OS voices no reduced-motion
+ * preference. The section-A resting states, the data-motion="off"
+ * kill-switch (!important) and the prefers-reduced-motion: reduce blanket
+ * all still park it, so reduced-motion stays fully calm. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] #contact .social-link {
+    animation: blueRedColor 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] #contact .section-header h2 {
+    animation: blueRedDrift 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+}
+
+/* ── E2. All section titles restore ────────────────────────────
+ * The calm demotion parked every h2 except Contact; restore the main-line
+ * rule (css/base.css .section-header h2, blueRedDrift) for ALL section
+ * titles in the same shared phase. Same gates as section E: static under
+ * reduced-motion (gate + kill-switch + reduce blanket). */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] .section-header h2 {
+    animation: blueRedDrift 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+}
+
+/* ── E3. Mode-pill colorcycle sync ─────────────────────────────
+ * The shell|linux pill by the terminal crumb cycles its text ink on the
+ * same 6s clock + shared phase as the nav/h2 cycles (blueRedColor, the
+ * same keyframes the cards and links use). Resting shell/linux colors
+ * show whenever motion is off. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] #mode-pill {
+    animation: blueRedColor 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+}
+
+/* ── E4. Sidebar active-dot colorcycle ─────────────────────
+ * The calm demotion parks every infinite cycle, which froze the active
+ * sidebar dot at static rest blue. The active dot is wayfinding chrome, so
+ * it keeps cycling in the default mode on the same 6s clock + shared
+ * --cycle-phase as the cards/contact/header (js/nav.js writes no inline
+ * animation delays, so nothing restarts the cycle mid-flight and every
+ * handoff stays in step). Same gates as sections E/F: static under
+ * reduced-motion (gate + kill-switch + reduce blanket). The mobile
+ * nav-dialog links are untouched. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] .nav-dot.active {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow12 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+}
+
+/* ── F. Synchronized project-card colorcycle ─────────────────────
+ * Same contract as section E, extended to the project cards: the card's
+ * animated `color` drives the tag ink (color: inherit), the hover edge
+ * (border-color: currentColor) and the cursor backlight (::after radial in
+ * currentColor), while headings/body keep their explicit resting colors —
+ * so hover never shows the old parked-white edge/glow. The View-Project
+ * links cycle their own text with the same period + phase. One shared
+ * period (6s) + one shared delay (var(--cycle-phase)) keeps cards, links,
+ * contact buttons and the contact title in step without rave-y staggering.
+ * Static whenever motion is off (gate + kill-switch + reduce blanket). */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] .spotlight-card,
+  html[data-motion="on"] .bento-card {
+    animation: blueRedColor 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] .cert-badge {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] .project-link {
+    animation: blueRedColor 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] .view-more-cta a {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] .guided-button {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow24 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] .view-more-cta a:hover,
+  html[data-motion="on"] .view-more-cta a:focus-visible {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+  html[data-motion="on"] .guided-button:hover,
+  html[data-motion="on"] .guided-button:focus-visible {
+    animation: blueRedColor 6s ease-in-out infinite, blueRedGlow40 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+}
+
+/* ── G. Scoped logo/wordmark colorcycle ────────────────────
+ * Diagnosis: the visual-calm wave parked the global clock via
+ *   html .doc-nav { animation: none; }  (motion.css section A)
+ * so --nav-cycle froze at rest blue and js/orb.js held CYCLE_STATIC for
+ * both the mark and the hover wordmark. Main ran
+ *   .doc-nav { animation: navCycle 6s ease-in-out infinite; }
+ * with .doc-nav-home:hover { color: var(--nav-cycle); } + orb tint from
+ * the live clock (ambient mark, hover wordmark).
+ * Restore scoped: the bar stays parked (calm holds for topo/thermal),
+ * while the wordmark link carries its own navCycle clock. js/orb.js reads
+ * the link first (group || bar) so the lattice + hover paint stay locked
+ * to the same scoped ink. The /terminal crumb carries the same scoped clock
+ * so the no-JS hover fallback (color: var(--nav-cycle)) stays in phase with
+ * the orb-tinted wordmark. Gated like sections E/F: static when motion is
+ * off (gate + kill-switch + reduce blanket). */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] .doc-nav-home,
+  html[data-motion="on"] .doc-nav-crumb {
+    animation: navCycle 6s ease-in-out infinite;
+    animation-delay: var(--cycle-phase, 0s);
+  }
+}

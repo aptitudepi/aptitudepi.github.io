@@ -1,0 +1,8 @@
+ai-memory
+[38;2;60;200;120m[1mPortfolio AI Assistant Memory & Conversation Turns:[0m
+[38;2;140;140;155mmemory: ON — 0 facts, 0 turns feed the next prompt (`ai-memory off` stops injection)[0m
+[38;2;140;140;155mNo saved facts. Save one with `ai-memory save <fact>`.[0m
+[38;2;140;140;155mNo conversation history stored.[0m
+[38;2;140;140;155mCloud default sends prompt + portfolio context to Groq via Worker proxy; local runs on-device after download[0m
+
+[38;2;60;200;120mdb[0m[38;2;220;220;230m@[0m[38;2;60;190;220mdvxb.io[0m[38;2;140;140;155m [0m[38;2;80;140;250m~[0m[38;2;140;140;155m❯ [0m

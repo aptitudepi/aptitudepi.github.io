@@ -1,0 +1,11 @@
+projects python
+[1m[38;2;220;220;230mPortfolio projects (2)[0m
+  [38;2;60;200;120mPCPG Analyzer[0m [38;2;100;100;115mPython · Streamlit · Pandas[0m
+    [38;2;140;140;155mWeb-based framework for dynamic analysis and visualization of Pheochromocytoma & Paraganglioma transcriptome data to support cancer researchers worldwide.[0m
+    [38;2;80;140;250mhttps://github.com/aptitudepi/pcpg-analyzer[0m
+  [38;2;60;200;120mNeural-Networks-From-Scratch[0m [38;2;100;100;115mPython · NumPy · Deep Learning[0m
+    [38;2;140;140;155mImplementations of neural network architectures built from scratch using only NumPy, demonstrating a deep understanding of fundamental ML concepts and backpropagation.[0m
+    [38;2;80;140;250mhttps://github.com/aptitudepi/Neural-Networks-From-Scratch[0m
+[38;2;140;140;155mNext: run `case <name>` for a deep dive, e.g. `case pcpg`[0m
+
+[38;2;60;200;120mdb[0m[38;2;220;220;230m@[0m[38;2;60;190;220mdvxb.io[0m[38;2;140;140;155m [0m[38;2;80;140;250m~[0m[38;2;140;140;155m❯ [0m

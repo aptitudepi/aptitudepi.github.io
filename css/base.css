@@ -56,6 +56,9 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: blueRedDrift 6s ease-in-out infinite;
+  /* Same shared phase as the nav clock and every other 6s cycle, so all
+     h2 titles stay in step instead of restarting per element. */
+  animation-delay: var(--cycle-phase, 0s);
 }
 
 @keyframes blueRedDrift {

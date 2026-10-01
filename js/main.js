@@ -1,13 +1,17 @@
 import { defineComponent, mountComponent } from './component.js';
 import { store } from './state.js';
-import { initParticles, setKonami } from './three-particles.js';
+import { initMotionPolicy } from './motion.js';
+import { setKonami } from './three-particles.js';
+import { initBackgrounds } from './backgrounds.js';
 import { initAnimations } from './animations.js';
 import { initGitHubStats } from './github-stats.js';
 import { initThermalAscii, RAMP_MIXED } from './thermal-ascii.js';
 import { initNav } from './nav.js';
-import { createTerminal, startBoot, getTerm } from './terminal.js';
+import { createTerminal, startBoot, getTerm, setMode, getMode } from './terminal.js';
 import { executeCommand, ASCII_ART } from './shell.js';
 import { bootVM } from './v86-launcher.js';
+import { initPalette, openPalette } from './palette.js';
+import { initGuided } from './guided.js';
 import { startMatrixRain, stopMatrixRain, isMatrixActive } from './matrix-rain.js';
 import { mountNavOrb } from './orb.js';
 import { initParticleBadges } from './particle-badge.js';
@@ -82,7 +86,11 @@ function triggerMatrixRain() {
 }
 
 function init() {
-  initParticles();
+  // The single motion policy paints html[data-motion] before any animated
+  // system boots, so the first paint already honours reduced-motion /
+  // saveData instead of flashing the expressive set for a frame.
+  initMotionPolicy();
+  initBackgrounds();
   initNav();
   initAnimations();
   initParticleBadges();
@@ -95,6 +103,15 @@ function init() {
   const container = document.getElementById('terminal-container');
   if (container && typeof Terminal !== 'undefined') {
     createTerminal(container);
+    initPalette();
+    initGuided();
+    const exitVmButton = document.getElementById('exit-vm-button');
+    if (exitVmButton) {
+      exitVmButton.addEventListener('click', () => {
+        if (typeof window.exitVM === 'function') window.exitVM();
+      });
+    }
+    window.__wave7 = { openPalette, setMode, getMode, getTerm };
     startBoot();
   }
 
@@ -106,6 +123,10 @@ function init() {
     // driver paints the canvas (see toggleDevPanel thermal wiring).
     window.__mainThermal = initThermalAscii(thermalCanvas, { art: ASCII_ART, ramp: RAMP_MIXED });
   }
+
+  // The live terminal boots directly (no intro beat): the hero xterm is
+  // the first paint, so reduced-motion, no-WebGL, Save-Data and noscript
+  // paths all land on the same live terminal with no blank hole.
 
   // Subscribe to universal reactive store
   store.subscribe('theme', (theme) => {

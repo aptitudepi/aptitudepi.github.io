@@ -26,6 +26,8 @@
  *     shimmer inside it; tumbling, the band's outline is the animation.
  */
 
+import { isMotionOK, onMotionChange } from './motion.js';
+
 const TAU = Math.PI * 2;
 
 /* ── Shared primitives ─────────────────────── */
@@ -440,7 +442,6 @@ function attachOrb(canvas, state, { tint = null, count = null } = {}) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return { setState() {}, repaint() {}, destroy() {} };
 
-  const reduceMq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   let current = resolve(state, count);
   let dpr = 1;
   let raf = 0;
@@ -473,7 +474,9 @@ function attachOrb(canvas, state, { tint = null, count = null } = {}) {
 
   const start = () => {
     if (!visible || document.visibilityState === 'hidden') return;
-    if (reduceMq && reduceMq.matches) {
+    // Motion-off (reduced motion, saveData / slow-2g, manual) parks the mark
+    // on a representative static frame instead of looping.
+    if (!isMotionOK()) {
       stop();
       frame(STATIC_T);
       return;
@@ -504,7 +507,9 @@ function attachOrb(canvas, state, { tint = null, count = null } = {}) {
   start();
   io?.observe(canvas);
   document.addEventListener('visibilitychange', onVisibility);
-  reduceMq?.addEventListener('change', onReduce);
+  // Single-policy subscription: a mid-session motion flip re-settles through
+  // stop()+start(), which parks a static frame when the policy is off.
+  const stopMotionListen = onMotionChange(onReduce);
 
   return {
     setState(next) {
@@ -521,7 +526,7 @@ function attachOrb(canvas, state, { tint = null, count = null } = {}) {
       stop();
       io?.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
-      reduceMq?.removeEventListener('change', onReduce);
+      stopMotionListen();
     },
   };
 }
@@ -536,6 +541,15 @@ let thinkingCallers = 0;
 // and every line printed after it land below the animation instead of behind it.
 const MARK_ROWS = 2;
 const MARK_COLS = 4;
+
+// Readable text for each thinking-orb state. The canvas carries role=status
+// with this label while ai.js prints the matching adjacent terminal line
+// ("Downloading… Searching portfolio context..." / "Generating
+// (real-time stream)..."), so the state is never animation-alone.
+function labelForThinkingState(stateName) {
+  if (stateName === 'composing') return 'Generating answer';
+  return 'Downloading portfolio context';
+}
 
 /**
  * Open the terminal mark in `state` if it is not up yet. Every call must be
@@ -566,8 +580,8 @@ function startThinkingOrb(term, state) {
 
       const canvas = document.createElement('canvas');
       canvas.className = 'thinking-orb';
-      canvas.setAttribute('role', 'img');
-      canvas.setAttribute('aria-label', 'Thinking');
+      canvas.setAttribute('role', 'status');
+      canvas.setAttribute('aria-label', labelForThinkingState(session.state));
 
       // Fires on every render pass, and the element is rebuilt across some of
       // them; the orb starts on the first one, once the canvas is in the DOM.
@@ -591,6 +605,7 @@ function setThinkingOrbState(state) {
   if (!thinking) return;
   thinking.state = state;
   thinking.orb?.setState(state);
+  if (thinking.canvas) thinking.canvas.setAttribute('aria-label', labelForThinkingState(state));
 }
 
 function stopThinkingOrb() {
@@ -671,8 +686,9 @@ function tintFromColor(str) {
  * inside the `dvxb.io` link, so the two are one hover group for free.
  *
  * Design B: the lattice always takes the bar's `--nav-cycle` ink. On
- * :hover/:focus-visible the wordmark is painted from that same clock each
- * frame — CSS `color: var(--nav-cycle)` with `transition: color` was
+ * :hover/:focus-visible the wordmark AND the /terminal crumb are painted
+ * from that same clock each frame — CSS `color: var(--nav-cycle)` with
+ * `transition: color` was
  * re-interpolating toward a moving target and never looked like a cycle.
  * Under reduced motion the clock freezes and both hold rest blue.
  */
@@ -682,13 +698,18 @@ function mountNavOrb() {
 
   const bar = canvas.closest('.doc-nav');
   const group = canvas.closest('a');
-  const reduceMq = window.matchMedia
-    ? window.matchMedia('(prefers-reduced-motion: reduce)')
-    : null;
+  // The /terminal crumb syncs off the same live clock as the dvxb.io
+  // wordmark below (same source, same phase, same inline-tint behavior).
+  const crumbLink = bar ? bar.querySelector('.doc-nav-crumb') : null;
 
   const cycleColor = () => {
-    if (reduceMq?.matches || !bar) return CYCLE_STATIC;
-    return getComputedStyle(bar).getPropertyValue('--nav-cycle').trim() || CYCLE_STATIC;
+    // Scoped logo clock (motion.css section G): the bar stays parked for
+    // calm, while the wordmark link carries its own navCycle clock so the
+    // mark + hover wordmark cycle without reviving the global wave.
+    if (!isMotionOK()) return CYCLE_STATIC;
+    const cycleSource = group || bar;
+    if (!cycleSource) return CYCLE_STATIC;
+    return getComputedStyle(cycleSource).getPropertyValue('--nav-cycle').trim() || CYCLE_STATIC;
   };
 
   const orb = attachOrb(canvas, 'solving', {
@@ -700,14 +721,24 @@ function mountNavOrb() {
         if (group.matches(':hover, :focus-visible')) group.style.color = cycle;
         else if (group.style.color) group.style.color = '';
       }
+      // The /terminal crumb paints from the SAME cycle string on hover, so
+      // wordmark and crumb move as one. The RGB-split glitch
+      // pseudo-elements are untouched, so they keep firing over the tinted
+      // text. Under reduced motion cycleColor() is the static rest blue,
+      // matching the parked wordmark.
+      if (crumbLink) {
+        if (crumbLink.matches(':hover, :focus-visible')) crumbLink.style.color = cycle;
+        else if (crumbLink.style.color) crumbLink.style.color = '';
+      }
       return tintFromColor(cycle);
     },
   });
 
-  // Reduced-motion can flip after mount; the lattice loop already restarts, but
+  // The policy can flip after mount; the lattice loop already restarts, but
   // a paused static frame needs an explicit redraw to drop animated ink.
-  const onReduce = () => orb.repaint();
-  reduceMq?.addEventListener('change', onReduce);
+  onMotionChange(() => {
+    orb.repaint();
+  });
 }
 
 export { attachOrb, startThinkingOrb, setThinkingOrbState, stopThinkingOrb, mountNavOrb };

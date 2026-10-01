@@ -1,5 +1,28 @@
 {
   "name": "0",
   "compatibility_date": "2026-07-14",
-  "main": "assets/v86/cors-proxy-worker.js"
+  "main": "assets/v86/cors-proxy-worker.js",
+  // WAVE 9b guestbook private telemetry: WALL_KV persists /wall posts
+  // (keep-forever, no TTL) plus the opaque telemetry blobs at
+  // telemetry:<post-id>.asc and the salted delete-token hashes at
+  // wall:deltoken:<post-id>. Local dev: run `wrangler dev --persist` so the
+  // binding works against local persisted state instead of erroring with no KV.
+  // TELEMETRY R2 bucket (live since 2026-09-09 via dashboard binding;
+  // local config mirrors it). The worker prefers env.TELEMETRY when bound
+  // (contentType application/pgp-encrypted, private no-store,
+  // postId/createdAt/fpHash customMetadata, write via ctx.waitUntil) and
+  // falls back to WALL_KV.
+  "r2_buckets": [
+    {
+      "binding": "TELEMETRY",
+      "bucket_name": "telemetry"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "WALL_KV",
+      "id": "cae9623f0da444a1b0c6ab921148f6ca",
+      "preview_id": "8940fb28f72e4c8ebc32a9c27b46f9ea"
+    }
+  ]
 }

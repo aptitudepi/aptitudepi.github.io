@@ -43,6 +43,12 @@ const HEIGHT = 240; // CSS px height for the sparse-noise fallback mode
 // before the nav bar mounts). Kept as a dim neutral so the field still flares.
 const CYCLE_FALLBACK = [205, 214, 244];
 
+// Resting-brightness gain for the ANSI portrait. The decoded true colors
+// carry deep shadows (~20-60) that read muddy on the dark terminal pane; a
+// 1.10 lift keeps every hue intact (uniform per-channel scale) while each
+// channel clamps at 255 so near-white highlights cannot blow out.
+const PORTRAIT_BRIGHTNESS_GAIN = 1.1;
+
 function getPalette() {
   const dark = document.documentElement.dataset.theme === "dark";
   // base: quiet glyph ink. hot: filled live from --nav-cycle each frame; the
@@ -133,6 +139,12 @@ function brailleDotCount(ch) {
 //              position; drawn cells get a neutral gray whose value scales with
 //              braille dot density (dimmer shadows, brighter faces), so the
 //              headshot reads before heat colours it in.
+//
+// Portrait detail used to live one step downstream: upscaleArtGrid() doubles
+// the decoded grid to 2W x 2L (nearest glyph + bilinear RGB). The 106x55
+// source grid won the /tmp preview, so the live site stays on the base
+// parseAnsiArt grid (106 cols x 55 rows) and upscaleArtGrid() remains only
+// for preview/dev use via the initThermalAscii `upscaleArt: true` flag.
 export function parseAnsiArt(artLines) {
   const rows = [];
   for (const line of artLines) {
@@ -164,6 +176,84 @@ export function parseAnsiArt(artLines) {
   return { cols, rows: rows.length, cells: rows };
 }
 
+// Double a decoded art grid to 2W x 2L cells without new source binaries:
+// each destination cell samples its 2x2 source neighborhood with bilinear
+// RGB interpolation (smooth color gradients at twice the resolution) while
+// the glyph stays nearest-source, so the braille dot-density shading parsed
+// above (dimmer shadows, brighter faces) survives the upscale instead of
+// smearing. Pure function over the grid (no DOM), so node harnesses can
+// assert the 2x cell counts directly.
+export function upscaleArtGrid(sourceGrid) {
+  const sourceRows = sourceGrid.rows;
+  const sourceCols = sourceGrid.cols;
+  const sourceCells = sourceGrid.cells;
+  const sampleSource = (sampleRow, sampleCol) => {
+    const clampedRow = Math.max(0, Math.min(sourceRows - 1, sampleRow));
+    const clampedCol = Math.max(0, Math.min(sourceCols - 1, sampleCol));
+    const sourceRow = sourceCells[clampedRow] || [];
+    return sourceRow[clampedCol] || { glyph: ' ', r: 0, g: 0, b: 0 };
+  };
+  const mixChannel = (topLeft, topRight, bottomLeft, bottomRight, colFrac, rowFrac, channel) => {
+    const topMix = topLeft[channel] * (1 - colFrac) + topRight[channel] * colFrac;
+    const bottomMix = bottomLeft[channel] * (1 - colFrac) + bottomRight[channel] * colFrac;
+    return Math.round(topMix * (1 - rowFrac) + bottomMix * rowFrac);
+  };
+  const destCols = sourceCols * 2;
+  const destRows = sourceRows * 2;
+  const destCells = [];
+  for (let destRow = 0; destRow < destRows; destRow++) {
+    const sourceY = destRow / 2;
+    const topRow = Math.floor(sourceY);
+    const bottomRow = Math.min(sourceRows - 1, topRow + 1);
+    const rowFrac = sourceY - topRow;
+    const destRowCells = [];
+    for (let destCol = 0; destCol < destCols; destCol++) {
+      const sourceX = destCol / 2;
+      const leftCol = Math.floor(sourceX);
+      const rightCol = Math.min(sourceCols - 1, leftCol + 1);
+      const colFrac = sourceX - leftCol;
+      const topLeftCell = sampleSource(topRow, leftCol);
+      const topRightCell = sampleSource(topRow, rightCol);
+      const bottomLeftCell = sampleSource(bottomRow, leftCol);
+      const bottomRightCell = sampleSource(bottomRow, rightCol);
+      const glyphCell = sampleSource(Math.round(sourceY), Math.round(sourceX));
+      destRowCells.push({
+        glyph: glyphCell.glyph,
+        r: mixChannel(topLeftCell, topRightCell, bottomLeftCell, bottomRightCell, colFrac, rowFrac, 'r'),
+        g: mixChannel(topLeftCell, topRightCell, bottomLeftCell, bottomRightCell, colFrac, rowFrac, 'g'),
+        b: mixChannel(topLeftCell, topRightCell, bottomLeftCell, bottomRightCell, colFrac, rowFrac, 'b'),
+      });
+    }
+    destCells.push(destRowCells);
+  }
+  return { cols: destCols, rows: destRows, cells: destCells };
+}
+
+// Edge test for the thermal colorcycle rim: a hot cell is an EDGE cell when
+// its own heat is above the threshold but a 4-neighbor sits below it (the
+// trail boundary) or the local gradient is steep (a neighbor differs by
+// more than the edge step). Out-of-bounds neighbors count as cold, so the
+// art border reads as an edge. Interior hot cells keep their ORIGINAL ascii
+// color; only edge cells lerp to the nav-cycle blue<->red flare. Pure
+// helper (no DOM) so node harnesses can assert edge/interior splits.
+const EDGE_GRADIENT_STEP = 0.12;
+export function isThermalEdgeCell(cellIndex, cellCol, cellRow, heatField, fieldCols, fieldRows, heatCutoff) {
+  const centerHeat = heatField[cellIndex];
+  if (centerHeat < heatCutoff) return false;
+  const neighborDeltas = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  for (const [deltaCol, deltaRow] of neighborDeltas) {
+    const neighborCol = cellCol + deltaCol;
+    const neighborRow = cellRow + deltaRow;
+    if (neighborCol < 0 || neighborCol >= fieldCols || neighborRow < 0 || neighborRow >= fieldRows) {
+      return true;
+    }
+    const neighborHeat = heatField[neighborRow * fieldCols + neighborCol];
+    if (neighborHeat < heatCutoff) return true;
+    if (Math.abs(centerHeat - neighborHeat) > EDGE_GRADIENT_STEP) return true;
+  }
+  return false;
+}
+
 export function initThermalAscii(canvas, options = {}) {
   let {
     fontPx = 11,
@@ -175,6 +265,9 @@ export function initThermalAscii(canvas, options = {}) {
     ramp = RAMP,
     maxDpr = 2,
     art = null, // array of ANSI lines (shell.js ASCII_ART) — portrait mode
+    // Preview/dev flag only: false (default) keeps the base 106x55
+    // parseAnsiArt grid; true restores the legacy 2x upscale for previews.
+    upscaleArt = false,
   } = options;
 
   // Grapheme steps for the active ramp (see RAMP_BENGALI note above): one
@@ -203,11 +296,17 @@ export function initThermalAscii(canvas, options = {}) {
   let disposed = false;
   let fontFamily = "'JetBrains Mono', ui-monospace, monospace";
 
-  // Portrait mode: decode the art once into a cell grid.
+  // Portrait mode: decode the art once into the base 106x55 cell grid. The
+  // legacy 2W x 2L upscale (bilinear RGB, nearest glyph) runs only when the
+  // preview/dev `upscaleArt` flag is set. The canvas keeps its fitted size,
+  // the resting portrait pre-renders into the static layer once, and
+  // per-frame work stays heat-only — maxDpr and heatRadius are untouched.
   let artGrid = null;
   if (art && Array.isArray(art)) {
     const decoded = parseAnsiArt(art);
-    if (decoded && decoded.rows > 0 && decoded.cols > 0) artGrid = decoded;
+    if (decoded?.rows > 0 && decoded?.cols > 0) {
+      artGrid = upscaleArt ? upscaleArtGrid(decoded) : decoded;
+    }
   }
   const portraitMode = Boolean(artGrid);
 
@@ -248,9 +347,12 @@ export function initThermalAscii(canvas, options = {}) {
             const cellInfo = rowCells[c] || { glyph: ' ', r: 0, g: 0, b: 0 };
             const i = r * COLS + c;
             glyphs[i] = cellInfo.glyph;
-            baseColors[i * 3] = cellInfo.r;
-            baseColors[i * 3 + 1] = cellInfo.g;
-            baseColors[i * 3 + 2] = cellInfo.b;
+            const gainedRed = Math.min(255, cellInfo.r * PORTRAIT_BRIGHTNESS_GAIN);
+            const gainedGreen = Math.min(255, cellInfo.g * PORTRAIT_BRIGHTNESS_GAIN);
+            const gainedBlue = Math.min(255, cellInfo.b * PORTRAIT_BRIGHTNESS_GAIN);
+            baseColors[i * 3] = gainedRed;
+            baseColors[i * 3 + 1] = gainedGreen;
+            baseColors[i * 3 + 2] = gainedBlue;
             field[i] = cellInfo.glyph === ' ' ? 0 : 1;
           }
         }
@@ -314,6 +416,8 @@ export function initThermalAscii(canvas, options = {}) {
     return layer;
   }
 
+  // Edge-only colorcycle rim (helper isThermalEdgeCell lives at module scope
+  // so node harnesses can import and assert edge/interior splits directly).
   function frame() {
     raf = 0;
     if (disposed || !ctx || !staticLayer) return;
@@ -344,18 +448,32 @@ export function initThermalAscii(canvas, options = {}) {
       const mix = Math.min(1, currentHeat * currentPal.boost);
       // Character scramble: a heated glyph gains WEIGHT through the ramp
       // (`.`` becomes `+` becomes `@`) as heat rises — on the portrait too.
+      // Geometry (heatRadius/stamp/pulse/decay/threshold) is untouched.
       const scrambleIdx = Math.min(rampGlyphs.length - 1, base + Math.round(currentHeat * 6));
       const scrambleGlyph = rampGlyphs[scrambleIdx];
-      // Lerp the cell's ink toward the live nav-cycle flare (or burn to black
-      // on a light page). Portrait cells start from their decoded colour;
-      // noise cells start from the shared base grey.
-      const col = portraitMode
-        ? [
-            Math.round(baseColors[i * 3] + (hotTarget[0] - baseColors[i * 3]) * mix),
-            Math.round(baseColors[i * 3 + 1] + (hotTarget[1] - baseColors[i * 3 + 1]) * mix),
-            Math.round(baseColors[i * 3 + 2] + (hotTarget[2] - baseColors[i * 3 + 2]) * mix),
-          ]
-        : currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (hotTarget[colorIdx] - baseColor) * mix));
+      // Edge-only colorcycle: interior hot cells retain their ORIGINAL ink
+      // (decoded portrait color with PORTRAIT_BRIGHTNESS_GAIN, or the shared
+      // base grey in noise mode) while EDGE cells — heat above threshold
+      // with a cold/steep neighbor — lerp toward the live nav-cycle flare
+      // (blue<->red, or burn to black on a light page). Static-safe: with no
+      // heat above threshold nothing paints and the resting static layer
+      // (original colors) shows untouched.
+      const edgeCell = isThermalEdgeCell(i, colIdx, rowIdx, heat, COLS, ROWS, heatThreshold);
+      const col = edgeCell
+        ? (portraitMode
+          ? [
+              Math.round(baseColors[i * 3] + (hotTarget[0] - baseColors[i * 3]) * mix),
+              Math.round(baseColors[i * 3 + 1] + (hotTarget[1] - baseColors[i * 3 + 1]) * mix),
+              Math.round(baseColors[i * 3 + 2] + (hotTarget[2] - baseColors[i * 3 + 2]) * mix),
+            ]
+          : currentPal.base.map((baseColor, colorIdx) => Math.round(baseColor + (hotTarget[colorIdx] - baseColor) * mix)))
+        : (portraitMode
+          ? [
+              Math.round(baseColors[i * 3]),
+              Math.round(baseColors[i * 3 + 1]),
+              Math.round(baseColors[i * 3 + 2]),
+            ]
+          : [currentPal.base[0], currentPal.base[1], currentPal.base[2]]);
       ctx.clearRect(colIdx * cellW, rowIdx * cellH, cellW, cellH);
       ctx.fillStyle = `rgb(${col.join(",")})`;
       ctx.fillText(scrambleGlyph, colIdx * cellW, rowIdx * cellH);

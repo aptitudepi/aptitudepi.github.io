@@ -19,41 +19,58 @@
  * theirs, this module only owns the scalar.
  */
 
-const reduceMq =
-  typeof window !== 'undefined' && window.matchMedia
-    ? window.matchMedia('(prefers-reduced-motion: reduce)')
-    : null;
+import { isMotionOK, onMotionChange } from './motion.js';
 
 /* ── Initial device estimate ───────────────── */
 
 // Cheap one-off read of the GPU renderer string. Returns '' if unavailable.
+// Boot probe only: the throwaway context is released immediately after the
+// read (mirror the topo isSupported idiom) so boot never holds a spare GL
+// context, and local refs are nulled for collection.
 function readRenderer() {
+  let probeCanvas = null;
+  let probeGl = null;
   try {
-    const c = document.createElement('canvas');
-    const gl = c.getContext('webgl2') || c.getContext('webgl');
-    if (!gl) return '';
+    probeCanvas = document.createElement('canvas');
+    probeGl = probeCanvas.getContext('webgl2') || probeCanvas.getContext('webgl');
+    if (!probeGl) return '';
     // Modern engines report the real GPU on plain RENDERER; reaching for the
     // deprecated WEBGL_debug_renderer_info extension first (or at all, when
     // RENDERER is already useful) makes Firefox log a deprecation warning.
-    let raw = '';
-    try { raw = String(gl.getParameter(gl.RENDERER) || '').trim(); } catch (_) { raw = ''; }
-    if (/^(webkit webgl|mozilla|generic|unknown)/i.test(raw)) raw = '';
-    if (!raw) {
-      const ext = gl.getExtension('WEBGL_debug_renderer_info');
-      if (ext) {
-        try { raw = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '').trim(); } catch (_) { raw = ''; }
+    let rawRenderer = '';
+    try { rawRenderer = String(probeGl.getParameter(probeGl.RENDERER) || '').trim(); } catch {
+      rawRenderer = '';
+    }
+    if (/^(webkit webgl|mozilla|generic|unknown)/i.test(rawRenderer)) rawRenderer = '';
+    if (!rawRenderer) {
+      const debugExtension = probeGl.getExtension('WEBGL_debug_renderer_info');
+      if (debugExtension) {
+        try { rawRenderer = String(probeGl.getParameter(debugExtension.UNMASKED_RENDERER_WEBGL) || '').trim(); } catch {
+          rawRenderer = '';
+        }
       }
     }
-    return raw.toLowerCase();
-  } catch (_) {
+    return rawRenderer.toLowerCase();
+  } catch {
     return '';
+  } finally {
+    try {
+      const loseExtension = probeGl ? probeGl.getExtension('WEBGL_lose_context') : null;
+      if (loseExtension && typeof loseExtension.loseContext === 'function') loseExtension.loseContext();
+    } catch {
+      probeGl = null;
+    }
+    probeGl = null;
+    probeCanvas = null;
   }
 }
 
 // Map the assorted device signals to a starting quality in [0, 1]. This is a
 // guess, not a verdict — the live loop corrects it within a second or two.
 function estimate() {
-  if (reduceMq && reduceMq.matches) return 0;
+  // The single motion policy (js/motion.js) owns the reduced-motion +
+  // saveData / slow-2g decision; a motion-off boot starts at the floor.
+  if (!isMotionOK()) return 0;
 
   const r = readRenderer();
   let gpu = 0.55; // unknown GPU → middle of the road
@@ -357,6 +374,9 @@ let last = 0;
 let running = false;
 let rafId = 0;
 let warmup = 0; // let the EMA settle before acting on it
+// Phase-5 coupled-scaler nesting depth: while > 0 the particle pause owns the
+// loop and start() stays out. Declared with the other state (declare-before-use).
+let suspendDepth = 0;
 
 function tick(ts) {
   if (!running) return;
@@ -384,9 +404,12 @@ function tick(ts) {
 
 function start() {
   if (running) return;
-  // Reduced-motion users are pinned at 0 and get no live loop — there is
+  // Suspended (particle pause) owns the loop until resumePerfLoop: starting
+  // here would reset ema/warmup and leave two schedulers behind.
+  if (suspendDepth > 0) return;
+  // Motion-off users are pinned at 0 and get no live loop — there is
   // nothing running for it to measure or rebalance.
-  if (reduceMq && reduceMq.matches) {
+  if (!isMotionOK()) {
     setQuality(0);
     return;
   }
@@ -402,26 +425,84 @@ function stop() {
   cancelAnimationFrame(rafId);
 }
 
+// Phase-5 coupled scaler: additive suspend/resume for the particle pause
+// path. suspendPerfLoop parks the RAF loop but preserves ema/warmup/last
+// exactly (start() above re-seeds them, so the pause path never reuses
+// start/stop); resumePerfLoop restarts in place only while the page is
+// visible and the motion policy passes, asserting a single RAF. Manual
+// pins are never touched — suspension is invisible to the override state,
+// and the onChange subscriber set is never modified (single qualityUnsub
+// holds by construction across any number of suspend/resume cycles).
+function suspendPerfLoop() {
+  suspendDepth += 1;
+  if (suspendDepth === 1 && running) {
+    running = false;
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+}
+
+function resumePerfLoop() {
+  if (suspendDepth > 0) suspendDepth -= 1;
+  if (suspendDepth !== 0) return;
+  if (running) return;
+  if (typeof document !== 'undefined' && document.hidden) return;
+  if (!isMotionOK()) return;
+  if (rafId !== 0) {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+  running = true;
+  rafId = requestAnimationFrame(tick);
+}
+
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') stop();
     else start();
   });
-  reduceMq?.addEventListener('change', () => {
-    if (reduceMq.matches) {
+  onMotionChange((motionOff) => {
+    if (motionOff) {
       stop();
       setQuality(0);
     } else {
       quality = estimate();
       lastNotified = quality;
       // Re-resolve URL/stored pins so a manual choice survives the
-      // reduced-motion round-trip; auto re-applies hint drops on the fresh
+      // motion-off round-trip; auto re-applies hint drops on the fresh
       // estimate. Notifies only when re-pinning (same no-op as before in auto).
       resolveBootOverride();
       start();
     }
   });
   start();
+}
+
+/* ── Adaptive-count flip discipline ──────── */
+
+// Rate limiter for adaptive steppers (particle instanceCount, …): at most
+// maxFlipTotal changes per sliding windowMs window, so a noisy probe cannot
+// flip-flop every evaluation. Pure state machine (no DOM/timers) — the owner
+// passes its own clock (performance.now()) for testability.
+function createFlipGuard(maxFlipTotal, windowMs) {
+  const flipStampList = [];
+  function pruneFlipStamps(nowMs) {
+    const cutoffMs = nowMs - windowMs;
+    while (flipStampList.length > 0 && flipStampList[0] < cutoffMs) {
+      flipStampList.shift();
+    }
+  }
+  function tryFlip(nowMs) {
+    pruneFlipStamps(nowMs);
+    if (flipStampList.length >= maxFlipTotal) return false;
+    flipStampList.push(nowMs);
+    return true;
+  }
+  function getFlipCount(nowMs) {
+    pruneFlipStamps(nowMs);
+    return flipStampList.length;
+  }
+  return { tryFlip, getFlipCount };
 }
 
 /* ── Public API ────────────────────────────── */
@@ -506,6 +587,39 @@ const perf = {
     perf.setTierOverride(SOURCE_AUTO, SOURCE_SIDEBAR);
   },
 
+  /**
+   * Additive suspend: park the scaler RAF while preserving ema/warmup
+   * (particle offscreen/hidden path). Nestable; never touches manual pins
+   * or the subscriber set.
+   */
+  suspendLoop() {
+    suspendPerfLoop();
+  },
+
+  /**
+   * Resume after suspend: restarts in place (ema/warmup preserved) only
+   * while the page is visible and the motion policy passes; otherwise stays
+   * parked. Asserts a single RAF.
+   */
+  resumeLoop() {
+    resumePerfLoop();
+  },
+
+  /** True while the scaler RAF is scheduled. */
+  isLoopRunning() {
+    return running;
+  },
+
+  /** Current suspend nesting depth (0 = nobody holds the loop). */
+  getSuspendDepth() {
+    return suspendDepth;
+  },
+
+  /** Live subscriber count — the single-qualityUnsub invariant probe. */
+  getListenerCount() {
+    return listeners.size;
+  },
+
   /** Clamp the auto scaler into [floor, ceiling]; manual pins ignore clamps. */
   setClamp(floorValue, ceilingValue) {
     const parsedFloor = Math.max(0, Math.min(1, Number(floorValue)));
@@ -529,4 +643,4 @@ resolveBootOverride();
 watchBatteryHint();
 
 export default perf;
-export { perf };
+export { perf, createFlipGuard };

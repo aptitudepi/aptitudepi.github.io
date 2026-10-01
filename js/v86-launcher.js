@@ -1,35 +1,68 @@
 import { setMode, setV86InputHandler, getTerm } from './terminal.js';
-import { writePrompt } from './shell.js';
+import { runForeground, isAbortError } from './foreground.js';
 
 let v86Emulator = null;
 let v86Ready = false;
 let v86Loading = false;
 
-function loadScript(url) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = url;
-    s.onload = resolve;
-    s.onerror = reject;
-    document.head.appendChild(s);
+// Container busy-state for the VM boot: the loading/progress terminal lines
+// carry the state text; aria-busy marks the region as updating. DOM-only.
+function setVmBusy(busyOn) {
+  try {
+    if (typeof document === 'undefined') return;
+    const containerNode = document.getElementById('terminal-container');
+    if (containerNode) containerNode.setAttribute('aria-busy', busyOn ? 'true' : 'false');
+  } catch (busyError) {
+    console.warn(`vm busy state skipped: ${busyError.message}`);
+  }
+}
+
+function loadScript(url, runSignal) {
+  return new Promise((resolveScript, rejectScript) => {
+    if (runSignal?.aborted) {
+      rejectScript(new DOMException('VM boot cancelled', 'AbortError'));
+      return;
+    }
+    const scriptNode = document.createElement('script');
+    scriptNode.src = url;
+    const abortListener = () => {
+      scriptNode.remove();
+      rejectScript(new DOMException('VM boot cancelled', 'AbortError'));
+    };
+    runSignal?.addEventListener('abort', abortListener, { once: true });
+    scriptNode.onload = () => {
+      runSignal?.removeEventListener('abort', abortListener);
+      resolveScript();
+    };
+    scriptNode.onerror = () => {
+      runSignal?.removeEventListener('abort', abortListener);
+      rejectScript(new Error(`failed to load ${url}`));
+    };
+    document.head.appendChild(scriptNode);
   });
 }
 
-async function bootVM(term) {
+// Boots the VM inside the foreground runner: resolves false when the VM takes
+// over the terminal (runner skips its prompt), true when the shell prompt
+// should render (already loading/running, or a failed boot).
+async function bootVM(term, runSignal) {
   if (v86Loading) {
     term.writeln('\x1b[38;2;180;180;100mVM is already loading...\x1b[0m');
-    return;
+    return true;
   }
   if (v86Ready && v86Emulator) {
     term.writeln('\x1b[38;2;100;200;100mVM already running.\x1b[0m');
-    return;
+    return true;
   }
 
   v86Loading = true;
-  term.writeln('\x1b[38;2;100;140;200mLoading v86 emulator...\x1b[0m');
+  setVmBusy(true);
+  term.writeln('\x1b[38;2;100;140;200mRun Linux in your browser — loading the emulator (5–15s to boot)...\x1b[0m');
+  term.writeln('\x1b[38;2;80;80;90m(Ctrl+C cancels the boot and returns to the shell)\x1b[0m');
 
   try {
-    await loadScript('assets/v86/v86_all.js');
+    await loadScript('assets/v86/v86_all.js', runSignal);
+    runSignal?.throwIfAborted();
     term.writeln('\x1b[38;2;100;200;100mv86 loaded.\x1b[0m');
     term.writeln('\x1b[38;2;100;140;200mBooting Buildroot Linux...\x1b[0m');
     term.writeln('\x1b[38;2;80;80;90m(This may take 5-15 seconds)\x1b[0m');
@@ -61,32 +94,38 @@ async function bootVM(term) {
 
     setV86InputHandler(function(data) {
       if (!v86Emulator) return;
-      for (const ch of data) {
-        v86Emulator.s.send('serial0-input', ch.charCodeAt(0));
+      for (const inputChar of data) {
+        v86Emulator.s.send('serial0-input', inputChar.charCodeAt(0));
       }
     });
 
     setMode('v86');
     v86Ready = true;
     v86Loading = false;
+    setVmBusy(false);
     term.writeln('\r');
-  } catch (err) {
-    term.writeln(`\x1b[38;2;220;80;80mError: ${err.message}\x1b[0m`);
+    return false;
+  } catch (bootError) {
     v86Loading = false;
+    setVmBusy(false);
+    if (isAbortError(bootError)) throw bootError;
+    term.writeln(`\x1b[38;2;220;80;80mError: ${bootError.message}\x1b[0m`);
+    term.writeln('\x1b[38;2;140;140;155mNext: retry `vm`, or reload the page and try again\x1b[0m');
+    return true;
   }
 }
 
 function exitVM() {
-  if (!v86Emulator) return;
+  if (!v86Emulator) return Promise.resolve(false);
   const term = getTerm();
-  if (!term) return;
-  v86Emulator.stop().then(() => {
+  if (!term) return Promise.resolve(false);
+  return runForeground('exit', term, async () => {
+    await v86Emulator.stop();
     term.writeln('\r\n\x1b[38;2;100;200;100mVM stopped.\x1b[0m');
     v86Ready = false;
     v86Emulator = null;
     setV86InputHandler(null);
     setMode('local');
-    writePrompt(term);
   });
 }
 
