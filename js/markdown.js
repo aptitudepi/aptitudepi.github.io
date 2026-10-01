@@ -174,7 +174,7 @@ function renderMarkdown(sourceText, columnWidth) {
     if (tableBuffer.length === 0) {
       return;
     }
-    for (const tableLine of renderTableBlock(tableBuffer, maxWidth)) {
+    for (const tableLine of renderTableBlock(tableBuffer)) {
       outputLines.push(tableLine);
     }
     tableBuffer = [];

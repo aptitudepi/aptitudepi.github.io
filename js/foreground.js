@@ -116,7 +116,7 @@ async function runForeground(commandName, term, workFunction) {
   const abortController = new AbortController();
   currentRun = { commandName, abortController };
   showForegroundStatus(commandName);
-  let workResult = undefined;
+  let workResult = null;
   let wasCancelled = false;
   try {
     workResult = await workFunction(abortController.signal);

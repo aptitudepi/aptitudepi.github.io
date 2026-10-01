@@ -37,7 +37,7 @@ function stripPdfTexOnly(src) {
     .split('\n')
     .filter((line) => !/^\s*\\pdf[a-zA-Z]/.test(line) && !/^\s*\\input\{\s*glyphtounicode\s*\}/.test(line))
     .join('\n');
-  return `\\def\\XeTeXLink@font{}\n` + filtered;
+  return '\\def\\XeTeXLink@font{}\n' + filtered;
 }
 
 // Public PDFs must not carry phone numbers or email addresses (the .tex

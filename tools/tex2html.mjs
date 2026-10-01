@@ -479,7 +479,7 @@ function renderHeader(content) {
     .split('·').map((s) => s.trim()).filter(Boolean).join('  ·  ');
   const contact = scrubbed;
   const nameHtml = name.replace(/^<strong>(.*)<\/strong>$/, '<strong>$1</strong>');
-  return `<div class="resume-header">` +
+  return '<div class="resume-header">' +
     `<h1 class="resume-name">${nameHtml}</h1>` +
     (contact ? `<p class="resume-contact">${contact}</p>` : '') +
     '</div>';

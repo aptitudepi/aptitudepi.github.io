@@ -829,11 +829,11 @@ void main(){
   function readScopedCycleColor() {
     try {
       const scopedNode = document.querySelector('.doc-nav-home') || document.querySelector('.doc-nav');
-      if (!scopedNode) return ``;
+      if (!scopedNode) return '';
       return getComputedStyle(scopedNode).getPropertyValue('--nav-cycle').trim();
     } catch (cycleReadError) {
       console.warn(`[particles] heat cycle read skipped: ${cycleReadError.message}`);
-      return ``;
+      return '';
     }
   }
 

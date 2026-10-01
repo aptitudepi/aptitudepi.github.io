@@ -78,7 +78,7 @@ function normalizeMotionToken(rawToken) {
   const tokenText = String(rawToken).trim().toLowerCase();
   if (tokenText === MODE_OFF_TEXT) return MODE_OFF_TEXT;
   if (tokenText === MODE_ON_TEXT) return MODE_ON_TEXT;
-  if (tokenText === 'auto') return `auto`;
+  if (tokenText === 'auto') return 'auto';
   return null;
 }
 
@@ -149,7 +149,7 @@ function resolveBootExpressive() {
   expressiveOptIn = readStoredValue(EXPRESSIVE_STORAGE_KEY) === '1';
 }
 
-let reduceMatcher = readReduceMatcher();
+const reduceMatcher = readReduceMatcher();
 const motionListeners = new Set();
 
 function computeMotionOff() {

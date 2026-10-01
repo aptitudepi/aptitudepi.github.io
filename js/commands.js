@@ -388,7 +388,7 @@ const FORTUNES = [
   'Any application that can be written in JavaScript, will eventually be written in JavaScript — Jeff Atwood',
   'Software is getting slower more rapidly than hardware becomes faster — Niklaus Wirth',
   'Unix was not designed to stop you from doing stupid things, because that would also stop you from doing clever things — Douglas Gwyn',
-  'The most damaging phrase in the language is: \"It\'s always been done that way\" — Grace Hopper',
+  'The most damaging phrase in the language is: "It\'s always been done that way" — Grace Hopper',
   'Peers can be the best teachers, because they\'re the ones that remember what it\'s like to not understand — Peter Norvig',
   'From then on, when anything went wrong with a computer, we said it had bugs in it — Grace Hopper',
   'Many people tend to look at programming styles and languages like religions: if you belong to one, you cannot belong to others. But this analogy is another fallacy — Niklaus Wirth',
@@ -445,7 +445,7 @@ const FORTUNES = [
   'Design and programming are human activities; forget that and all is lost — Bjarne Stroustrup',
   'Most of the biggest problems in software are problems of misconception — Rich Hickey',
   'After more than 30 years of programming, we ought to know that the design of complex software is inherently difficult — Niklaus Wirth',
-  'If we wish to count lines of code, we should not regard them as \"lines produced\" but as \"lines spent\" — E.W. Dijkstra',
+  'If we wish to count lines of code, we should not regard them as "lines produced" but as "lines spent" — E.W. Dijkstra',
   'Working ten hour days allows you to fall behind twice as fast as you could working five hour days — Isaac Asimov',
   'Measuring programming progress by lines of code is like measuring aircraft building progress by weight — Bill Gates',
   'The designer of a new kind of system must participate fully in the implementation — Donald Knuth',
@@ -647,6 +647,8 @@ function infoLabelColor() {
 
 const SHOW_TERMINAL_ART = false;
 
+const NEOFETCH_TRY_COMMANDS = ['matrix', 'vm', 'ai', 'weather', 'hn', 'md', 'wall'];
+
 function neofetch(term) {
   const artHeight = ASCII_ART.length;
   const gap = 4;
@@ -773,7 +775,7 @@ async function getLocation(runSignal) {
 async function weatherCommand(term, args, runSignal) {
   const isF = args.includes('-f');
   term.writeln(`${SITE_MUTED}Fetching location...${ANSI_RESET}`);
-  let loc = undefined;
+  let loc = null;
   if (_prefetchedLocation) {
     loc = _prefetchedLocation;
   } else {
@@ -2626,8 +2628,6 @@ const COMMAND_COMPLETION_NAMES = [
 const TOOL_ALLOWLIST_NAMES = COMMAND_REGISTRY.filter((entry) => entry.allow).map((entry) => entry.name);
 
 const TOOL_ALLOWLIST_BARE_ONLY = COMMAND_REGISTRY.filter((entry) => entry.bareOnly).map((entry) => entry.name);
-
-const NEOFETCH_TRY_COMMANDS = ['matrix', 'vm', 'ai', 'weather', 'hn', 'md', 'wall'];
 
 function resolveCommand(nameText) {
   const key = String(nameText).toLowerCase();

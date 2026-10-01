@@ -119,7 +119,7 @@ function readCommitSha() {
     return rawOutput.trim();
   } catch (gitError) {
     process.stderr.write(`snapshot: git rev-parse failed: ${gitError.message}\n`);
-    return `unknown`;
+    return 'unknown';
   }
 }
 
@@ -437,7 +437,7 @@ async function createFallbackDriver(initScriptText, serverOrigin) {
 
   const debugSocket = new WebSocket(pageTarget.webSocketDebuggerUrl);
   await new Promise((resolveSocket, rejectSocket) => {
-    debugSocket.addEventListener('open', () => resolveSocket(undefined), { once: true });
+    debugSocket.addEventListener('open', () => resolveSocket(), { once: true });
     debugSocket.addEventListener('error', (socketError) => rejectSocket(socketError), { once: true });
   });
 

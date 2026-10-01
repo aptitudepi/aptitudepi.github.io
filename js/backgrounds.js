@@ -105,8 +105,8 @@ function persistBackgroundMode(modeText) {
 // The motion policy (js/motion.js) always wins: anything but an explicit off
 // collapses to static while reduced-motion / Data-Saver / slow-link holds.
 function resolveEffectiveMode() {
-  if (requestedMode === 'off') return `off`;
-  if (!isMotionOK()) return `static`;
+  if (requestedMode === 'off') return 'off';
+  if (!isMotionOK()) return 'static';
   return requestedMode;
 }
 

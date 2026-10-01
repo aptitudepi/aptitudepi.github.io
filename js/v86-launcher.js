@@ -32,7 +32,7 @@ function loadScript(url, runSignal) {
     runSignal?.addEventListener('abort', abortListener, { once: true });
     scriptNode.onload = () => {
       runSignal?.removeEventListener('abort', abortListener);
-      resolveScript(undefined);
+      resolveScript();
     };
     scriptNode.onerror = () => {
       runSignal?.removeEventListener('abort', abortListener);

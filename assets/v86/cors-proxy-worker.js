@@ -122,15 +122,15 @@ function wallStripAnsi(rawText) {
 // error string, or null when the message is acceptable.
 function wallSpamVerdict(cleanMessage) {
   if (cleanMessage.length === 0) {
-    return `Message cannot be empty`;
+    return 'Message cannot be empty';
   }
   if (Array.from(cleanMessage).length > WALL_MESSAGE_MAX) {
-    return `Message is too long (kept to 280 characters)`;
+    return 'Message is too long (kept to 280 characters)';
   }
   const schemeLinks = cleanMessage.match(/https?:\/\//g) ?? [];
   const bareLinks = cleanMessage.match(/www\./g) ?? [];
   if (schemeLinks.length + bareLinks.length > WALL_LINK_MAX) {
-    return `Message looks like link spam — keep it to two links or fewer`;
+    return 'Message looks like link spam — keep it to two links or fewer';
   }
   return null;
 }

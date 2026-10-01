@@ -320,7 +320,7 @@ async function runBrowserAsserts() {
         await window.bootVM(activeTerm, abortController.signal);
         return 'resolved';
       } catch (bootError) {
-        return bootError && bootError.name ? bootError.name : String(bootError);
+        return bootError?.name ? bootError.name : String(bootError);
       }
     });
     check(abortResult === 'AbortError', `aborted VM boot surfaces AbortError, never a hang (${abortResult})`);
