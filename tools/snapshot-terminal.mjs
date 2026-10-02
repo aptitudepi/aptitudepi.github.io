@@ -89,7 +89,7 @@ function sleepMillis(durationMillis) {
 }
 
 function countPrompts(streamText) {
-  const promptMarks = streamText.match(/❯/g);
+  const promptMarks = streamText.match(/❯/gu);
   return promptMarks === null ? 0 : promptMarks.length;
 }
 

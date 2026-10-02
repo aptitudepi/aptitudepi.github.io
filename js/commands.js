@@ -535,10 +535,6 @@ function levenshtein(firstString, secondString) {
   return distanceMatrix[lenA][lenB];
 }
 
-function commandCount() {
-  return COMMANDS.length;
-}
-
 // Normalize a user-supplied VFS path: resolve relative paths against the
 // home directory, collapse duplicate slashes, resolve ./ and ../ segments.
 // A trailing slash is insignificant for lookup.
@@ -721,19 +717,6 @@ function neofetch(term) {
     }
   }
 
-}
-
-function helpText(term) {
-  term.writeln(`${ANSI_BOLD}${SITE_WHITE}Available commands (${commandCount()})${ANSI_RESET}`);
-  term.writeln(`${SITE_MUTED}────────────────────${ANSI_RESET}`);
-  const rows = COMMAND_REGISTRY.filter((entry) => entry.helpDisplay !== null);
-  rows.sort((first, second) => first.helpPos - second.helpPos);
-  for (const entry of rows) {
-    term.writeln(`  ${SITE_GREEN}${entry.helpDisplay.padEnd(14)}${ANSI_RESET}${SITE_WHITE}${entry.helpDesc}${ANSI_RESET}`);
-    for (const extraRow of entry.extraHelpRows) {
-      term.writeln(`  ${SITE_GREEN}${extraRow[0].padEnd(14)}${ANSI_RESET}${SITE_WHITE}${extraRow[1]}${ANSI_RESET}`);
-    }
-  }
 }
 
 async function getLocation(runSignal) {
@@ -943,103 +926,116 @@ function renderComment(term, item, depth) {
   }
 }
 
-async function hnCommand(term, args, runSignal) {
-  if (args.length > 0) {
-    const idx = parseInt(args[0], 10);
-    if (isNaN(idx) || idx < 1 || idx > _hnItems.length) {
-      term.writeln(`${SITE_ERR}hn: invalid index${ANSI_RESET}`);
-      term.writeln(`${SITE_MUTED}Next: run \`hn\` to refresh the list, then \`hn <number>\`${ANSI_RESET}`);
-      return;
-    }
-    const item = _hnItems[idx - 1];
-    if (!item) {
-      term.writeln(`${SITE_ERR}hn: item not found${ANSI_RESET}`);
-      term.writeln(`${SITE_MUTED}Next: run \`hn\` to refresh the list, then \`hn <number>\`${ANSI_RESET}`);
-      return;
-    }
-    term.writeln(`${SITE_MUTED}Fetching story #${item.id}...${ANSI_RESET}`);
-    try {
-      const storyResp = await fetch(`https://hacker-news.firebaseio.com/v0/item/${item.id}.json`, { signal: combinedTimeoutSignal(runSignal, 10000) });
-      if (!storyResp.ok) throw new Error(`story HTTP ${storyResp.status}`);
-      const story = await storyResp.json();
-      if (!story) throw new Error('empty');
+function fetchHnItem(itemId, runSignal) {
+  return fetch(`https://hacker-news.firebaseio.com/v0/item/${itemId}.json`, { signal: combinedTimeoutSignal(runSignal, 10000) }).then((itemResp) => itemResp.ok ? itemResp.json() : null);
+}
 
-      term.writeln(`${ANSI_BOLD}${SITE_WHITE}${stripAnsi(story.title)}${ANSI_RESET}`);
-      const authorName = stripAnsi(story.by) || 'anonymous';
-      const pts = story.score || 0;
-      const cmts = story.descendants || 0;
-      const ago = story.time ? timeAgo(story.time) : '';
-      term.writeln(`${SITE_MUTED}by ${SITE_GREEN}${authorName}${SITE_MUTED} | ${pts} points | ${cmts} comments | ${ago}${ANSI_RESET}`);
-      if (story.url) {
-        term.writeln(`${SITE_BLUE}${stripAnsi(story.url)}${ANSI_RESET}`);
-      }
-      if (story.text) {
-        term.writeln('');
-        term.writeln(stripAnsi(stripHtml(story.text)));
-      }
+function renderHnStoryHeader(term, story) {
+  term.writeln(`${ANSI_BOLD}${SITE_WHITE}${stripAnsi(story.title)}${ANSI_RESET}`);
+  const authorName = stripAnsi(story.by) || 'anonymous';
+  const pts = story.score || 0;
+  const cmts = story.descendants || 0;
+  const ago = story.time ? timeAgo(story.time) : '';
+  term.writeln(`${SITE_MUTED}by ${SITE_GREEN}${authorName}${SITE_MUTED} | ${pts} points | ${cmts} comments | ${ago}${ANSI_RESET}`);
+  if (story.url) {
+    term.writeln(`${SITE_BLUE}${stripAnsi(story.url)}${ANSI_RESET}`);
+  }
+  if (story.text) {
+    term.writeln('');
+    term.writeln(stripAnsi(stripHtml(story.text)));
+  }
+}
 
-      if (story.kids && story.kids.length > 0) {
-        term.writeln('');
-        const commentIds = story.kids.slice(0, 10);
-        const comments = await Promise.all(
-          commentIds.map((commentId) =>
-            fetch(`https://hacker-news.firebaseio.com/v0/item/${commentId}.json`, { signal: combinedTimeoutSignal(runSignal, 10000) }).then((commentResp) => commentResp.ok ? commentResp.json() : null)
-          )
-        );
-        for (const comment of comments) {
-          if (comment?.kids && comment.kids.length > 0) {
-            const replyIds = comment.kids.slice(0, 3);
-            comment._replies = (await Promise.all(
-              replyIds.map((replyId) =>
-                fetch(`https://hacker-news.firebaseio.com/v0/item/${replyId}.json`, { signal: combinedTimeoutSignal(runSignal, 10000) }).then((replyResp) => replyResp.ok ? replyResp.json() : null)
-              )
-            )).filter(Boolean);
-          }
-        }
-        for (const comment of comments) {
-          renderComment(term, comment, 0);
-          term.writeln('');
-        }
-      } else {
-        term.writeln(`${SITE_MUTED}No comments yet${ANSI_RESET}`);
-      }
-    } catch (storyError) {
-      if (isAbortError(storyError)) throw storyError;
-      term.writeln(`${SITE_ERR}Failed to fetch story #${item.id}${ANSI_RESET}`);
-      term.writeln(`${SITE_MUTED}Next: retry the story, or run \`hn\` to refresh the list${ANSI_RESET}`);
-    }
+async function renderHnStoryComments(term, story, runSignal) {
+  if (!story.kids || story.kids.length === 0) {
+    term.writeln(`${SITE_MUTED}No comments yet${ANSI_RESET}`);
     return;
   }
+  term.writeln('');
+  const commentIds = story.kids.slice(0, 10);
+  const comments = await Promise.all(commentIds.map((commentId) => fetchHnItem(commentId, runSignal)));
+  for (const comment of comments) {
+    if (comment?.kids && comment.kids.length > 0) {
+      const replyIds = comment.kids.slice(0, 3);
+      comment._replies = (await Promise.all(
+        replyIds.map((replyId) => fetchHnItem(replyId, runSignal))
+      )).filter(Boolean);
+    }
+  }
+  for (const comment of comments) {
+    renderComment(term, comment, 0);
+    term.writeln('');
+  }
+}
 
+async function runHnStoryCommand(term, item, runSignal) {
+  term.writeln(`${SITE_MUTED}Fetching story #${item.id}...${ANSI_RESET}`);
+  try {
+    const storyResp = await fetch(`https://hacker-news.firebaseio.com/v0/item/${item.id}.json`, { signal: combinedTimeoutSignal(runSignal, 10000) });
+    if (!storyResp.ok) throw new Error(`story HTTP ${storyResp.status}`);
+    const story = await storyResp.json();
+    if (!story) throw new Error('empty');
+    renderHnStoryHeader(term, story);
+    await renderHnStoryComments(term, story, runSignal);
+  } catch (storyError) {
+    if (isAbortError(storyError)) throw storyError;
+    term.writeln(`${SITE_ERR}Failed to fetch story #${item.id}${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: retry the story, or run \`hn\` to refresh the list${ANSI_RESET}`);
+  }
+}
+
+function renderHnTopList(term, items) {
+  term.writeln(`${SITE_CYAN}┌────┬──────────────────────────────────────────────────┬───────┬────────┐${ANSI_RESET}`);
+  term.writeln(`${SITE_CYAN}│${SITE_FAINT} #  ${SITE_CYAN}│${SITE_FAINT} Title                                            ${SITE_CYAN}│${SITE_FAINT} Score ${SITE_CYAN}│${SITE_FAINT} Comments${SITE_CYAN}│${ANSI_RESET}`);
+  term.writeln(`${SITE_CYAN}├────┼──────────────────────────────────────────────────┼───────┼────────┤${ANSI_RESET}`);
+  for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+    const listItem = items[itemIndex];
+    if (!listItem) continue;
+    const num = String(itemIndex + 1).padStart(2);
+    const title = (listItem.title || 'Untitled').slice(0, 48).padEnd(48);
+    const score = String(listItem.score || 0).padStart(5);
+    const comments = String(listItem.descendants || 0).padStart(6);
+    term.writeln(`${SITE_CYAN}│${SITE_GREEN}${num} ${SITE_CYAN}│${SITE_WHITE} ${title} ${SITE_CYAN}│${SITE_MUTED} ${score}${SITE_CYAN}│${SITE_MUTED} ${comments}${SITE_CYAN}│${ANSI_RESET}`);
+  }
+  term.writeln(`${SITE_CYAN}└────┴──────────────────────────────────────────────────┴───────┴────────┘${ANSI_RESET}`);
+  term.writeln(`${SITE_MUTED}Type ${SITE_WHITE}hn <number>${SITE_MUTED} to view a story${ANSI_RESET}`);
+}
+
+async function runHnTopListCommand(term, runSignal) {
   term.writeln(`${SITE_MUTED}Fetching top stories...${ANSI_RESET}`);
   try {
     const idsResp = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json', { signal: combinedTimeoutSignal(runSignal, 10000) });
     if (!idsResp.ok) throw new Error(`topstories HTTP ${idsResp.status}`);
     const ids = await idsResp.json();
     const topIds = ids.slice(0, 30);
-    const items = await Promise.all(topIds.map((topId) =>
-      fetch(`https://hacker-news.firebaseio.com/v0/item/${topId}.json`, { signal: combinedTimeoutSignal(runSignal, 10000) }).then((itemResp) => itemResp.ok ? itemResp.json() : null)
-    ));
+    const items = await Promise.all(topIds.map((topId) => fetchHnItem(topId, runSignal)));
     _hnItems = items;
-    term.writeln(`${SITE_CYAN}┌────┬──────────────────────────────────────────────────┬───────┬────────┐${ANSI_RESET}`);
-    term.writeln(`${SITE_CYAN}│${SITE_FAINT} #  ${SITE_CYAN}│${SITE_FAINT} Title                                            ${SITE_CYAN}│${SITE_FAINT} Score ${SITE_CYAN}│${SITE_FAINT} Comments${SITE_CYAN}│${ANSI_RESET}`);
-    term.writeln(`${SITE_CYAN}├────┼──────────────────────────────────────────────────┼───────┼────────┤${ANSI_RESET}`);
-    for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-      const listItem = items[itemIndex];
-      if (!listItem) continue;
-      const num = String(itemIndex + 1).padStart(2);
-      const title = (listItem.title || 'Untitled').slice(0, 48).padEnd(48);
-      const score = String(listItem.score || 0).padStart(5);
-      const comments = String(listItem.descendants || 0).padStart(6);
-      term.writeln(`${SITE_CYAN}│${SITE_GREEN}${num} ${SITE_CYAN}│${SITE_WHITE} ${title} ${SITE_CYAN}│${SITE_MUTED} ${score}${SITE_CYAN}│${SITE_MUTED} ${comments}${SITE_CYAN}│${ANSI_RESET}`);
-    }
-    term.writeln(`${SITE_CYAN}└────┴──────────────────────────────────────────────────┴───────┴────────┘${ANSI_RESET}`);
-    term.writeln(`${SITE_MUTED}Type ${SITE_WHITE}hn <number>${SITE_MUTED} to view a story${ANSI_RESET}`);
+    renderHnTopList(term, items);
   } catch (listError) {
     if (isAbortError(listError)) throw listError;
     term.writeln(`${SITE_ERR}Failed to fetch Hacker News${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}Next: retry \`hn\` or check your connection${ANSI_RESET}`);
   }
+}
+
+async function hnCommand(term, args, runSignal) {
+  if (args.length === 0) {
+    await runHnTopListCommand(term, runSignal);
+    return;
+  }
+  const idx = parseInt(args[0], 10);
+  if (isNaN(idx) || idx < 1 || idx > _hnItems.length) {
+    term.writeln(`${SITE_ERR}hn: invalid index${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: run \`hn\` to refresh the list, then \`hn <number>\`${ANSI_RESET}`);
+    return;
+  }
+  const item = _hnItems[idx - 1];
+  if (!item) {
+    term.writeln(`${SITE_ERR}hn: item not found${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: run \`hn\` to refresh the list, then \`hn <number>\`${ANSI_RESET}`);
+    return;
+  }
+  await runHnStoryCommand(term, item, runSignal);
 }
 
 async function mdCommand(term, args, runSignal) {
@@ -1257,7 +1253,7 @@ function runVmCommand(term, runSignal) {
   }
   term.writeln(`${SITE_ERR}VM module not loaded${ANSI_RESET}`);
   term.writeln(`${SITE_MUTED}Next: reload the page and retry \`vm\`${ANSI_RESET}`);
-  return;
+  return null;
 }
 async function runAiCommand(term, args, runSignal) {
   return (await import('./ai.js')).generateOutput(args.join(' '), term, runSignal);
@@ -2619,6 +2615,26 @@ function runManCommand(term, args) {
 }
 
 const COMMANDS = COMMAND_REGISTRY.filter((entry) => entry.listed).map((entry) => entry.name);
+
+// Help rendering lives below the registry/COMMANDS definitions (JS-0129):
+// both run only after module init, and `function` declarations hoist, so the
+// `run: helpText` reference inside the literal above stays valid.
+function commandCount() {
+  return COMMANDS.length;
+}
+
+function helpText(term) {
+  term.writeln(`${ANSI_BOLD}${SITE_WHITE}Available commands (${commandCount()})${ANSI_RESET}`);
+  term.writeln(`${SITE_MUTED}────────────────────${ANSI_RESET}`);
+  const rows = COMMAND_REGISTRY.filter((entry) => entry.helpDisplay !== null);
+  rows.sort((first, second) => first.helpPos - second.helpPos);
+  for (const entry of rows) {
+    term.writeln(`  ${SITE_GREEN}${entry.helpDisplay.padEnd(14)}${ANSI_RESET}${SITE_WHITE}${entry.helpDesc}${ANSI_RESET}`);
+    for (const extraRow of entry.extraHelpRows) {
+      term.writeln(`  ${SITE_GREEN}${extraRow[0].padEnd(14)}${ANSI_RESET}${SITE_WHITE}${extraRow[1]}${ANSI_RESET}`);
+    }
+  }
+}
 
 const COMMAND_COMPLETION_NAMES = [
   ...COMMANDS,

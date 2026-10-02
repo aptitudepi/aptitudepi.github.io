@@ -349,7 +349,7 @@ async function executeCommandBody(trimmed, term, runSignal) {
         await executeSingleCommand(`${segments[segmentIndex]} "${captured.trimEnd()}"`, term, runSignal);
       }
     }
-    return;
+    return null;
   }
 
   return executeSingleCommand(trimmed, term, runSignal);
@@ -398,7 +398,7 @@ async function executeSingleCommand(trimmed, term, runSignal) {
     term.writeln(`${SITE_ERR}${cmd}: command not found${ANSI_RESET}`);
     term.writeln(`${SITE_MUTED}Next: type \`help\` for the full command list${ANSI_RESET}`);
   }
-  return;
+  return null;
 }
 
 window.executeTerminalCommand = executeCommand;

@@ -301,7 +301,7 @@ function cleanPastedLine(rawLine) {
     /^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+:[^#$]*[#$]\s*/,
     /^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+\s+[#$]\s*/,
     /^\$[ \t]+/,
-    /^[❯>#][ \t]+/,
+    /^[❯>#][ \t]+/u,
   ];
   for (const promptPattern of promptPatterns) {
     if (promptPattern.test(trimmedLine)) return trimmedLine.replace(promptPattern, '');
@@ -390,73 +390,81 @@ function cycleHistoryMatch(step) {
   renderGhostText();
 }
 
-function handleInput(data) {
-  if (mode === 'v86') {
-    v86ExitBuffer = `${v86ExitBuffer}${data.toLowerCase()}`.slice(-30);
-    if (data === '\x1a' || v86ExitBuffer.includes('exit\r') || v86ExitBuffer.includes('exit\n')) {
-      v86ExitBuffer = '';
-      if (typeof window.exitVM === 'function') window.exitVM();
-      return;
-    }
-    if (v86InputHandler) v86InputHandler(data);
-    return;
+function handleV86Input(data) {
+  if (mode !== 'v86') return false;
+  v86ExitBuffer = `${v86ExitBuffer}${data.toLowerCase()}`.slice(-30);
+  if (data === '\x1a' || v86ExitBuffer.includes('exit\r') || v86ExitBuffer.includes('exit\n')) {
+    v86ExitBuffer = '';
+    if (typeof window.exitVM === 'function') window.exitVM();
+    return true;
   }
+  if (v86InputHandler) v86InputHandler(data);
+  return true;
+}
 
-  if (data === '\x12') { openHistorySearch(); return; }
-  if (data === '\x06') {
-    if (acceptGhostText()) return;
+function renderRecalledBufferLine() {
+  term.write('\r\x1b[K');
+  writePrompt(term);
+  term.write(inputBuffer);
+  refreshSuggestions();
+}
+
+function recallOlderHistoryEntry() {
+  if (CMD_HISTORY.idx < CMD_HISTORY.length - 1) {
+    CMD_HISTORY.idx++;
+    inputBuffer = CMD_HISTORY[CMD_HISTORY.length - 1 - CMD_HISTORY.idx];
+    renderRecalledBufferLine();
   }
+}
+
+function recallNewerHistoryEntry() {
+  if (CMD_HISTORY.idx >= 0) {
+    CMD_HISTORY.idx--;
+    if (CMD_HISTORY.idx >= 0) {
+      inputBuffer = CMD_HISTORY[CMD_HISTORY.length - 1 - CMD_HISTORY.idx];
+    } else {
+      inputBuffer = '';
+    }
+    renderRecalledBufferLine();
+  }
+}
+
+function handleEditingKey(data) {
+  if (data === '\x12') { openHistorySearch(); return true; }
+  if (data === '\x06') return acceptGhostText();
   if (data === '\x1b') {
-    if (closeSuggestions()) return;
+    return closeSuggestions();
   }
   if (data === '\x1b[C') {
-    if (acceptGhostText()) return;
-    return;
+    acceptGhostText();
+    return true;
   }
-  if (data === '\x1b[D') return;
+  if (data === '\x1b[D') return true;
+  if (data === '\t') { handleTabCompletion(term); return true; }
+  return false;
+}
 
-  if (data === '\x1b[A') {
-    if (!bootDone || isForegroundBusy()) return;
-    if (suggestionMode === 'history') { cycleHistoryMatch(-1); return; }
-    if (CMD_HISTORY.idx < CMD_HISTORY.length - 1) {
-      CMD_HISTORY.idx++;
-      const entry = CMD_HISTORY[CMD_HISTORY.length - 1 - CMD_HISTORY.idx];
-      inputBuffer = entry;
-      term.write('\r\x1b[K');
-      writePrompt(term);
-      term.write(entry);
-      refreshSuggestions();
-    }
-    return;
+function handleHistoryRecallKey(data) {
+  if (data !== '\x1b[A' && data !== '\x1b[B') return false;
+  if (!bootDone || isForegroundBusy()) return true;
+  if (suggestionMode === 'history') {
+    cycleHistoryMatch(data === '\x1b[A' ? -1 : 1);
+    return true;
   }
+  if (data === '\x1b[A') recallOlderHistoryEntry();
+  else recallNewerHistoryEntry();
+  return true;
+}
 
-  if (data === '\x1b[B') {
-    if (!bootDone || isForegroundBusy()) return;
-    if (suggestionMode === 'history') { cycleHistoryMatch(1); return; }
-    if (CMD_HISTORY.idx >= 0) {
-      CMD_HISTORY.idx--;
-      if (CMD_HISTORY.idx >= 0) {
-        inputBuffer = CMD_HISTORY[CMD_HISTORY.length - 1 - CMD_HISTORY.idx];
-      } else {
-        inputBuffer = '';
-      }
-      term.write('\r\x1b[K');
-      writePrompt(term);
-      term.write(inputBuffer);
-      refreshSuggestions();
-    }
-    return;
-  }
+function handlePasteKey(data) {
+  if (looksLikePaste(data) === false) return false;
+  if (!bootDone || isForegroundBusy()) return true;
+  handlePaste(data);
+  refreshSuggestions();
+  return true;
+}
 
-  if (data === '\t') { handleTabCompletion(term); return; }
-
-  if (looksLikePaste(data)) {
-    if (!bootDone || isForegroundBusy()) return;
-    handlePaste(data);
-    refreshSuggestions();
-    return;
-  }
-
+function typePrintableChars(data) {
   for (const char of data) {
     if (char === '\r') {
       submitBufferLine();
@@ -481,6 +489,14 @@ function handleInput(data) {
       term.write(char);
     }
   }
+}
+
+function handleInput(data) {
+  if (handleV86Input(data)) return;
+  if (handleEditingKey(data)) return;
+  if (handleHistoryRecallKey(data)) return;
+  if (handlePasteKey(data)) return;
+  typePrintableChars(data);
   refreshSuggestions();
 }
 
