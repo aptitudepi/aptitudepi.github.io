@@ -106,10 +106,11 @@ function initTopolines() {
   syncEnabled = true;
   syncSaturation = 0.25;
   lastColor = '';
-  // Live boot matches the dev sidebar defaults (influence 1.00, sync on):
-  // influence is additive in the topo shader and a no-op until a particle
-  // canvas is wired, so pinning it here is safe even when particles boot late.
-  if (topo.setParticleInfluence) topo.setParticleInfluence(1);
+  // Live boot renders clean (influence 0); the dev sidebar slider can
+  // still crank it to 1. Influence is additive in the topo shader and a
+  // no-op until a particle canvas is wired, so defaulting to 0 is safe
+  // even when particles boot late.
+  if (topo.setParticleInfluence) topo.setParticleInfluence(0);
   const readyParticleCanvas = window.ParticleDev?.getParticleCanvas?.();
   if (readyParticleCanvas && topo.setParticleTex) topo.setParticleTex(readyParticleCanvas);
   // WAVE 12: a topo created after takeTopoLoop() must start paused — the
