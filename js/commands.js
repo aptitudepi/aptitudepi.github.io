@@ -535,18 +535,6 @@ function levenshtein(firstString, secondString) {
   return distanceMatrix[lenA][lenB];
 }
 
-// Forward-declared bindings (JS-0129): commandCount/helpText below run only
-// after module init, but textually precede the registry literal, so the
-// bindings are declared here and assigned once at their original sites.
-// Handler `run` references stay after their function declarations, so no new
-// forward use is introduced by this hoist.
-let COMMAND_REGISTRY;
-let COMMANDS;
-
-function commandCount() {
-  return COMMANDS.length;
-}
-
 // Normalize a user-supplied VFS path: resolve relative paths against the
 // home directory, collapse duplicate slashes, resolve ./ and ../ segments.
 // A trailing slash is insignificant for lookup.
@@ -729,19 +717,6 @@ function neofetch(term) {
     }
   }
 
-}
-
-function helpText(term) {
-  term.writeln(`${ANSI_BOLD}${SITE_WHITE}Available commands (${commandCount()})${ANSI_RESET}`);
-  term.writeln(`${SITE_MUTED}────────────────────${ANSI_RESET}`);
-  const rows = COMMAND_REGISTRY.filter((entry) => entry.helpDisplay !== null);
-  rows.sort((first, second) => first.helpPos - second.helpPos);
-  for (const entry of rows) {
-    term.writeln(`  ${SITE_GREEN}${entry.helpDisplay.padEnd(14)}${ANSI_RESET}${SITE_WHITE}${entry.helpDesc}${ANSI_RESET}`);
-    for (const extraRow of entry.extraHelpRows) {
-      term.writeln(`  ${SITE_GREEN}${extraRow[0].padEnd(14)}${ANSI_RESET}${SITE_WHITE}${extraRow[1]}${ANSI_RESET}`);
-    }
-  }
 }
 
 async function getLocation(runSignal) {
@@ -1782,7 +1757,7 @@ async function runDevmodeCommand(term) {
   return;
 }
 
-COMMAND_REGISTRY = [
+const COMMAND_REGISTRY = [
   {
     name: "whoami",
     aliases: [],
@@ -2639,7 +2614,27 @@ function runManCommand(term, args) {
   renderMan(term, args[0] ?? '');
 }
 
-COMMANDS = COMMAND_REGISTRY.filter((entry) => entry.listed).map((entry) => entry.name);
+const COMMANDS = COMMAND_REGISTRY.filter((entry) => entry.listed).map((entry) => entry.name);
+
+// Help rendering lives below the registry/COMMANDS definitions (JS-0129):
+// both run only after module init, and `function` declarations hoist, so the
+// `run: helpText` reference inside the literal above stays valid.
+function commandCount() {
+  return COMMANDS.length;
+}
+
+function helpText(term) {
+  term.writeln(`${ANSI_BOLD}${SITE_WHITE}Available commands (${commandCount()})${ANSI_RESET}`);
+  term.writeln(`${SITE_MUTED}────────────────────${ANSI_RESET}`);
+  const rows = COMMAND_REGISTRY.filter((entry) => entry.helpDisplay !== null);
+  rows.sort((first, second) => first.helpPos - second.helpPos);
+  for (const entry of rows) {
+    term.writeln(`  ${SITE_GREEN}${entry.helpDisplay.padEnd(14)}${ANSI_RESET}${SITE_WHITE}${entry.helpDesc}${ANSI_RESET}`);
+    for (const extraRow of entry.extraHelpRows) {
+      term.writeln(`  ${SITE_GREEN}${extraRow[0].padEnd(14)}${ANSI_RESET}${SITE_WHITE}${extraRow[1]}${ANSI_RESET}`);
+    }
+  }
+}
 
 const COMMAND_COMPLETION_NAMES = [
   ...COMMANDS,

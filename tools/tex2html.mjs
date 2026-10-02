@@ -339,9 +339,9 @@ const INLINE_STYLE_TAGS = {
 function handleStyledGroupCommand(p, name) {
   if (hasOwnEntry(INLINE_STYLE_TAGS, name) === false) return null;
   const tags = INLINE_STYLE_TAGS[name];
-  const g = p.readGroup();
-  if (g == null) throw new TexParseError(`\\${name} missing argument`);
-  return `${tags[0]}${renderInline(g)}${tags[1]}`;
+  const group = p.readGroup();
+  if (group == null) throw new TexParseError(`\\${name} missing argument`);
+  return `${tags[0]}${renderInline(group)}${tags[1]}`;
 }
 
 function handleHrefCommand(p) {

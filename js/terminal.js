@@ -433,8 +433,7 @@ function handleEditingKey(data) {
   if (data === '\x12') { openHistorySearch(); return true; }
   if (data === '\x06') return acceptGhostText();
   if (data === '\x1b') {
-    if (closeSuggestions()) return true;
-    return false;
+    return closeSuggestions();
   }
   if (data === '\x1b[C') {
     acceptGhostText();
