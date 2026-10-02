@@ -40,16 +40,53 @@ function stripPdfTexOnly(src) {
   return '\\def\\XeTeXLink@font{}\n' + filtered;
 }
 
+// Read a `{...}` group with nesting. openIdx must point at `{`.
+// Returns [innerText, indexAfterClose] or null if unbalanced.
+function readBraced(src, openIdx) {
+  let depth = 0;
+  for (let j = openIdx; j < src.length; j++) {
+    if (src[j] === '{') depth++;
+    else if (src[j] === '}') {
+      depth--;
+      if (depth === 0) return [src.slice(openIdx + 1, j), j + 1];
+    }
+  }
+  return null;
+}
+
+// Remove `\href{mailto:...}{...}` / `\url{mailto:...}` commands. Brace-aware:
+// the display text is often `\underline{addr}` (nested braces), which a
+// `[^}]*` regex matches only partially, leaving a stray `}` that breaks
+// XeTeX with `Extra }, or forgotten \endgroup`.
+function stripMailtoCmd(src, cmd, groups) {
+  const re = new RegExp(`\\\\${cmd}\\s*\\{`, 'gi');
+  let out = '';
+  let last = 0;
+  let match = null;
+  while ((match = re.exec(src)) !== null) {
+    const g1 = readBraced(src, match.index + match[0].length - 1);
+    if (!g1) continue;
+    const end = groups === 2 ? readBraced(src, g1[1]) : null;
+    const targetEnd = groups === 2 ? end?.[1] : g1[1];
+    if (targetEnd == null) continue;
+    if (/^\s*mailto:/i.test(g1[0])) {
+      out += src.slice(last, match.index);
+      last = targetEnd;
+    }
+  }
+  return out + src.slice(last);
+}
+
 // Public PDFs must not carry phone numbers or email addresses (the .tex
 // source keeps them for print). Scrubbed here so both local and CI builds
 // produce clean PDFs without touching the private Full-CV source.
 function stripPrivateContact(src) {
-  return src
+  return stripMailtoCmd(stripMailtoCmd(src, 'href', 2), 'url', 1)
     .replace(/\(\d{3}\)\s*[-.]?\s*\d{3}\s*[-.]?\s*\d{4}/g, '')
     .replace(/\b\d{3}\s*[-.]\s*\d{3}\s*[-.]\s*\d{4}\b/g, '')
-    .replace(/\\href\{mailto:[^}]*\}\{[^}]*\}/gi, '')
-    .replace(/\\url\{mailto:[^}]*\}/gi, '')
-    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '');
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '')
+    // Collapse separators orphaned by the scrub (`$|$  $|$` -> `$|$`).
+    .replace(/(?:\$\|\$\s*){2,}/g, '$|$ ');
 }
 
 // Compile with Tectonic. Tectonic fetches fonts/packages from its remote
