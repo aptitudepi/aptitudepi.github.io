@@ -59,18 +59,18 @@ function readBraced(src, openIdx) {
 // `[^}]*` regex matches only partially, leaving a stray `}` that breaks
 // XeTeX with `Extra }, or forgotten \endgroup`.
 function stripMailtoCmd(src, cmd, groups) {
-  const re = new RegExp('\\\\' + cmd + '\\s*\\{', 'gi');
+  const re = new RegExp(`\\\\${cmd}\\s*\\{`, 'gi');
   let out = '';
   let last = 0;
-  let m;
-  while ((m = re.exec(src)) !== null) {
-    const g1 = readBraced(src, m.index + m[0].length - 1);
+  let match = null;
+  while ((match = re.exec(src)) !== null) {
+    const g1 = readBraced(src, match.index + match[0].length - 1);
     if (!g1) continue;
     const end = groups === 2 ? readBraced(src, g1[1]) : null;
-    const targetEnd = groups === 2 ? (end && end[1]) : g1[1];
+    const targetEnd = groups === 2 ? end?.[1] : g1[1];
     if (targetEnd == null) continue;
     if (/^\s*mailto:/i.test(g1[0])) {
-      out += src.slice(last, m.index);
+      out += src.slice(last, match.index);
       last = targetEnd;
     }
   }
