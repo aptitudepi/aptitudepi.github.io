@@ -298,103 +298,106 @@ function renderMath(m) {
   return out;
 }
 
+const SPECIAL_COMMAND_HTML = {
+  '\\': '<br>',
+  '&': '&amp;',
+  '%': '%',
+  '#': '#',
+  '$': '$',
+  '_': '_',
+  ' ': ' ',
+  ',': '\u2009',
+  '.': '',
+  '-': '',
+  '~': ' ',
+  '{': '{',
+  '}': '}',
+  '^': '^',
+};
+
+function hasOwnEntry(table, key) {
+  return Object.prototype.hasOwnProperty.call(table, key);
+}
+
+function handleSpecialCommand(name) {
+  if (hasOwnEntry(SPECIAL_COMMAND_HTML, name)) return SPECIAL_COMMAND_HTML[name];
+  throw new TexParseError(`unknown special command \\${name}`);
+}
+
+const INLINE_STYLE_TAGS = {
+  textbf: ['<strong>', '</strong>'],
+  textit: ['<em>', '</em>'],
+  emph: ['<em>', '</em>'],
+  underline: ['<u>', '</u>'],
+  textsuperscript: ['<sup>', '</sup>'],
+  textsubscript: ['<sub>', '</sub>'],
+  textsc: ['<span class="small-caps">', '</span>'],
+  texttt: ['<code>', '</code>'],
+  textrm: ['<span>', '</span>'],
+};
+
+function handleStyledGroupCommand(p, name) {
+  if (hasOwnEntry(INLINE_STYLE_TAGS, name) === false) return null;
+  const tags = INLINE_STYLE_TAGS[name];
+  const g = p.readGroup();
+  if (g == null) throw new TexParseError(`\\${name} missing argument`);
+  return `${tags[0]}${renderInline(g)}${tags[1]}`;
+}
+
+function handleHrefCommand(p) {
+  const url = p.readGroup();
+  const disp = p.readGroup();
+  if (url == null || disp == null) throw new TexParseError('\\href missing arguments');
+  // Public site never publishes email links: mailto anchors (and bare
+  // email displays) are dropped so resume/cv HTML cannot leak addresses.
+  if (/^\s*mailto:/i.test(url.trim())) return '';
+  if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(disp)) return '';
+  return `<a href="${escapeHtml(url.trim())}" target="_blank" rel="noopener noreferrer">${renderInline(disp)}</a>`;
+}
+
+function handleUrlCommand(p) {
+  const url = p.readGroup();
+  if (url == null) throw new TexParseError('\\url missing argument');
+  if (/^\s*mailto:/i.test(url) || /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(url)) return '';
+  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
+}
+
+function handleLinkCommand(p, name) {
+  if (name === 'href') return handleHrefCommand(p);
+  if (name === 'url') return handleUrlCommand(p);
+  return null;
+}
+
+const INLINE_SYMBOL_HTML = {
+  textless: '&lt;',
+  textgreater: '&gt;',
+  textbar: '|',
+  textasciitilde: '~',
+  textasciicircum: '^',
+  textbackslash: '\\',
+  textquotesingle: "'",
+  textendash: '–',
+  textemdash: '—',
+  textunderscore: '_',
+  newline: '<br>',
+  linebreak: '<br>',
+  par: '<br>',
+};
+
+function handleSymbolCommand(name) {
+  if (hasOwnEntry(INLINE_SYMBOL_HTML, name) === false) return null;
+  return INLINE_SYMBOL_HTML[name];
+}
+
 function handleInlineCommand(p, cmd) {
   const name = cmd.name;
-  if (cmd.isSpecial) {
-    switch (name) {
-      case '\\': return '<br>';
-      case '&': return '&amp;';
-      case '%': return '%';
-      case '#': return '#';
-      case '$': return '$';
-      case '_': return '_';
-      case ' ': return ' ';
-      case ',': return '\u2009';
-      case '.': return '';
-      case '-': return '';
-      case '~': return ' ';
-      case '{': return '{';
-      case '}': return '}';
-      case '^': return '^';
-      default:
-        throw new TexParseError(`unknown special command \\${name}`);
-    }
-  }
-  switch (name) {
-    case 'textbf': {
-      const g = p.readGroup();
-      if (g == null) throw new TexParseError('\\textbf missing argument');
-      return `<strong>${renderInline(g)}</strong>`;
-    }
-    case 'textit':
-    case 'emph': {
-      const g = p.readGroup();
-      if (g == null) throw new TexParseError(`\\${name} missing argument`);
-      return `<em>${renderInline(g)}</em>`;
-    }
-    case 'underline': {
-      const g = p.readGroup();
-      if (g == null) throw new TexParseError('\\underline missing argument');
-      return `<u>${renderInline(g)}</u>`;
-    }
-    case 'textsuperscript': {
-      const g = p.readGroup();
-      if (g == null) throw new TexParseError('\\textsuperscript missing argument');
-      return `<sup>${renderInline(g)}</sup>`;
-    }
-    case 'textsubscript': {
-      const g = p.readGroup();
-      if (g == null) throw new TexParseError('\\textsubscript missing argument');
-      return `<sub>${renderInline(g)}</sub>`;
-    }
-    case 'textsc': {
-      const g = p.readGroup();
-      if (g == null) throw new TexParseError('\\textsc missing argument');
-      return `<span class="small-caps">${renderInline(g)}</span>`;
-    }
-    case 'texttt': {
-      const g = p.readGroup();
-      if (g == null) throw new TexParseError('\\texttt missing argument');
-      return `<code>${renderInline(g)}</code>`;
-    }
-    case 'textrm': {
-      const g = p.readGroup();
-      if (g == null) throw new TexParseError('\\textrm missing argument');
-      return `<span>${renderInline(g)}</span>`;
-    }
-    case 'href': {
-      const url = p.readGroup();
-      const disp = p.readGroup();
-      if (url == null || disp == null) throw new TexParseError('\\href missing arguments');
-      // Public site never publishes email links: mailto anchors (and bare
-      // email displays) are dropped so resume/cv HTML cannot leak addresses.
-      if (/^\s*mailto:/i.test(url.trim())) return '';
-      if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(disp)) return '';
-      return `<a href="${escapeHtml(url.trim())}" target="_blank" rel="noopener noreferrer">${renderInline(disp)}</a>`;
-    }
-    case 'url': {
-      const url = p.readGroup();
-      if (url == null) throw new TexParseError('\\url missing argument');
-      if (/^\s*mailto:/i.test(url) || /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(url)) return '';
-      return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
-    }
-    case 'textless': return '&lt;';
-    case 'textgreater': return '&gt;';
-    case 'textbar': return '|';
-    case 'textasciitilde': return '~';
-    case 'textasciicircum': return '^';
-    case 'textbackslash': return '\\';
-    case 'textquotesingle': return "'";
-    case 'textendash': return '–';
-    case 'textemdash': return '—';
-    case 'textunderscore': return '_';
-    case 'newline':
-    case 'linebreak':
-    case 'par':
-      return '<br>';
-    default:
-      break;
-  }
+  if (cmd.isSpecial) return handleSpecialCommand(name);
+  const styled = handleStyledGroupCommand(p, name);
+  if (styled !== null) return styled;
+  const linked = handleLinkCommand(p, name);
+  if (linked !== null) return linked;
+  const symbol = handleSymbolCommand(name);
+  if (symbol !== null) return symbol;
   if (INLINE_IGNORED.has(name)) return '';
   if (INLINE_IGNORED_WITH_ARG.has(name)) {
     p.readGroup();
