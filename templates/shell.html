@@ -26,9 +26,21 @@
 <link rel="stylesheet" href="/css/components.css">
 <link rel="stylesheet" href="/css/nav.css">
 <link rel="stylesheet" href="/css/doc.css">
+<style>
+/* Doc pages do not load layout.css: carry just the ambient blur sheet so
+   /resume and /cv sit on the same particle + topo + blur stack as index. */
+.page-blur{position:fixed;inset:0;width:100%;height:100vh;height:100dvh;min-height:100%;z-index:10;pointer-events:none;background:var(--color-glass);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+</style>
+<!-- Topolines UMD — must load before modules that use window.Topolines -->
+<script src="/js/topolines.global.js"></script>
 </head>
 <body>
 <canvas id="c" aria-hidden="true"></canvas>
+
+<div class="page-blur" aria-hidden="true"></div>
+
+<div id="topo-host" aria-hidden="true"></div>
+<p class="sr-only">Ambient particle and topology background. Decorative; every state on this page is also stated in text.</p>
 
 <a class="skip-link" href="#main">Skip to content</a>
 
@@ -62,9 +74,131 @@ __BODY__
   <p>&copy; 2026 Devkumar Banerjee &middot; <a href="/">dvxb.io</a></p>
 </footer>
 
+<script>
+// The bar is position:fixed (see css/nav.css) and leaves flow: mirror
+// js/nav.js initFixedNavOffset so the download button keeps its in-flow
+// slot below the header instead of sliding up under the bar. Dependency-free
+// on purpose — doc pages boot without the terminal bundle.
+(function () {
+  function syncNavHeight() {
+    var bar = document.querySelector('.doc-nav');
+    if (!bar) return;
+    document.documentElement.style.setProperty('--doc-nav-height', bar.offsetHeight + 'px');
+  }
+  syncNavHeight();
+  window.addEventListener('resize', syncNavHeight);
+  if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+    document.fonts.ready.then(syncNavHeight).catch(function (fontError) {
+      console.warn('nav height font sync skipped: ' + fontError.message);
+    });
+  }
+})();
+</script>
 <script type="module">
-  import { initParticles } from '/js/three-particles.js';
-  initParticles();
+  // Same ambient stack as index.html: single-owner background loop
+  // (particles + topo + matrix, see js/backgrounds.js) under the motion
+  // policy, then re-apply persisted devtools settings below.
+  import { initMotionPolicy } from '/js/motion.js';
+  import { initBackgrounds } from '/js/backgrounds.js';
+  initMotionPolicy();
+  initBackgrounds();
+  // Boot-apply for persisted devtools settings (`dvxb.dev.*` in localStorage:
+  // same-origin, zero header overhead). KEEP IN SYNC with the copy in
+  // index.html. Only stored keys are pushed, so a fresh browser boots as before.
+  (function () {
+    var PREFIX = 'dvxb.dev.';
+    function readDev(key) {
+      try {
+        if (!window.localStorage) return null;
+        return window.localStorage.getItem(PREFIX + key);
+      } catch (readError) {
+        console.warn('dev settings read skipped: ' + readError.message);
+        return null;
+      }
+    }
+    function storedNum(key) {
+      var raw = readDev(key);
+      if (raw === null) return null;
+      var n = Number(raw);
+      return Number.isFinite(n) ? n : null;
+    }
+    function storedFlag(key) {
+      var raw = readDev(key);
+      if (raw === null) return null;
+      return raw === '1' || raw === 'true';
+    }
+    function applyAcrylic() {
+      var blur = storedNum('blur');
+      var glass = storedNum('glass-alpha');
+      var border = storedNum('border-alpha');
+      if (blur === null && glass === null && border === null) return;
+      if (blur !== null) {
+        document.querySelectorAll('#app, .hero-shell, .doc-nav, .spotlight-card, .footer, .doc-panel').forEach(function (el) {
+          el.style.backdropFilter = 'blur(' + blur + 'px)';
+          el.style.webkitBackdropFilter = 'blur(' + blur + 'px)';
+        });
+      }
+      if (glass !== null) document.documentElement.style.setProperty('--color-glass', 'oklch(0.09 0.008 260 / ' + glass.toFixed(2) + ')');
+      if (border !== null) document.documentElement.style.setProperty('--color-glass-border', 'oklch(0.2 0.02 260 / ' + border.toFixed(2) + ')');
+    }
+    var TOPO_OPTS = [['opacity', 'opacity'], ['linewidth', 'lineWidth'], ['levels', 'levels'], ['scale', 'scale'], ['speed', 'speed'], ['warp', 'warp']];
+    function applyTopo() {
+      var TopoDev = window.TopoDev;
+      if (!TopoDev) return false;
+      var sync = storedFlag('sync');
+      if (sync !== null) TopoDev.setSync(sync);
+      if (sync === false) {
+        var color = readDev('color');
+        if (color !== null) TopoDev.setOptions({ color: color });
+      }
+      var opts = {};
+      TOPO_OPTS.forEach(function (pair) {
+        var n = storedNum(pair[0]);
+        if (n !== null) opts[pair[1]] = n;
+      });
+      var interactive = storedFlag('interactive');
+      if (interactive !== null) opts.interactive = interactive;
+      if (Object.keys(opts).length > 0) TopoDev.setOptions(opts);
+      var influence = storedNum('particle-influence');
+      if (influence !== null) TopoDev.setParticleInfluence(influence);
+      var syncSat = storedNum('sync-sat');
+      if (syncSat !== null) TopoDev.setSyncSaturation(syncSat);
+      return true;
+    }
+    var PARTICLE_SETTERS = [['p-count', 'setCount'], ['p-size', 'setParticleSize'], ['p-fov', 'setFOV'], ['p-ca', 'setCA'], ['p-decay', 'setTrailDecay'], ['p-bright', 'setBrightness'], ['p-scanline', 'setScanline'], ['p-vignette', 'setVignette'], ['p-topo-speed', 'setTopoSpeed']];
+    function applyParticles() {
+      var PDev = window.ParticleDev;
+      if (!PDev) return false;
+      PARTICLE_SETTERS.forEach(function (pair) {
+        var n = storedNum(pair[0]);
+        if (n !== null) PDev[pair[1]](n);
+      });
+      var rainbow = storedFlag('p-rainbow');
+      if (rainbow !== null) PDev.setRainbow(rainbow);
+      var syncTopo = storedFlag('p-sync-topo');
+      if (syncTopo !== null) PDev.setSyncTopo(syncTopo);
+      // ?quality= URL pins win over stored pins (perf.js precedence).
+      if (new URLSearchParams(window.location.search).has('quality') === false && typeof PDev.setQualityTier === 'function') {
+        var tier = readDev('p-quality-tier');
+        if (tier !== null && tier !== 'auto') {
+          PDev.setQualityTier(tier);
+        } else if (storedFlag('p-override') === true) {
+          var raw = storedNum('p-quality');
+          if (raw !== null) PDev.setQualityOverride(raw);
+        }
+      }
+      return true;
+    }
+    var tries = 0;
+    function tick() {
+      tries += 1;
+      var topoDone = applyTopo();
+      var partDone = applyParticles();
+      if (tries < 120 && (!topoDone || !partDone)) requestAnimationFrame(tick);
+    }
+    applyAcrylic();
+    requestAnimationFrame(tick);
+  })();
 </script>
 <script type="module">
   import { mountNavOrb } from '/js/orb.js';
