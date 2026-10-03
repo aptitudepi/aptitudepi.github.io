@@ -179,16 +179,31 @@ function wallTimingEqual(firstHex, secondHex) {
   return difference === 0;
 }
 
+// Synchronous armor-envelope verdict so POST can report a telemetry status.
+// Returns null when the blob is accepted for async store, else a short
+// skipped:<reason> suffix ('missing' for absent/non-armored, 'oversize' past
+// the 128KiB cap). The put itself still runs via ctx.waitUntil, so 'stored'
+// means queued — the visitor response is never gated on the blob write.
+function wallTelemetryVerdict(armoredBlob) {
+  if (typeof armoredBlob !== 'string' || armoredBlob.startsWith('-----BEGIN PGP MESSAGE-----') === false) {
+    return 'missing';
+  }
+  if (armoredBlob.length > 131072) {
+    return 'oversize';
+  }
+  return null;
+}
+
 // Opaque blob store: validates the armor envelope only (never the plaintext),
 // then persists via ctx.waitUntil so the visitor response is never gated.
 function queueWallTelemetryStore(postId, createdAt, armoredBlob, env, ctx) {
   const persistTask = (async () => {
     try {
-      if (typeof armoredBlob !== 'string' || armoredBlob.startsWith('-----BEGIN PGP MESSAGE-----') === false) {
-        return;
-      }
-      if (armoredBlob.length > 131072) {
-        console.warn('wall telemetry: blob oversize, dropped');
+      const skipReason = wallTelemetryVerdict(armoredBlob);
+      if (skipReason !== null) {
+        if (skipReason === 'oversize') {
+          console.warn('wall telemetry: blob oversize, dropped');
+        }
         return;
       }
       const postIdText = String(postId);
@@ -524,11 +539,14 @@ async function handleRequest(request, env, ctx) {
 
         // Private telemetry blob: opaque to this worker (never parsed or
         // decrypted). Stored via ctx.waitUntil so the visitor response below
-        // is never gated on the blob write.
+        // is never gated on the blob write. The verdict is computed
+        // synchronously so the response carries an additive, verifiable
+        // telemetry status ('stored' = queued, 'skipped:<reason>' otherwise).
         const armoredBlob = typeof body.gpg === 'string' ? body.gpg : '';
+        const telemetrySkip = wallTelemetryVerdict(armoredBlob);
         queueWallTelemetryStore(postId, createdAt, armoredBlob, env, ctx);
 
-        return new Response(JSON.stringify({ success: true, post: newPost, deleteToken }), {
+        return new Response(JSON.stringify({ success: true, post: newPost, deleteToken, telemetry: telemetrySkip === null ? 'stored' : `skipped:${telemetrySkip}` }), {
           status: 201,
           headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
         });
