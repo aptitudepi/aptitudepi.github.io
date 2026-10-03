@@ -765,7 +765,10 @@ void main(){
   }
   window.addEventListener('resize', onResize);
 
-  /** Read postOut pixels into the hidden 2D canvas for topo texture sampling */
+  /** Read pre-post trail pixels (trailB) into the hidden 2D canvas for topo
+      texture sampling — the direct post input, so CA/brightness/scanline/
+      vignette/ACES never bake into the density feed. Called before the
+      trail ping-pong swap, so trailB holds the just-rendered frame. */
   function updateParticleCanvas() {
     const w = W(), h = H();
     const pw = Math.min(256, w), ph = Math.min(256, h);
@@ -773,12 +776,13 @@ void main(){
       _topoCanvas.width = pw; _topoCanvas.height = ph;
     }
     const len = pw * ph * 4;
-    // postOut is RGBA16F: RGBA/UNSIGNED_BYTE readback is invalid (GL error,
-    // buffer left untouched). RGBA/FLOAT is the spec-required baseline.
+    // trailB is RGBA16F like postOut was: RGBA/UNSIGNED_BYTE readback is
+    // invalid (GL error, buffer left untouched). RGBA/FLOAT is the
+    // spec-required baseline.
     if (!_fBuf || _fBuf.length < len) _fBuf = new Float32Array(len);
     if (!_pxBuf || _pxBuf.length < len) _pxBuf = new Uint8Array(len);
     const glContext = renderer.getContext();
-    renderer.setRenderTarget(postOut);
+    renderer.setRenderTarget(trailB);
     glContext.readPixels(0, 0, pw, ph, glContext.RGBA, glContext.FLOAT, _fBuf);
     renderer.setRenderTarget(null);
     for (let i = 0; i < len; i++) {
