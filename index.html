@@ -428,6 +428,105 @@
 <script type="module" src="https://cdn.jsdelivr.net/npm/number-flow@0.6.2/+esm"></script>
 
 <!-- ── Entry Point ─────────────────────── -->
+<script type="module">
+  // Boot-apply for persisted devtools settings (`dvxb.dev.*` in localStorage:
+  // same-origin, zero header overhead). KEEP IN SYNC with the copy in
+  // templates/shell.html. Only stored keys are pushed, so a fresh browser boots as before.
+  (function () {
+    var PREFIX = 'dvxb.dev.';
+    function readDev(key) {
+      try {
+        if (!window.localStorage) return null;
+        return window.localStorage.getItem(PREFIX + key);
+      } catch (readError) {
+        console.warn('dev settings read skipped: ' + readError.message);
+        return null;
+      }
+    }
+    function storedNum(key) {
+      var raw = readDev(key);
+      if (raw === null) return null;
+      var n = Number(raw);
+      return Number.isFinite(n) ? n : null;
+    }
+    function storedFlag(key) {
+      var raw = readDev(key);
+      if (raw === null) return null;
+      return raw === '1' || raw === 'true';
+    }
+    function applyAcrylic() {
+      var blur = storedNum('blur');
+      var glass = storedNum('glass-alpha');
+      var border = storedNum('border-alpha');
+      if (blur === null && glass === null && border === null) return;
+      if (blur !== null) {
+        document.querySelectorAll('#app, .hero-shell, .doc-nav, .spotlight-card, .footer, .doc-panel').forEach(function (el) {
+          el.style.backdropFilter = 'blur(' + blur + 'px)';
+          el.style.webkitBackdropFilter = 'blur(' + blur + 'px)';
+        });
+      }
+      if (glass !== null) document.documentElement.style.setProperty('--color-glass', 'oklch(0.09 0.008 260 / ' + glass.toFixed(2) + ')');
+      if (border !== null) document.documentElement.style.setProperty('--color-glass-border', 'oklch(0.2 0.02 260 / ' + border.toFixed(2) + ')');
+    }
+    var TOPO_OPTS = [['opacity', 'opacity'], ['linewidth', 'lineWidth'], ['levels', 'levels'], ['scale', 'scale'], ['speed', 'speed'], ['warp', 'warp']];
+    function applyTopo() {
+      var TopoDev = window.TopoDev;
+      if (!TopoDev) return false;
+      var sync = storedFlag('sync');
+      if (sync !== null) TopoDev.setSync(sync);
+      if (sync === false) {
+        var color = readDev('color');
+        if (color !== null) TopoDev.setOptions({ color: color });
+      }
+      var opts = {};
+      TOPO_OPTS.forEach(function (pair) {
+        var n = storedNum(pair[0]);
+        if (n !== null) opts[pair[1]] = n;
+      });
+      var interactive = storedFlag('interactive');
+      if (interactive !== null) opts.interactive = interactive;
+      if (Object.keys(opts).length > 0) TopoDev.setOptions(opts);
+      var influence = storedNum('particle-influence');
+      if (influence !== null) TopoDev.setParticleInfluence(influence);
+      var syncSat = storedNum('sync-sat');
+      if (syncSat !== null) TopoDev.setSyncSaturation(syncSat);
+      return true;
+    }
+    var PARTICLE_SETTERS = [['p-count', 'setCount'], ['p-size', 'setParticleSize'], ['p-fov', 'setFOV'], ['p-ca', 'setCA'], ['p-decay', 'setTrailDecay'], ['p-bright', 'setBrightness'], ['p-scanline', 'setScanline'], ['p-vignette', 'setVignette'], ['p-topo-speed', 'setTopoSpeed']];
+    function applyParticles() {
+      var PDev = window.ParticleDev;
+      if (!PDev) return false;
+      PARTICLE_SETTERS.forEach(function (pair) {
+        var n = storedNum(pair[0]);
+        if (n !== null) PDev[pair[1]](n);
+      });
+      var rainbow = storedFlag('p-rainbow');
+      if (rainbow !== null) PDev.setRainbow(rainbow);
+      var syncTopo = storedFlag('p-sync-topo');
+      if (syncTopo !== null) PDev.setSyncTopo(syncTopo);
+      // ?quality= URL pins win over stored pins (perf.js precedence).
+      if (new URLSearchParams(window.location.search).has('quality') === false && typeof PDev.setQualityTier === 'function') {
+        var tier = readDev('p-quality-tier');
+        if (tier !== null && tier !== 'auto') {
+          PDev.setQualityTier(tier);
+        } else if (storedFlag('p-override') === true) {
+          var raw = storedNum('p-quality');
+          if (raw !== null) PDev.setQualityOverride(raw);
+        }
+      }
+      return true;
+    }
+    var tries = 0;
+    function tick() {
+      tries += 1;
+      var topoDone = applyTopo();
+      var partDone = applyParticles();
+      if (tries < 120 && (!topoDone || !partDone)) requestAnimationFrame(tick);
+    }
+    applyAcrylic();
+    requestAnimationFrame(tick);
+  })();
+</script>
 <script type="module" src="js/main.js"></script>
 
 </body>

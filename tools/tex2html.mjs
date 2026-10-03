@@ -479,7 +479,10 @@ function renderHeader(content) {
     .replace(/\(\d{3}\)\s*[-.]?\s*\d{3}\s*[-.]?\s*\d{4}/g, '')
     .replace(/\b\d{3}\s*[-.]\s*\d{3}\s*[-.]\s*\d{4}\b/g, '')
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '')
-    .split('·').map((s) => s.trim()).filter(Boolean).join('  ·  ');
+    // The TeX header separates contacts with $|$ (a literal `|`), not `·`:
+    // split on both (plus the relic `•`) so scrubbed phone/email slots do
+    // not survive as orphan `| |` separators, then drop empties.
+    .split(/[·|•]/u).map((s) => s.trim()).filter(Boolean).join('  ·  ');
   const contact = scrubbed;
   const nameHtml = name.replace(/^<strong>(.*)<\/strong>$/, '<strong>$1</strong>');
   return '<div class="resume-header">' +

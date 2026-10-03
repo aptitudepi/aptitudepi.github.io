@@ -34,6 +34,8 @@ body::before {
 }
 
 .doc-download {
+  position: relative;
+  z-index: 2;
   padding: 0 0 var(--space-8);
   text-align: center;
 }

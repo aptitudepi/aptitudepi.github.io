@@ -4,6 +4,59 @@
 // markup is injected below, styles via css/devtools.css. First import mounts
 // and applies everything (same boot behavior the standalone page had);
 // toggleDevPanel() flips visibility afterwards.
+//
+// Every push persists to localStorage (`dvxb.dev.*` via js/dev-boot.js) and
+// the panel hydrates from it first, so settings survive navigation and
+// re-apply on every page (including cv/resume, which have no panel).
+// Panel controls persist under `dvxb.dev.*` (localStorage: same-origin, zero
+// header overhead — these tunables never leave the browser) and hydrate back
+// on open; the boot-apply snippet (templates/shell.html, mirrored in
+// index.html) re-applies them on every page load, panel or not.
+const DEV_STORE_PREFIX = 'dvxb.dev.';
+
+function readDevSetting(key) {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    return window.localStorage.getItem(DEV_STORE_PREFIX + key);
+  } catch (readError) {
+    console.warn(`dev settings read skipped: ${readError.message}`);
+    return null;
+  }
+}
+
+function storeDevSetting(key, value) {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    window.localStorage.setItem(DEV_STORE_PREFIX + key, String(value));
+  } catch (storeError) {
+    console.warn(`dev settings persist skipped: ${storeError.message}`);
+  }
+}
+
+function devPanelKey(el) {
+  return el.id.replace(/^dev-/u, '');
+}
+
+function persistDevPanel() {
+  document.querySelectorAll('#dev-panel input, #dev-panel select').forEach((el) => {
+    if (el.id) storeDevSetting(devPanelKey(el), el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value);
+  });
+}
+
+function hydrateDevPanel() {
+  document.querySelectorAll('#dev-panel input, #dev-panel select').forEach((el) => {
+    if (!el.id) return;
+    const raw = readDevSetting(devPanelKey(el));
+    if (raw === null) return;
+    if (el.type === 'checkbox') {
+      el.checked = raw === '1' || raw === 'true';
+    } else if (el.tagName === 'SELECT') {
+      if (Array.from(el.options).some((o) => o.value === raw)) el.value = raw;
+    } else {
+      el.value = raw;
+    }
+  });
+}
 const PANEL_HTML = `<div id="dev-panel" hidden>
   <button class="dev-close" id="dev-panel-close" aria-label="Close dev panel" title="Close">×</button>
   <h3>Topolines</h3>
@@ -107,6 +160,11 @@ function ensurePanel() {
 }
 ensureCss();
 ensurePanel();
+hydrateDevPanel();
+// One delegated persist: every slider/select/checkbox stores to `dvxb.dev.*`
+// on change, so the push functions below stay untouched.
+document.getElementById('dev-panel').addEventListener('input', persistDevPanel);
+document.getElementById('dev-panel').addEventListener('change', persistDevPanel);
 
   const getEl = (id) => document.getElementById(id);
 
@@ -377,7 +435,7 @@ ensurePanel();
         if (vnet.enabled.checked) velocityNet.enable(); else velocityNet.disable();
         velocityNet.setOpacity(Number(vnet.opacity.value));
         vnOut.opacity.textContent = (Number(vnet.opacity.value)).toFixed(2);
-      }
+          }
 
       vnet.enabled.addEventListener('change', pushVN);
       Object.values(vnet).forEach(inp => {
@@ -443,7 +501,7 @@ ensurePanel();
         thOut.radius.textContent = thm.radius.value;
         thOut.decay.textContent = Number(thm.decay.value).toFixed(2);
         thOut.density.textContent = Number(thm.density.value).toFixed(2);
-        if (!thermal) return;
+            if (!thermal) return;
         // Live setters: no destroy + re-init, heat is preserved per tick.
         if (typeof thermal.setHeatRadius === 'function') thermal.setHeatRadius(Number(thm.radius.value));
         if (typeof thermal.setHeatDecay === 'function') thermal.setHeatDecay(Number(thm.decay.value));
