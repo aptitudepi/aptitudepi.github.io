@@ -533,6 +533,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-terminal-border) tran
 }
 
 /* ── Topolines Overlay ──────────────────────── */
+/* Paint contract: above .page-blur (z 10), below #app content (z 30). */
 #topo-host {
   position: fixed;
   top: 0;
