@@ -17,6 +17,7 @@
 //   node tools/wall-admin.mjs list [--json] [--endpoint URL]
 //   node tools/wall-admin.mjs get-blob <post-id> [--via kv|r2] [--out file.asc]
 //   node tools/wall-admin.mjs decrypt <blob.asc> --key-file owner-private.asc [--out telemetry.json]
+//   node tools/wall-admin.mjs audit [--endpoint URL]
 //   WALL_OWNER_PRIVATE_KEY_PATH=/path/owner-private.asc node tools/wall-admin.mjs decrypt <blob.asc>
 
 import { spawnSync } from 'node:child_process';
@@ -43,6 +44,7 @@ function printUsage() {
     '  list [--json] [--endpoint URL]              list public posts',
     '  get-blob <post-id> [--via kv|r2] [--out f]  fetch one armored blob via wrangler',
     '  decrypt <blob.asc> --key-file key.asc [--out telemetry.json]',
+    '  audit [--endpoint URL]                      join KV posts with blob presence + dates, report gaps',
     'Environment: WALL_OWNER_PRIVATE_KEY_PATH may replace --key-file.',
   ];
   process.stderr.write(`${usageLines.join('\n')}\n`);
@@ -149,6 +151,95 @@ async function decryptBlobCommand(decryptArgs) {
   process.stdout.write(`${prettyText}\n`);
 }
 
+// audit: join every known post ID (KV deltoken keys cover posts since
+// deleted from the wall) with blob presence, and report gaps. Dates stay
+// explicit: the wall timestamp when the post is still listed, plus the UTC
+// date derived from the epoch-ms post ID (R2 keys are telemetry/<id>.asc
+// with createdAt in customMetadata). Read-only: only wrangler gets run.
+function listKnownPostIds() {
+  const listResult = spawnSync(
+    'wrangler',
+    ['kv', 'key', 'list', '--binding', 'WALL_KV', '--remote'],
+    { cwd: SITE_ROOT, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 },
+  );
+  if (listResult.status !== 0) {
+    throw new Error(`wrangler kv key list failed: ${String(listResult.stderr).slice(0, 400)}`);
+  }
+  const keyEntries = JSON.parse(String(listResult.stdout));
+  const postIds = [];
+  for (const keyEntry of keyEntries) {
+    const keyName = String(keyEntry.name ?? '');
+    if (keyName.startsWith('wall:deltoken:')) {
+      postIds.push(keyName.slice('wall:deltoken:'.length));
+    }
+  }
+  return postIds;
+}
+
+function probeBlobPresence(postIdText) {
+  const r2Result = spawnSync(
+    'wrangler',
+    ['r2', 'object', 'get', `telemetry/telemetry/${postIdText}.asc`, '--remote', '--pipe'],
+    { cwd: SITE_ROOT, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 },
+  );
+  if (r2Result.status === 0 && String(r2Result.stdout).startsWith('-----BEGIN PGP MESSAGE-----')) {
+    return 'r2';
+  }
+  const kvResult = spawnSync(
+    'wrangler',
+    ['kv', 'key', 'get', `telemetry:${postIdText}.asc`, '--binding', 'WALL_KV', '--remote', '--text'],
+    { cwd: SITE_ROOT, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 },
+  );
+  if (kvResult.status === 0 && String(kvResult.stdout).startsWith('-----BEGIN PGP MESSAGE-----')) {
+    return 'kv';
+  }
+  return null;
+}
+
+function epochIdToDate(postIdText) {
+  const epochMillis = Number(postIdText);
+  if (Number.isFinite(epochMillis) === false) {
+    return 'unknown';
+  }
+  return new Date(epochMillis).toISOString();
+}
+
+async function auditTelemetryBlobs(auditArgs) {
+  const endpointText = readFlagValue(auditArgs, '--endpoint') ?? DEFAULT_ENDPOINT;
+  const wallTimestamps = {};
+  try {
+    const listResp = await fetch(endpointText);
+    if (listResp.ok) {
+      const listData = await listResp.json();
+      const postList = Array.isArray(listData.posts) ? listData.posts : [];
+      for (const wallPost of postList) {
+        wallTimestamps[String(wallPost.id)] = String(wallPost.timestamp ?? '');
+      }
+    }
+  } catch (fetchError) {
+    process.stderr.write(`warning: wall endpoint unreadable, dating from post IDs only (${fetchError.message})\n`);
+  }
+  const postIds = listKnownPostIds();
+  postIds.sort();
+  let blobCount = 0;
+  const gapIds = [];
+  for (const postIdText of postIds) {
+    const blobHome = probeBlobPresence(postIdText);
+    if (blobHome === null) {
+      gapIds.push(postIdText);
+    } else {
+      blobCount += 1;
+    }
+    const wallDate = wallTimestamps[postIdText] ?? '(deleted)';
+    process.stdout.write(`${postIdText} wall:${wallDate} id:${epochIdToDate(postIdText)} blob:${blobHome ?? 'MISSING'}\n`);
+  }
+  process.stderr.write(`audit: ${postIds.length} known posts, ${blobCount} blobs, ${gapIds.length} gaps\n`);
+  if (gapIds.length > 0) {
+    process.stderr.write(`gaps: ${gapIds.join(', ')}\n`);
+    process.exitCode = 1;
+  }
+}
+
 async function mainEntry() {
   const cliArgs = process.argv.slice(2);
   const subCommand = cliArgs[0] ?? '';
@@ -163,6 +254,10 @@ async function mainEntry() {
     }
     if (subCommand === 'decrypt') {
       await decryptBlobCommand(cliArgs.slice(1));
+      return;
+    }
+    if (subCommand === 'audit') {
+      await auditTelemetryBlobs(cliArgs.slice(1));
       return;
     }
     printUsage();
