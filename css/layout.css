@@ -62,8 +62,8 @@ section:not(#hero-target) > * {
   background: var(--color-terminal-bg);
   position: relative;
   z-index: 1;
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  /* Single-blur rule: the site-wide .page-blur sheet above is the one
+     backdrop-filter over the hero; no second blur here (tint only). */
   /* overflow:clip keeps pane rounding without breaking sticky .doc-nav (hidden fallback). */
   overflow: hidden;
   overflow: clip;
