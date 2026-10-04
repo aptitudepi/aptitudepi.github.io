@@ -19,7 +19,9 @@
 // drift closed); neither change affects the help rows or the counts above.
 // WAVE 12: `background` (off|static|ambient|expressive) is unlisted with null
 // helpDisplay/helpPos; PR3 `imgcat` is unlisted the same way (inline images
-// need a browser plus a CDN-fetched addon). Playground: `pg <demo>` (first
+// need a browser plus a CDN-fetched addon). PR4: `sparkline` is unlisted the
+// same way (null helpDisplay/helpPos); its chart module lazy-imports on first
+// run. Playground: `pg <demo>` (first
 // demo: `pg life`, lazy-imported pg-life.js) is likewise unlisted with null
 // helpDisplay/helpPos. The 36/34 golden pins hold.
 
@@ -1503,6 +1505,12 @@ function runNoiseCommand(term) {
   }
   return;
 }
+
+// PR4 `sparkline` is unlisted the same way: the chart module (and its CDN
+// import of lightweight-charts) loads only when the command runs.
+async function runSparklineCommand(term, args, runSignal) {
+  return (await import('./sparkline.js')).runSparklineCommand(term, runSignal);
+}
 async function runPgCommand(term, args, runSignal) {
   const demoArg = String(args[0] ?? '').trim().toLowerCase();
   if (!demoArg) {
@@ -1517,7 +1525,11 @@ async function runPgCommand(term, args, runSignal) {
   const lifeModule = await import('./pg-life.js');
   await lifeModule.runLife(term, runSignal);
 }
-
+// `spark` follows the same lazy pattern: the terminal-native renderer module
+// (no CDN — pure Unicode/ANSI) loads only when the command runs.
+async function runSparkCommand(term, args, runSignal) {
+  return (await import('./spark.js')).runSparkCommand(term, args, runSignal);
+}
 async function runBackgroundCommand(term, args) {
   const modeArg = String(args[0] ?? '').trim().toLowerCase();
   const backgroundsModule = await import('./backgrounds.js');
@@ -2458,6 +2470,42 @@ const COMMAND_REGISTRY = [
     bareOnly: false,
     aiQueue: false,
     run: runImgcatCommand,
+  },
+  {
+    name: "sparkline",
+    aliases: [],
+    aliasOf: null,
+    plain: "Render a commit-activity sparkline (lightweight-charts over CDN)",
+    category: "ADDITIONAL",
+    argsSpec: "",
+    examples: ["sparkline"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runSparklineCommand,
+  },
+  {
+    name: "spark",
+    aliases: [],
+    aliasOf: null,
+    plain: "Render commit activity inline (Unicode sparkline; `graph` = activity grid)",
+    category: "ADDITIONAL",
+    argsSpec: "[graph]",
+    examples: ["spark", "spark graph"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runSparkCommand,
   },
   {
     name: "weather",

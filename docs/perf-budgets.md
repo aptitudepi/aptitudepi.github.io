@@ -9,9 +9,9 @@ no CI gate — run it before pushing a wave that touches `js/` or `css/`.
 
 | Asset | Measured gzip | Budget gzip | Headroom |
 |---|---|---|---|
-| `js/` total (36 modules) | 219,372 B (~214 KiB) | ≤ 220,000 B | ~0.3% |
-| `js/commands.js` (largest single module) | 61,580 B | ≤ 64,000 B | ~4% |
-| `css/` total (12 sheets) | 23,046 B (~22.5 KiB) | ≤ 23,200 B | ~0.7% |
+| `js/` total (37 modules) | 223,617 B (~218 KiB) | ≤ 224,000 B | ~0.2% |
+| `js/commands.js` (largest single module) | 61,990 B | ≤ 64,000 B | ~3% |
+| `css/` total (12 sheets) | 23,309 B (~23 KiB) | ≤ 23,500 B | ~0.8% |
 | `index.html` | 9,975 B | ≤ 10,000 B | ~0.3% |
 
 Budget history: raised 2026-10-04 for the playground wave — `js/` gained the
@@ -39,7 +39,10 @@ split, not to minify.
 
 Budget history: PR1 (`host` hardware command, `changelog`/`dmesg` build
 commands, OSC-8 links, `uname -a` build-info) bumped `js/` 215,000→220,000
-and `js/commands.js` 60,000→64,000 to cover the new registry entries.
+and `js/commands.js` 60,000→64,000 to cover the new registry entries. PR15
+(`spark`, ANSI/Unicode commit-activity renderers ported from microcharts)
+bumped `js/` 220,000→224,000: the delta is the lazy `js/spark.js` module and
+its registry entry — all output is ANSI, so `css/` is untouched.
 
 ## Lab targets (documented, verified on demand via Lighthouse)
 
