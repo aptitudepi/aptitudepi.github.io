@@ -506,6 +506,20 @@ function createTerminal(container) {
   term = new window.Terminal({
     cursorBlink: true,
     cursorStyle: 'block',
+    // OSC-8 hyperlink clicks (projects/cv/gh output wraps repository URLs
+    // in OSC-8 sequences): open in a new tab,noopener. Plain-text fallbacks
+    // keep working where OSC-8 is unsupported.
+    linkHandler: {
+      activate(event, uri) {
+        try {
+          if (typeof uri === 'string' && /^https?:\/\//.test(uri)) {
+            window.open(uri, '_blank', 'noopener');
+          }
+        } catch (linkError) {
+          console.warn(`link open skipped: ${linkError.message}`);
+        }
+      },
+    },
     // registerDecoration (js/orb.js anchors the AI thought orb to a buffer
     // line with it) is behind xterm's proposed-API flag
     allowProposedApi: true,
