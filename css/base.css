@@ -20,6 +20,14 @@
 }
 
 /* ── View Transitions API (transitions.dev) ─────── */
+/* Opt same-origin MPA navigations into the default crossfade. Unknown
+   at-rule: browsers without view-transition support ignore it and keep
+   the classic instant navigation, so this is safe to ship unprefixed.
+   Shared by index.html, templates/shell.html and templates/man.html. */
+@view-transition {
+  navigation: auto;
+}
+
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 350ms;
