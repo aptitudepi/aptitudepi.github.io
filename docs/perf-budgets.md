@@ -9,8 +9,8 @@ no CI gate — run it before pushing a wave that touches `js/` or `css/`.
 
 | Asset | Measured gzip | Budget gzip | Headroom |
 |---|---|---|---|
-| `js/` total (35 modules) | 204,957 B (~200 KiB) | ≤ 215,000 B | ~5% |
-| `js/commands.js` (largest single module) | 55,818 B | ≤ 60,000 B | ~7% |
+| `js/` total (35 modules) | 204,957 B (~200 KiB) | ≤ 220,000 B | ~7% |
+| `js/commands.js` (largest single module) | 55,818 B | ≤ 64,000 B | ~14% |
 | `css/` total (12 sheets) | 20,263 B (~20 KiB) | ≤ 23,000 B | ~13% |
 | `index.html` | 8,589 B | ≤ 10,000 B | ~16% |
 
@@ -24,6 +24,10 @@ If the checker fails: prefer code-splitting (dynamic `import()`) over
 minification tricks; the site ships unminified sources deliberately
 (readable View-Source is a feature here). A failing budget is a prompt to
 split, not to minify.
+
+Budget history: PR1 (`host` hardware command, `changelog`/`dmesg` build
+commands, OSC-8 links, `uname -a` build-info) bumped `js/` 215,000→220,000
+and `js/commands.js` 60,000→64,000 to cover the new registry entries.
 
 ## Lab targets (documented, verified on demand via Lighthouse)
 

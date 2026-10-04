@@ -1123,13 +1123,136 @@ function runUptimeCommand(term) {
   term.writeln(`\r${SITE_GREEN} up ${uptimeStr()}${ANSI_RESET}`);
   return;
 }
-function runUnameCommand(term, args) {
-  if (args.includes('-a')) {
-    term.writeln(`${SITE_WHITE}Linux ${getTerminalHost()} 7.x-LTS #1 dvxb v2 x86_64 GNU/Linux${ANSI_RESET}`);
-  } else {
-    term.writeln(`${SITE_WHITE}Linux${ANSI_RESET}`);
+// OSC-8 hyperlink wrapper for xterm output: link-aware terminals render
+// `text` as a clickable link to `url`; every other terminal shows the plain
+// (ANSI-colored) text fallback. Pair with the terminal `linkHandler`.
+function osc8Link(url, text) {
+  return `\x1b]8;;${String(url)}\x1b\\${String(text)}\x1b]8;;\x1b\\`;
+}
+
+// PR1 build metadata: CI writes build-info.json ({sha, run_number,
+// built_at}) between PDF verification and sitemap generation; the terminal
+// consumes it at runtime with fetch no-store. Absent locally (dev/snapshot)
+// every consumer falls back to static text, so goldens stay deterministic.
+let cachedBuildInfo = null;
+let buildInfoPromise = null;
+function loadBuildInfo() {
+  if (cachedBuildInfo !== null) return Promise.resolve(cachedBuildInfo);
+  if (buildInfoPromise !== null) return buildInfoPromise;
+  buildInfoPromise = (async () => {
+    try {
+      const infoResp = await fetch('build-info.json', { cache: 'no-store' });
+      if (!infoResp.ok) return null;
+      const infoData = await infoResp.json();
+      cachedBuildInfo = infoData !== null && typeof infoData === 'object' ? infoData : null;
+    } catch {
+      cachedBuildInfo = null;
+    }
+    return cachedBuildInfo;
+  })();
+  return buildInfoPromise;
+}
+
+function buildInfoLine() {
+  const info = cachedBuildInfo;
+  if (info === null || typeof info.sha !== 'string' || info.sha.length < 7) return null;
+  const shortSha = info.sha.slice(0, 12);
+  const runNumber = info.run_number === undefined || info.run_number === null ? 'unknown run' : `#${info.run_number}`;
+  const builtAt = typeof info.built_at === 'string' && info.built_at.length > 0 ? info.built_at : 'unknown date';
+  return { shortSha, runNumber, builtAt };
+}
+
+// Client-side hardware/browser probe with guarded fallbacks: Chromium
+// exposes User-Agent Client Hints (getHighEntropyValues), deviceMemory and
+// the unmasked WebGL renderer; Firefox/Safari hide most of it, so every
+// probe fails closed to an "unknown (...)" label instead of throwing.
+function readWebglRenderer() {
+  try {
+    if (typeof document === 'undefined') return 'unknown (no DOM)';
+    const probeCanvas = document.createElement('canvas');
+    const gl = probeCanvas.getContext('webgl') || probeCanvas.getContext('experimental-webgl');
+    if (!gl) return 'unknown (WebGL unavailable)';
+    let renderer = null;
+    try {
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    } catch {
+      renderer = null;
+    }
+    try {
+      const loseContext = gl.getExtension('WEBGL_lose_context');
+      if (loseContext) loseContext.loseContext();
+    } catch {
+      // best-effort context release; ignore errors
+    }
+    return typeof renderer === 'string' && renderer.length > 0 ? renderer : 'unknown (masked by browser)';
+  } catch {
+    return 'unknown (probe failed)';
   }
+}
+
+async function runHostCommand(term) {
+  const nav = typeof navigator !== 'undefined' ? navigator : null;
+  term.writeln(`${ANSI_BOLD}${SITE_WHITE}Client hardware / browser${ANSI_RESET}`);
+  term.writeln(`  ${SITE_LABEL}userAgent:${ANSI_RESET} ${SITE_WHITE}${sanitizeTerminalText(nav?.userAgent ?? 'unknown')}${ANSI_RESET}`);
+  let clientHints = 'unknown (Firefox/Safari: no User-Agent Client Hints)';
+  const userAgentData = nav?.userAgentData ?? null;
+  if (userAgentData) {
+    try {
+      const brands = Array.isArray(userAgentData.brands)
+        ? userAgentData.brands.map((brand) => `${brand.brand} ${brand.version}`).join('; ')
+        : '';
+      const platform = typeof userAgentData.platform === 'string' ? userAgentData.platform : 'unknown platform';
+      let highEntropy = '';
+      try {
+        const highValues = await userAgentData.getHighEntropyValues(['architecture', 'bitness', 'platformVersion', 'model']);
+        const highParts = [`arch ${highValues.architecture ?? '?'}`, `${highValues.bitness ?? '?'}`, `platform ${highValues.platformVersion ?? '?'}`];
+        if (highValues.model) highParts.push(`model ${highValues.model}`);
+        highEntropy = ` (${highParts.join(' · ')})`;
+      } catch {
+        highEntropy = ' (high-entropy values unavailable)';
+      }
+      clientHints = `${platform}${brands ? ` — ${brands}` : ''}${highEntropy}`;
+    } catch {
+      clientHints = 'unknown (client-hints probe failed)';
+    }
+  }
+  term.writeln(`  ${SITE_LABEL}clientHints:${ANSI_RESET} ${SITE_WHITE}${sanitizeTerminalText(clientHints)}${ANSI_RESET}`);
+  const coreCount = nav !== null && typeof nav.hardwareConcurrency === 'number' ? `${nav.hardwareConcurrency} logical cores` : 'unknown (unavailable in this browser)';
+  term.writeln(`  ${SITE_LABEL}cpu:${ANSI_RESET} ${SITE_WHITE}${sanitizeTerminalText(coreCount)}${ANSI_RESET}`);
+  const memoryLabel = nav !== null && typeof nav.deviceMemory === 'number' ? `~${nav.deviceMemory} GB (approximate bucket)` : 'unknown (Chromium-only API)';
+  term.writeln(`  ${SITE_LABEL}memory:${ANSI_RESET} ${SITE_WHITE}${sanitizeTerminalText(memoryLabel)}${ANSI_RESET}`);
+  term.writeln(`  ${SITE_LABEL}gpu:${ANSI_RESET} ${SITE_WHITE}${sanitizeTerminalText(readWebglRenderer())}${ANSI_RESET}`);
   return;
+}
+
+async function runChangelogCommand(term) {
+  term.writeln(`${ANSI_BOLD}${SITE_WHITE}Build changelog${ANSI_RESET}`);
+  await loadBuildInfo();
+  const infoLine = buildInfoLine();
+  if (infoLine === null) {
+    term.writeln(`  ${SITE_MUTED}no build-info.json — local preview build; CI deploys record the commit and run number here${ANSI_RESET}`);
+    return;
+  }
+  term.writeln(`  ${SITE_LABEL}commit:${ANSI_RESET} ${SITE_WHITE}${sanitizeTerminalText(cachedBuildInfo.sha)}${ANSI_RESET}`);
+  term.writeln(`  ${SITE_LABEL}run:${ANSI_RESET} ${SITE_WHITE}${sanitizeTerminalText(String(infoLine.runNumber))}${ANSI_RESET}`);
+  term.writeln(`  ${SITE_LABEL}built:${ANSI_RESET} ${SITE_WHITE}${sanitizeTerminalText(infoLine.builtAt)}${ANSI_RESET}`);
+  return;
+}
+
+function runUnameCommand(term, args) {
+  if (!args.includes('-a')) {
+    term.writeln(`${SITE_WHITE}Linux${ANSI_RESET}`);
+    return Promise.resolve();
+  }
+  return loadBuildInfo().then(() => {
+    const infoLine = buildInfoLine();
+    if (infoLine !== null) {
+      term.writeln(`${SITE_WHITE}Linux ${getTerminalHost()} ${infoLine.shortSha} ${infoLine.runNumber} ${infoLine.builtAt} x86_64 GNU/Linux${ANSI_RESET}`);
+    } else {
+      term.writeln(`${SITE_WHITE}Linux ${getTerminalHost()} 7.x-LTS #1 dvxb v2 x86_64 GNU/Linux${ANSI_RESET}`);
+    }
+  });
 }
 function runPwdCommand(term) {
   term.writeln(`${SITE_BLUE}/home/db${ANSI_RESET}`);
@@ -1194,8 +1317,8 @@ function runAboutCommand(term) {
   term.writeln('Systems tinkerer, researcher, and open-source');
   term.writeln('contributor. Interested in ML infrastructure, developer tooling,');
   term.writeln('and building things that feel alive.');
-  term.writeln(`cv: ${SITE_BLUE}https://dvxb.io${ANSI_RESET}`);
-  term.writeln(`gh: ${SITE_BLUE}https://github.com/aptitudepi${ANSI_RESET}`);
+  term.writeln(`cv: ${osc8Link('https://dvxb.io', `${SITE_BLUE}https://dvxb.io${ANSI_RESET}`)}`);
+  term.writeln(`gh: ${osc8Link('https://github.com/aptitudepi', `${SITE_BLUE}https://github.com/aptitudepi${ANSI_RESET}`)}`);
   return;
 }
 function runFortuneCommand(term) {
@@ -1618,7 +1741,7 @@ function runProjectsCommand(term, args) {
   for (const project of matchedProjects) {
     term.writeln(`  ${SITE_GREEN}${project.name}${ANSI_RESET} ${SITE_FAINT}${project.tags.join(' · ')}${ANSI_RESET}`);
     term.writeln(`    ${SITE_MUTED}${project.description}${ANSI_RESET}`);
-    term.writeln(`    ${SITE_BLUE}${project.repo}${ANSI_RESET}`);
+    term.writeln(`    ${osc8Link(project.repo, `${SITE_BLUE}${project.repo}${ANSI_RESET}`)}`);
   }
   term.writeln(`${SITE_MUTED}Next: run \`case <name>\` for a deep dive, e.g. \`case pcpg\`${ANSI_RESET}`);
   return;
@@ -2571,6 +2694,65 @@ const COMMAND_REGISTRY = [
     bareOnly: false,
     aiQueue: false,
     run: runExportCommand,
+  },
+  // PR1 client/build introspection. Unlisted on purpose (like the WAVE 8
+  // portfolio set) so `help` output and the COMMANDS count stay
+  // byte-identical to the goldens; the palette, tab completion and `man`
+  // pick them up from the registry automatically. `dmesg` shares the
+  // changelog run (dmesg-style view of the same build metadata).
+  {
+    name: "host",
+    aliases: [],
+    aliasOf: null,
+    plain: "Show client hardware and browser info",
+    category: "CORE",
+    argsSpec: "",
+    examples: ["host"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runHostCommand,
+  },
+  {
+    name: "changelog",
+    aliases: ["dmesg"],
+    aliasOf: null,
+    plain: "Show the deployed build metadata",
+    category: "CORE",
+    argsSpec: "",
+    examples: ["changelog", "dmesg"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runChangelogCommand,
+  },
+  {
+    name: "dmesg",
+    aliases: [],
+    aliasOf: "changelog",
+    plain: "Alias for changelog",
+    category: "CORE",
+    argsSpec: "",
+    examples: ["dmesg"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runChangelogCommand,
   },
 ];
 

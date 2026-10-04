@@ -117,6 +117,14 @@ jobs:
       - name: Remove Full-CV checkout from artifact
         run: rm -rf full-cv
 
+      # CI build metadata for the terminal (`uname -a`, `changelog`/`dmesg`):
+      # consumed at runtime via fetch no-store; absent on local previews, so
+      # those paths keep their static fallbacks.
+      - name: Write build-info.json
+        run: |
+          printf '{"sha":"%s","run_number":"%s","built_at":"%s"}\n' \
+            "$GITHUB_SHA" "$GITHUB_RUN_NUMBER" "$(date -u +%FT%TZ)" > build-info.json
+
       # sitemap.xml from the shared URL list (tools/site-urls.mjs); lastmod is
       # this deploy. Same list feeds the IndexNow submit after Pages is live.
       - name: Generate sitemap.xml
