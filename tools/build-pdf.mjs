@@ -97,12 +97,12 @@ function stripPrivateContact(src) {
     // paragraph. Everything else is preserved byte-for-byte.
     // (a1) a line of only spaces+separators is deleted wholesale (keeping it
     // would inject a blank line, i.e. a TeX paragraph break, into the block);
-    .replace(/\n[ \t]*(?:\$\|\$|[·|•])(?:[ \t]*(?:\$\|\$|[·|•]))*[ \t]*(?=\n)/g, '')
+    .replace(/\n[ \t]*(?:\$\|\$|[·|•])(?:[ \t]*(?:\$\|\$|[·|•]))*[ \t]*(?=\n)/gu, '')
     // (a2) separators alone on a line after commands like \small: drop seps,
     // keep the commands (the line must stay non-blank for the same reason);
-    .replace(/(^|\n)([ \t]*(?:\\[a-zA-Z]+[ \t]*)*)(?:[ \t]*(?:\$\|\$|[·|•]))+[ \t]*(?=$|\n)/gm, '$1$2')
-    .replace(/((?:^|\n[ \t]*\n)[ \t]*(?:\\[a-zA-Z]+[ \t]*)*)(?:[ \t]*(?:\$\|\$|[·|•]))+[ \t]*/g, '$1')
-    .replace(/(?:[ \t]*(?:\$\|\$|[·|•]))+[ \t]*(?=$|\n[ \t]*\n)/g, '');
+    .replace(/(^|\n)([ \t]*(?:\\[a-zA-Z]+[ \t]*)*)(?:[ \t]*(?:\$\|\$|[·|•]))+[ \t]*(?=$|\n)/gmu, '$1$2')
+    .replace(/((?:^|\n[ \t]*\n)[ \t]*(?:\\[a-zA-Z]+[ \t]*)*)(?:[ \t]*(?:\$\|\$|[·|•]))+[ \t]*/gu, '$1')
+    .replace(/(?:[ \t]*(?:\$\|\$|[·|•]))+[ \t]*(?=$|\n[ \t]*\n)/gu, '');
 }
 
 // Compile with Tectonic. Tectonic fetches fonts/packages from its remote
