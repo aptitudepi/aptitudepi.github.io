@@ -12,8 +12,7 @@
 //   - `man`, `llm`, `guestbook` plus the WAVE 8 portfolio set (`projects`,
 //     `case`, `skills`, `timeline`, `export`) plus the WAVE 12 `background`
 //     mode switch plus the PR1 introspection set (`host`, `changelog`,
-//     `dmesg`), PR3 `imgcat`, and the PR4 `sparkline` command execute but
-//     stay unlisted:
+//     `dmesg`), PR3 `imgcat`, and the PR4 `sparkline` command 
 //     COMMANDS keeps 36 so `help` output stays byte-identical to the goldens.
 //   - `google`, `ddg`, `ping` are listed but have no `help` row (as before);
 //     their one-line help lives in the registry and renders via `man`.
@@ -42,8 +41,8 @@ const LEGACY_ALLOWLIST = new Set([
 ]);
 
 const NEVER_ALLOWED = ['clear', 'vm', 'ai', 'llm', 'ai-model', 'md', 'devmode', 'guestbook', 'man'];
+const UNLISTED_EXECUTABLE = ['llm', 'guestbook', 'man', 'projects', 'case', 'skills', 'timeline', 'export', 'background', 'host', 'changelog', 'dmesg', 'imgcat', 'sparkline', 'pg'];
 
-const UNLISTED_EXECUTABLE = ['llm', 'guestbook', 'man', 'projects', 'case', 'skills', 'timeline', 'export', 'background', 'host', 'changelog', 'dmesg', 'imgcat', 'sparkline'];
 
 let failureCount = 0;
 

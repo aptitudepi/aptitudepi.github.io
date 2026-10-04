@@ -21,7 +21,9 @@
 // helpDisplay/helpPos; PR3 `imgcat` is unlisted the same way (inline images
 // need a browser plus a CDN-fetched addon). PR4: `sparkline` is unlisted the
 // same way (null helpDisplay/helpPos); its chart module lazy-imports on first
-// run. The 36/34 golden pins hold.
+// run. Playground: `pg <demo>` (first
+// demo: `pg life`, lazy-imported pg-life.js) is likewise unlisted with null
+// helpDisplay/helpPos. The 36/34 golden pins hold.
 
 import { isAbortError } from './foreground.js';
 import { sanitizeTerminalText, renderMarkdown } from './markdown.js';
@@ -1503,10 +1505,25 @@ function runNoiseCommand(term) {
   }
   return;
 }
+
 // PR4 `sparkline` is unlisted the same way: the chart module (and its CDN
 // import of lightweight-charts) loads only when the command runs.
 async function runSparklineCommand(term, args, runSignal) {
   return (await import('./sparkline.js')).runSparklineCommand(term, runSignal);
+}
+async function runPgCommand(term, args, runSignal) {
+  const demoArg = String(args[0] ?? '').trim().toLowerCase();
+  if (!demoArg) {
+    term.writeln(`${SITE_MUTED}Playgrounds: life — run \`pg <demo>\`${ANSI_RESET}`);
+    return;
+  }
+  if (demoArg !== 'life') {
+    term.writeln(`${SITE_ERR}pg: unknown demo ${sanitizeTerminalText(demoArg)}${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Playgrounds: life — run \`pg life\`${ANSI_RESET}`);
+    return;
+  }
+  const lifeModule = await import('./pg-life.js');
+  await lifeModule.runLife(term, runSignal);
 }
 async function runBackgroundCommand(term, args) {
   const modeArg = String(args[0] ?? '').trim().toLowerCase();
@@ -1532,13 +1549,23 @@ async function runBackgroundCommand(term, args) {
   }
   return;
 }
-// `imgcat` fetches @xterm/addon-image from jsDelivr on first use only (same
-// pinned-CDN pattern as @xterm/addon-fit in templates/shell.html), then
-// streams the image as one iTerm2 inline-image escape (repo paths only).
-const IMGCAT_ADDON_URL = 'https://cdn.jsdelivr.net/npm/@xterm/addon-image@0.9.0/lib/addon-image.js';
+// `imgcat` lazy-loads the vendored sixel decoder + @xterm/image addon from
+// vendor/xterm/ on first use only, then streams the image as one iTerm2
+// inline-image escape (repo-relative paths only; base64 has no newlines).
+const IMGCAT_SIXEL_URL = 'vendor/xterm/sixel-full.js';
+const IMGCAT_ADDON_URL = 'vendor/xterm/xterm-image-addon.js';
 const IMGCAT_DEFAULT_IMAGE = 'assets/imgcat-sample.png';
 const IMGCAT_PATH_PATTERN = /^(assets|images)\/[\w./-]+\.(png|gif|jpe?g|webp)$/i;
 let imgcatSetupPromise = null;
+function imgcatLoadScript(scriptSrc) {
+  return new Promise((resolveLoad, rejectLoad) => {
+    const scriptTag = document.createElement('script');
+    scriptTag.src = scriptSrc;
+    scriptTag.onload = resolveLoad;
+    scriptTag.onerror = () => rejectLoad(new Error(`load failed: ${scriptSrc}`));
+    document.head.appendChild(scriptTag);
+  });
+}
 async function runImgcatCommand(term, args, runSignal) {
   const targetPath = String(args[0] || IMGCAT_DEFAULT_IMAGE).trim();
   if (!IMGCAT_PATH_PATTERN.test(targetPath) || targetPath.includes('..')) {
@@ -1549,26 +1576,24 @@ async function runImgcatCommand(term, args, runSignal) {
   try {
     if (!imgcatSetupPromise) {
       imgcatSetupPromise = (async () => {
-        await new Promise((resolveLoad, rejectLoad) => {
-          const scriptTag = document.createElement('script');
-          scriptTag.src = IMGCAT_ADDON_URL;
-          scriptTag.onload = resolveLoad;
-          scriptTag.onerror = () => rejectLoad(new Error('addon load failed'));
-          document.head.appendChild(scriptTag);
-        });
+        await imgcatLoadScript(IMGCAT_SIXEL_URL); // decoder ready before addon registers its sequences
+        await imgcatLoadScript(IMGCAT_ADDON_URL);
         const ImageAddonCtor = window.ImageAddon?.ImageAddon || window.ImageAddon;
         const realTerminal = (await import('./terminal.js')).getTerm();
-        if (typeof ImageAddonCtor !== 'function' || !realTerminal) throw new Error('terminal addon unavailable');
-        realTerminal.loadAddon(new ImageAddonCtor());
-        return realTerminal;
+        if (typeof ImageAddonCtor !== 'function' || !realTerminal || !window.sixel) {
+          throw new Error('inline images not supported in this terminal');
+        }
+        const imageAddon = new ImageAddonCtor();
+        realTerminal.loadAddon(imageAddon);
+        return { realTerminal, imageAddon };
       })();
     }
-    await imgcatSetupPromise;
+    await imgcatSetupPromise; // throws with a graceful message if the addon/decoder failed to load
     const imgResp = await fetch(encodeURI(targetPath), { signal: combinedTimeoutSignal(runSignal, 10000) });
     if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status}`);
     const imgBytes = new Uint8Array(await imgResp.arrayBuffer());
     let imgBinary = '';
-    imgBytes.forEach((byte) => { imgBinary += String.fromCharCode(byte); });
+    for (const byte of imgBytes) imgBinary += String.fromCharCode(byte);
     term.write(`\r\n\x1b]1337;File=inline=1:${btoa(imgBinary)}\x07\r\n`);
     term.writeln(`${SITE_MUTED}${targetPath} (${imgBytes.length} bytes)${ANSI_RESET}`);
   } catch (imgcatError) {
@@ -2402,6 +2427,26 @@ const COMMAND_REGISTRY = [
     bareOnly: false,
     aiQueue: false,
     run: runBackgroundCommand,
+  },
+  // Playground: lazy demos. Unlisted + no help row, so the 36/34 golden pins
+  // stay byte-identical; it joins the documented UNLISTED_EXECUTABLE set.
+  {
+    name: "pg",
+    aliases: [],
+    aliasOf: null,
+    plain: "Run a lazy-loaded playground demo (pg life)",
+    category: "ADDITIONAL",
+    argsSpec: "<demo>",
+    examples: ["pg", "pg life"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runPgCommand,
   },
   {
     name: "imgcat",

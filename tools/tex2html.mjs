@@ -482,7 +482,10 @@ function renderHeader(content) {
     // The TeX header separates contacts with $|$ (a literal `|`), not `·`:
     // split on both (plus the relic `•`) so scrubbed phone/email slots do
     // not survive as orphan `| |` separators, then drop empties.
-    .split(/[·|•]/u).map((s) => s.trim()).filter(Boolean).join('  ·  ');
+    .split(/[·|•]/u).map((s) => s.trim()).filter(Boolean).join('  ·  ')
+    // Defensive: strip leading/trailing separators that could survive from
+    // the TeX source (mirrors the PDF build's stripPrivateContact fix).
+    .replace(/^\s*[·|•]+\s*/u, '').replace(/\s*[·|•]+\s*$/u, '');
   const contact = scrubbed;
   const nameHtml = name.replace(/^<strong>(.*)<\/strong>$/, '<strong>$1</strong>');
   return '<div class="resume-header">' +
