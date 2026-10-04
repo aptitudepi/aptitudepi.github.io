@@ -1542,13 +1542,23 @@ async function runBackgroundCommand(term, args) {
   }
   return;
 }
-// `imgcat` fetches @xterm/addon-image from jsDelivr on first use only (same
-// pinned-CDN pattern as @xterm/addon-fit in templates/shell.html), then
-// streams the image as one iTerm2 inline-image escape (repo paths only).
-const IMGCAT_ADDON_URL = 'https://cdn.jsdelivr.net/npm/@xterm/addon-image@0.9.0/lib/addon-image.js';
+// `imgcat` lazy-loads the vendored sixel decoder + @xterm/image addon from
+// vendor/xterm/ on first use only, then streams the image as one iTerm2
+// inline-image escape (repo-relative paths only; base64 has no newlines).
+const IMGCAT_SIXEL_URL = 'vendor/xterm/sixel-full.js';
+const IMGCAT_ADDON_URL = 'vendor/xterm/xterm-image-addon.js';
 const IMGCAT_DEFAULT_IMAGE = 'assets/imgcat-sample.png';
 const IMGCAT_PATH_PATTERN = /^(assets|images)\/[\w./-]+\.(png|gif|jpe?g|webp)$/i;
 let imgcatSetupPromise = null;
+function imgcatLoadScript(scriptSrc) {
+  return new Promise((resolveLoad, rejectLoad) => {
+    const scriptTag = document.createElement('script');
+    scriptTag.src = scriptSrc;
+    scriptTag.onload = resolveLoad;
+    scriptTag.onerror = () => rejectLoad(new Error(`load failed: ${scriptSrc}`));
+    document.head.appendChild(scriptTag);
+  });
+}
 async function runImgcatCommand(term, args, runSignal) {
   const targetPath = String(args[0] || IMGCAT_DEFAULT_IMAGE).trim();
   if (!IMGCAT_PATH_PATTERN.test(targetPath) || targetPath.includes('..')) {
@@ -1559,26 +1569,24 @@ async function runImgcatCommand(term, args, runSignal) {
   try {
     if (!imgcatSetupPromise) {
       imgcatSetupPromise = (async () => {
-        await new Promise((resolveLoad, rejectLoad) => {
-          const scriptTag = document.createElement('script');
-          scriptTag.src = IMGCAT_ADDON_URL;
-          scriptTag.onload = resolveLoad;
-          scriptTag.onerror = () => rejectLoad(new Error('addon load failed'));
-          document.head.appendChild(scriptTag);
-        });
+        await imgcatLoadScript(IMGCAT_SIXEL_URL); // decoder ready before addon registers its sequences
+        await imgcatLoadScript(IMGCAT_ADDON_URL);
         const ImageAddonCtor = window.ImageAddon?.ImageAddon || window.ImageAddon;
         const realTerminal = (await import('./terminal.js')).getTerm();
-        if (typeof ImageAddonCtor !== 'function' || !realTerminal) throw new Error('terminal addon unavailable');
-        realTerminal.loadAddon(new ImageAddonCtor());
-        return realTerminal;
+        if (typeof ImageAddonCtor !== 'function' || !realTerminal || !window.sixel) {
+          throw new Error('inline images not supported in this terminal');
+        }
+        const imageAddon = new ImageAddonCtor();
+        realTerminal.loadAddon(imageAddon);
+        return { realTerminal, imageAddon };
       })();
     }
-    await imgcatSetupPromise;
+    await imgcatSetupPromise; // throws with a graceful message if the addon/decoder failed to load
     const imgResp = await fetch(encodeURI(targetPath), { signal: combinedTimeoutSignal(runSignal, 10000) });
     if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status}`);
     const imgBytes = new Uint8Array(await imgResp.arrayBuffer());
     let imgBinary = '';
-    imgBytes.forEach((byte) => { imgBinary += String.fromCharCode(byte); });
+    for (const byte of imgBytes) imgBinary += String.fromCharCode(byte);
     term.write(`\r\n\x1b]1337;File=inline=1:${btoa(imgBinary)}\x07\r\n`);
     term.writeln(`${SITE_MUTED}${targetPath} (${imgBytes.length} bytes)${ANSI_RESET}`);
   } catch (imgcatError) {
