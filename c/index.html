@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card — Devkumar Banerjee</title>
+<meta name="description" content="Contact card for Devkumar Banerjee — CS Honors @ Texas A&M. Links: dvxb.io, GitHub, LinkedIn, email.">
+<link rel="canonical" href="https://dvxb.io/c">
+<link rel="icon" type="image/svg+xml" href="/favicon-bengali.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/favicon-32.png">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js"
+  }
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/components.css">
+<link rel="stylesheet" href="/css/nav.css">
+<link rel="stylesheet" href="/css/doc.css">
+<!-- Topolines UMD — must load before modules that use window.Topolines -->
+<script src="/js/topolines.global.js"></script>
+</head>
+<body>
+<canvas id="c" aria-hidden="true"></canvas>
+<div id="topo-host" aria-hidden="true"></div>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="doc-nav">
+  <div class="terminal-dots" aria-hidden="true">
+    <span class="terminal-dot red"></span>
+    <span class="terminal-dot yellow"></span>
+    <span class="terminal-dot green"></span>
+  </div>
+  <div class="doc-crumb">
+    <a class="doc-nav-home" href="/"><canvas class="nav-orb" width="24" height="24" aria-hidden="true"></canvas>dvxb.io</a>
+    <span class="doc-nav-sep" aria-hidden="true">/</span>
+    <a class="doc-nav-crumb" data-text="c" href="/c">c</a>
+  </div>
+  <nav class="doc-nav-links" aria-label="Pages">
+    <a href="/resume">resume</a>
+    <a href="/cv">cv</a>
+    <a href="/man/">man</a>
+  </nav>
+  <span class="terminal-clock" id="headerClock" role="timer" aria-label="Current time"></span>
+</header>
+
+<main id="main" class="doc-main">
+  <article class="doc-panel card">
+    <h1 class="card-name"><strong>Devkumar Banerjee</strong></h1>
+    <p class="card-role">B.S. Computer Science, Texas A&amp;M (2029) — student, researcher, builder</p>
+    <nav class="card-links" aria-label="Contact links">
+      <a href="https://dvxb.io" target="_blank" rel="noopener noreferrer"><code>dvxb.io</code></a>
+      <a href="https://github.com/aptitudepi" target="_blank" rel="noopener noreferrer"><code>github.com/aptitudepi</code></a>
+      <a href="https://linkedin.com/in/dvkb" target="_blank" rel="noopener noreferrer"><code>linkedin.com/in/dvkb</code></a>
+      <a href="mailto:dkb@tamu.edu"><code>dkb@tamu.edu</code></a>
+      <a href="/assets/gpg.asc" target="_blank" rel="noopener noreferrer"><code>gpg key</code></a>
+    </nav>
+    <p class="card-hint">or, at <a href="/">dvxb.io</a>, type <code>help</code> — try <code>neofetch</code>, <code>ai</code>, or <code>imgcat</code></p>
+  </article>
+</main>
+
+<style>
+  .card { text-align: center; }
+  .card-name { font-family: var(--font-display); font-weight: 300; margin: 0 0 var(--space-4); }
+  .card-role { color: var(--color-text-muted); margin: 0 0 var(--space-6); }
+  .card-links { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-6); }
+  .card-links a { padding: var(--space-2); }
+  .card-hint { color: var(--color-text-muted); font-size: 0.9rem; margin: 0; }
+</style>
+<script type="module">
+  import { initMotionPolicy } from '/js/motion.js';
+  import { initBackgrounds } from '/js/backgrounds.js';
+  initMotionPolicy();
+  initBackgrounds();
+</script>
+<script type="module">
+  import { mountNavOrb } from '/js/orb.js';
+  mountNavOrb();
+</script>
+<script>
+  (function () {
+    var el = document.getElementById('headerClock');
+    if (!el) return;
+    var tick = function () { el.textContent = new Date().toLocaleTimeString(); };
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
+</body>
+</html>

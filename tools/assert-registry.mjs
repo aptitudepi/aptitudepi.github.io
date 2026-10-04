@@ -11,7 +11,8 @@
 // Intentional, documented deltas (NOT drift):
 //   - `man`, `llm`, `guestbook` plus the WAVE 8 portfolio set (`projects`,
 //     `case`, `skills`, `timeline`, `export`) plus the WAVE 12 `background`
-//     mode switch execute but stay unlisted:
+//     mode switch plus the PR3 `imgcat` image renderer execute but stay
+//     unlisted:
 //     COMMANDS keeps 36 so `help` output stays byte-identical to the goldens.
 //   - `google`, `ddg`, `ping` are listed but have no `help` row (as before);
 //     their one-line help lives in the registry and renders via `man`.
@@ -41,7 +42,7 @@ const LEGACY_ALLOWLIST = new Set([
 
 const NEVER_ALLOWED = ['clear', 'vm', 'ai', 'llm', 'ai-model', 'md', 'devmode', 'guestbook', 'man'];
 
-const UNLISTED_EXECUTABLE = ['llm', 'guestbook', 'man', 'projects', 'case', 'skills', 'timeline', 'export', 'background'];
+const UNLISTED_EXECUTABLE = ['llm', 'guestbook', 'man', 'projects', 'case', 'skills', 'timeline', 'export', 'background', 'imgcat'];
 
 let failureCount = 0;
 
