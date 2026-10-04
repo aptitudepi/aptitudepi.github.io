@@ -17,9 +17,11 @@ const TOOL_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const SITE_ROOT = join(TOOL_DIRECTORY, '..');
 
 const BUDGET_TABLE = [
+  // PR4 kept mainline js/ ≤ 220k / commands.js ≤ 64k and raised css/ 23k→23.5k:
+  // the lazy-load `sparkline` module + panel styles are the delta (chart library rides the CDN).
   { label: 'js/ total', kind: 'directory', relativePath: 'js', extension: '.js', maxGzipBytes: 220000 },
   { label: 'js/commands.js', kind: 'file', relativePath: 'js/commands.js', extension: null, maxGzipBytes: 64000 },
-  { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 23000 },
+  { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 23500 },
   { label: 'index.html', kind: 'file', relativePath: 'index.html', extension: null, maxGzipBytes: 10000 },
 ];
 

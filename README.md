@@ -178,3 +178,8 @@ including Google.
 ---
 
 Built with [v86](https://github.com/copy/v86), [xterm.js](https://xtermjs.org/), [Three.js](https://threejs.org/), [Anime.js](https://animejs.com/), and [Cloudflare Workers](https://workers.cloudflare.com/).
+
+The terminal `sparkline` command draws the commit-activity chart with
+[lightweight-charts](https://github.com/tradingview/lightweight-charts),
+loaded lazily from jsDelivr only when the command runs (never at page load).
+Powered by [TradingView](https://www.tradingview.com/) Lightweight Charts™.

@@ -9,10 +9,10 @@ no CI gate — run it before pushing a wave that touches `js/` or `css/`.
 
 | Asset | Measured gzip | Budget gzip | Headroom |
 |---|---|---|---|
-| `js/` total (35 modules) | 204,957 B (~200 KiB) | ≤ 220,000 B | ~7% |
-| `js/commands.js` (largest single module) | 55,818 B | ≤ 64,000 B | ~14% |
-| `css/` total (12 sheets) | 20,263 B (~20 KiB) | ≤ 23,000 B | ~13% |
-| `index.html` | 8,589 B | ≤ 10,000 B | ~16% |
+| `js/` total | 219,682 B (~215 KiB) | ≤ 220,000 B | ~0.1% |
+| `js/commands.js` (largest single module) | 61,475 B | ≤ 64,000 B | ~4% |
+| `css/` total | 23,146 B (~23 KiB) | ≤ 23,500 B | ~1.5% |
+| `index.html` | 9,975 B | ≤ 10,000 B | ~0.3% |
 
 Budget note (PR3, `imgcat`): the `js/` total ceiling moved 215,000 →
 216,000 B (+0.5%) to admit the lazy `imgcat` command (~1 KiB gzip, all in
