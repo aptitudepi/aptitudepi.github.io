@@ -14,6 +14,11 @@ no CI gate — run it before pushing a wave that touches `js/` or `css/`.
 | `css/` total (12 sheets) | 20,263 B (~20 KiB) | ≤ 23,000 B | ~13% |
 | `index.html` | 8,589 B | ≤ 10,000 B | ~16% |
 
+Budget note (PR3, `imgcat`): the `js/` total ceiling moved 215,000 →
+216,000 B (+0.5%) to admit the lazy `imgcat` command (~1 KiB gzip, all in
+`commands.js`, whose own 60,000 B ceiling still holds). Per-module and other
+ceilings are unchanged.
+
 Why totals, not per-file (except commands.js): most modules load lazily
 (`ai.js`, `devtools.js`, `wall-telemetry.js`, `v86-launcher.js` are dynamic
 imports; three.js/xterm/anime ride the CDN importmap), so a per-file budget

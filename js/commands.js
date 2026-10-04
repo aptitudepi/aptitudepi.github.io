@@ -18,7 +18,8 @@
 // WAVE 9a: `wall` and `guestbook` both carry plain/examples/argsSpec (alias
 // drift closed); neither change affects the help rows or the counts above.
 // WAVE 12: `background` (off|static|ambient|expressive) is unlisted with null
-// helpDisplay/helpPos, so the 36/34 golden pins above are untouched.
+// helpDisplay/helpPos; PR3 `imgcat` is unlisted the same way (inline images
+// need a browser plus a CDN-fetched addon). The 36/34 golden pins hold.
 
 import { isAbortError } from './foreground.js';
 import { sanitizeTerminalText, renderMarkdown } from './markdown.js';
@@ -1524,6 +1525,52 @@ async function runBackgroundCommand(term, args) {
   }
   return;
 }
+// `imgcat` fetches @xterm/addon-image from jsDelivr on first use only (same
+// pinned-CDN pattern as @xterm/addon-fit in templates/shell.html), then
+// streams the image as one iTerm2 inline-image escape (repo paths only).
+const IMGCAT_ADDON_URL = 'https://cdn.jsdelivr.net/npm/@xterm/addon-image@0.9.0/lib/addon-image.js';
+const IMGCAT_DEFAULT_IMAGE = 'assets/imgcat-sample.png';
+const IMGCAT_PATH_PATTERN = /^(assets|images)\/[\w./-]+\.(png|gif|jpe?g|webp)$/i;
+let imgcatSetupPromise = null;
+async function runImgcatCommand(term, args, runSignal) {
+  const targetPath = String(args[0] || IMGCAT_DEFAULT_IMAGE).trim();
+  if (!IMGCAT_PATH_PATTERN.test(targetPath) || targetPath.includes('..')) {
+    term.writeln(`${SITE_ERR}imgcat: path must be a repo-relative image under assets/ or images/${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: try \`imgcat\` or \`imgcat ${IMGCAT_DEFAULT_IMAGE}\`${ANSI_RESET}`);
+    return;
+  }
+  try {
+    if (!imgcatSetupPromise) {
+      imgcatSetupPromise = (async () => {
+        await new Promise((resolveLoad, rejectLoad) => {
+          const scriptTag = document.createElement('script');
+          scriptTag.src = IMGCAT_ADDON_URL;
+          scriptTag.onload = resolveLoad;
+          scriptTag.onerror = () => rejectLoad(new Error('addon load failed'));
+          document.head.appendChild(scriptTag);
+        });
+        const ImageAddonCtor = window.ImageAddon?.ImageAddon || window.ImageAddon;
+        const realTerminal = (await import('./terminal.js')).getTerm();
+        if (typeof ImageAddonCtor !== 'function' || !realTerminal) throw new Error('terminal addon unavailable');
+        realTerminal.loadAddon(new ImageAddonCtor());
+        return realTerminal;
+      })();
+    }
+    await imgcatSetupPromise;
+    const imgResp = await fetch(encodeURI(targetPath), { signal: combinedTimeoutSignal(runSignal, 10000) });
+    if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status}`);
+    const imgBytes = new Uint8Array(await imgResp.arrayBuffer());
+    let imgBinary = '';
+    imgBytes.forEach((byte) => { imgBinary += String.fromCharCode(byte); });
+    term.write(`\r\n\x1b]1337;File=inline=1:${btoa(imgBinary)}\x07\r\n`);
+    term.writeln(`${SITE_MUTED}${targetPath} (${imgBytes.length} bytes)${ANSI_RESET}`);
+  } catch (imgcatError) {
+    imgcatSetupPromise = null; // a failed load/registration is retried on the next run
+    term.writeln(`${SITE_ERR}imgcat: ${imgcatError.message}${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: check the network and retry \`imgcat\`${ANSI_RESET}`);
+  }
+  return;
+}
 async function runWallDeleteCommand(term, args, runSignal) {
   const targetId = String(args[1] ?? '').trim();
   if (targetId.length === 0) {
@@ -2348,6 +2395,24 @@ const COMMAND_REGISTRY = [
     bareOnly: false,
     aiQueue: false,
     run: runBackgroundCommand,
+  },
+  {
+    name: "imgcat",
+    aliases: [],
+    aliasOf: null,
+    plain: "Render an image inline in the terminal (lazy @xterm/addon-image)",
+    category: "ADDITIONAL",
+    argsSpec: "[image]",
+    examples: ["imgcat", "imgcat assets/imgcat-sample.png"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runImgcatCommand,
   },
   {
     name: "weather",
