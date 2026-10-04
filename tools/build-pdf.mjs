@@ -86,7 +86,23 @@ function stripPrivateContact(src) {
     .replace(/\b\d{3}\s*[-.]\s*\d{3}\s*[-.]\s*\d{4}\b/g, '')
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '')
     // Collapse separators orphaned by the scrub (`$|$  $|$` -> `$|$`).
-    .replace(/(?:\$\|\$\s*){2,}/g, '$|$ ');
+    // Spaces/tabs only: never swallow a newline, which would merge the
+    // orphan onto the following contact line.
+    .replace(/(?:\$\|\$[ \t]*){2,}/g, '$|$ ')
+    // Drop separators orphaned by the scrub. TeX joins source lines into one
+    // paragraph, so a separator trailing a source line may legitimately sit
+    // between two surviving contacts; only remove separators that are
+    // (a) alone on a source line (modulo leading commands like \small),
+    // (b) at the very start of a paragraph, or (c) at the very end of a
+    // paragraph. Everything else is preserved byte-for-byte.
+    // (a1) a line of only spaces+separators is deleted wholesale (keeping it
+    // would inject a blank line, i.e. a TeX paragraph break, into the block);
+    .replace(/\n[ \t]*(?:\$\|\$|[·|•])(?:[ \t]*(?:\$\|\$|[·|•]))*[ \t]*(?=\n)/g, '')
+    // (a2) separators alone on a line after commands like \small: drop seps,
+    // keep the commands (the line must stay non-blank for the same reason);
+    .replace(/(^|\n)([ \t]*(?:\\[a-zA-Z]+[ \t]*)*)(?:[ \t]*(?:\$\|\$|[·|•]))+[ \t]*(?=$|\n)/gm, '$1$2')
+    .replace(/((?:^|\n[ \t]*\n)[ \t]*(?:\\[a-zA-Z]+[ \t]*)*)(?:[ \t]*(?:\$\|\$|[·|•]))+[ \t]*/g, '$1')
+    .replace(/(?:[ \t]*(?:\$\|\$|[·|•]))+[ \t]*(?=$|\n[ \t]*\n)/g, '');
 }
 
 // Compile with Tectonic. Tectonic fetches fonts/packages from its remote
