@@ -19,7 +19,9 @@
 // drift closed); neither change affects the help rows or the counts above.
 // WAVE 12: `background` (off|static|ambient|expressive) is unlisted with null
 // helpDisplay/helpPos; PR3 `imgcat` is unlisted the same way (inline images
-// need a browser plus a CDN-fetched addon). The 36/34 golden pins hold.
+// need a browser plus a CDN-fetched addon). Playground: `pg <demo>` (first
+// demo: `pg life`, lazy-imported pg-life.js) is likewise unlisted with null
+// helpDisplay/helpPos. The 36/34 golden pins hold.
 
 import { isAbortError } from './foreground.js';
 import { sanitizeTerminalText, renderMarkdown } from './markdown.js';
@@ -1501,6 +1503,21 @@ function runNoiseCommand(term) {
   }
   return;
 }
+async function runPgCommand(term, args, runSignal) {
+  const demoArg = String(args[0] ?? '').trim().toLowerCase();
+  if (!demoArg) {
+    term.writeln(`${SITE_MUTED}Playgrounds: life — run \`pg <demo>\`${ANSI_RESET}`);
+    return;
+  }
+  if (demoArg !== 'life') {
+    term.writeln(`${SITE_ERR}pg: unknown demo ${sanitizeTerminalText(demoArg)}${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Playgrounds: life — run \`pg life\`${ANSI_RESET}`);
+    return;
+  }
+  const lifeModule = await import('./pg-life.js');
+  await lifeModule.runLife(term, runSignal);
+}
+
 async function runBackgroundCommand(term, args) {
   const modeArg = String(args[0] ?? '').trim().toLowerCase();
   const backgroundsModule = await import('./backgrounds.js');
@@ -2395,6 +2412,26 @@ const COMMAND_REGISTRY = [
     bareOnly: false,
     aiQueue: false,
     run: runBackgroundCommand,
+  },
+  // Playground: lazy demos. Unlisted + no help row, so the 36/34 golden pins
+  // stay byte-identical; it joins the documented UNLISTED_EXECUTABLE set.
+  {
+    name: "pg",
+    aliases: [],
+    aliasOf: null,
+    plain: "Run a lazy-loaded playground demo (pg life)",
+    category: "ADDITIONAL",
+    argsSpec: "<demo>",
+    examples: ["pg", "pg life"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runPgCommand,
   },
   {
     name: "imgcat",
