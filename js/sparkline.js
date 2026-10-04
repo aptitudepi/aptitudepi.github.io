@@ -17,13 +17,26 @@ let chartsModulePromise = null;
 const loadLightweightCharts = () =>
   (chartsModulePromise ??= import(/* webpackIgnore: true */ CDN_URL));
 
-async function fetchWeeklyCounts(runSignal) {
+// Shared with the `spark` command (js/spark.js) so both render off the same
+// jogruber contributions payload — one fetch shape, no duplicate endpoint.
+export async function fetchContributionDays(runSignal) {
   try {
     const res = await fetch(JGR_URL, { headers: { accept: 'application/json' }, signal: combinedTimeoutSignal(runSignal, 10000) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const days = Array.isArray(data.contributions) ? data.contributions : [];
     if (days.length === 0) throw new Error('empty contributions');
+    return days;
+  } catch (error) {
+    console.warn('sparkline: contributions fetch failed:', error.message);
+    return null;
+  }
+}
+
+async function fetchWeeklyCounts(runSignal) {
+  try {
+    const days = await fetchContributionDays(runSignal);
+    if (!days) throw new Error('no days');
     const byDate = new Map(days.map((d) => [d.date, d.count]));
     const today = new Date();
     const weeks = [];

@@ -1525,6 +1525,11 @@ async function runPgCommand(term, args, runSignal) {
   const lifeModule = await import('./pg-life.js');
   await lifeModule.runLife(term, runSignal);
 }
+// `spark` follows the same lazy pattern: the terminal-native renderer module
+// (no CDN — pure Unicode/ANSI) loads only when the command runs.
+async function runSparkCommand(term, args, runSignal) {
+  return (await import('./spark.js')).runSparkCommand(term, args, runSignal);
+}
 async function runBackgroundCommand(term, args) {
   const modeArg = String(args[0] ?? '').trim().toLowerCase();
   const backgroundsModule = await import('./backgrounds.js');
@@ -2483,6 +2488,24 @@ const COMMAND_REGISTRY = [
     bareOnly: false,
     aiQueue: false,
     run: runSparklineCommand,
+  },
+  {
+    name: "spark",
+    aliases: [],
+    aliasOf: null,
+    plain: "Render commit activity inline (Unicode sparkline; `graph` = activity grid)",
+    category: "ADDITIONAL",
+    argsSpec: "[graph]",
+    examples: ["spark", "spark graph"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runSparkCommand,
   },
   {
     name: "weather",
