@@ -30,6 +30,8 @@ import {
   isAiCommandName,
   renderMan,
   resolveCommand,
+  startLiveUptimeBelow,
+  stopLiveUptime,
   suggestCommand,
   tokenizeCommandLine,
 } from "../js/commands.js";
@@ -219,6 +221,21 @@ check(JSON.stringify(tokenizeCommandLine('')) === JSON.stringify([]), 'tokenizer
 check(isAiCommandName('ai') && isAiCommandName('llm') && !isAiCommandName('wall'), 'ai-queue routing covers ai+llm only');
 check(suggestCommand('unknown-cmd') === null, 'unknown-cmd gets no suggestion (golden pin)');
 check(suggestCommand('hep') === 'help', 'hep suggests help');
+
+// 11. Live-uptime addressing: writePrompt's blank + prompt rows land
+// pre-tick, so the shared helper maps 3 rows below to 5 up (fake timer).
+{
+  const keepTimer = globalThis.setInterval;
+  let tickFn = null;
+  globalThis.setInterval = (fn) => { tickFn = fn; return 7; };
+  const tickBytes = [];
+  const liveTerm = { cols: 80, write(chunk) { tickBytes.push(String(chunk)); } };
+  startLiveUptimeBelow(liveTerm, 3, () => 'v');
+  tickFn();
+  globalThis.setInterval = keepTimer;
+  stopLiveUptime();
+  check(tickBytes[0].startsWith('\x1b7\x1b[5A'), 'live ticker addresses 5 up for 3 rows below');
+}
 
 if (failureCount > 0) {
   process.stderr.write(`assert-registry: ${failureCount} failure(s)\n`);

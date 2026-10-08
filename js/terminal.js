@@ -1,5 +1,5 @@
 import { executeCommand, bootSequence, writePrompt, setHostRefreshRequester, vfs, CMD_HISTORY, stripAnsi } from './shell.js';
-import { COMMAND_COMPLETION_NAMES } from './commands.js';
+import { COMMAND_COMPLETION_NAMES, stopLiveUptime } from './commands.js';
 import { isForegroundBusy, requestForegroundCancel } from './foreground.js';
 
 let term = null;
@@ -492,6 +492,8 @@ function typePrintableChars(data) {
 }
 
 function handleInput(data) {
+  // First keystroke freezes the live-uptime ticker (stale rows).
+  stopLiveUptime();
   if (handleV86Input(data)) return;
   if (handleEditingKey(data)) return;
   if (handleHistoryRecallKey(data)) return;
@@ -568,6 +570,8 @@ function createTerminal(container) {
 
   const ro = new ResizeObserver(() => {
     cachedCellSize = null;
+    // Refit stales row addressing: freeze the ticker.
+    stopLiveUptime();
     if (fitAddon) try { fitAddon.fit(); } catch (_) {}
   });
   ro.observe(container);

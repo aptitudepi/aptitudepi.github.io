@@ -746,7 +746,7 @@ function neofetch(term) {
   const renderEpoch = uptimeEpochMillis();
   // A wrapped Uptime row can't rewrite segment-only, so narrow screens stay static.
   if (uptimeRowIndex >= 0 && rowsBelowUptime >= 1 && uptimeScreenRows === 1) {
-    startLiveUptime(term, rowsBelowUptime, () => `\x1b[${uptimeValueColumn}G${uptimeStr(renderEpoch)}`);
+    startLiveUptimeBelow(term, rowsBelowUptime, () => `\x1b[${uptimeValueColumn}G${uptimeStr(renderEpoch)}`);
   } else {
     stopLiveUptime();
   }
@@ -1158,12 +1158,12 @@ async function runUptimeCommand(term) {
   const renderEpoch = uptimeEpochMillis();
   const uptimeLine = `\r${SITE_GREEN} up ${uptimeStr(renderEpoch)}${ANSI_RESET}`;
   term.writeln(uptimeLine);
-  // Live view: the shared ticker rewrites that line in place every 1s until
-  // the next submit stops it (shell hook). Static when live addressing is
-  // unavailable (export capture, no cols) or the line wraps; +8 headroom.
+  // Live view: the shared ticker rewrites that line in place every 1s
+  // (frozen by keystroke/resize/submit hooks). Static when wrapped or
+  // write-only (export capture, no cols); +8 headroom.
   const termCols = typeof term?.cols === 'number' && term.cols > 0 ? term.cols : 80;
   if (Math.max(1, Math.ceil((visibleLen(uptimeLine) + 8) / termCols)) === 1) {
-    startLiveUptime(term, 1, () => `\r${SITE_GREEN} up ${uptimeStr(renderEpoch)}${ANSI_RESET}`);
+    startLiveUptimeBelow(term, 0, () => `\r${SITE_GREEN} up ${uptimeStr(renderEpoch)}${ANSI_RESET}`);
   }
   return;
 }
@@ -1251,6 +1251,11 @@ function startLiveUptime(term, rowsUp, paintRow) {
     }
   }, 1000);
   return true;
+}
+// Shared by neofetch + uptime: writePrompt's blank and prompt rows land
+// pre-tick, so add 2 (ticks hit the target, never the input row).
+function startLiveUptimeBelow(term, rowsBelow, paintRow) {
+  return startLiveUptime(term, rowsBelow + 2, paintRow);
 }
 
 // Client-side hardware/browser probe with guarded fallbacks: Chromium
@@ -3099,7 +3104,7 @@ function isAiCommandName(commandName) {
 
 export {
   ASCII_ART, vfs, RESUME, CMD_HISTORY, SHOW_TERMINAL_ART, neofetch, uptimeStr,
-  stopLiveUptime,
+  stopLiveUptime, startLiveUptimeBelow,
   ansiRGB, stripAnsi, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE,
   SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS,
   BOOT_SCRIPT, TERMINAL_HOST_FALLBACK, getTerminalHost, setTerminalHost,
