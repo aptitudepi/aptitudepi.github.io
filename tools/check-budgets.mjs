@@ -21,7 +21,11 @@ const BUDGET_TABLE = [
   // the lazy-load `sparkline` module + panel styles are the delta (chart library rides the CDN).
   // PR15 (`spark`, terminal-native chart renderers) raised js/ 220,000→224,000:
   // the delta is the lazy js/spark.js module + the `spark` registry entry; no CSS, no CDN.
-  { label: 'js/ total', kind: 'directory', relativePath: 'js', extension: '.js', maxGzipBytes: 224000 },
+  // feat/uptime-live raises js/ 224,000→226,000: the delta is the shared
+  // live-uptime ticker in commands.js (deploy-epoch clock + single-flight 1s
+  // in-place rewrite for neofetch/uptime) plus the shell executeCommand stop
+  // hook; no new modules, no CSS.
+  { label: 'js/ total', kind: 'directory', relativePath: 'js', extension: '.js', maxGzipBytes: 226000 },
   { label: 'js/commands.js', kind: 'file', relativePath: 'js/commands.js', extension: null, maxGzipBytes: 64000 },
   { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 23500 },
   { label: 'index.html', kind: 'file', relativePath: 'index.html', extension: null, maxGzipBytes: 10000 },

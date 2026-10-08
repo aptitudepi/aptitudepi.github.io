@@ -1,7 +1,7 @@
 import { runForeground, setPromptRenderer, isForegroundBusy } from './foreground.js';
 import { combinedTimeoutSignal } from './fetch-timeout.js';
 import {
-  neofetch, SITE_GREEN, SITE_WHITE, SITE_CYAN, SITE_BLUE, SITE_MUTED, SITE_OK,
+  neofetch, stopLiveUptime, SITE_GREEN, SITE_WHITE, SITE_CYAN, SITE_BLUE, SITE_MUTED, SITE_OK,
   SITE_ERR, SITE_FAINT, ANSI_RESET, resolveCommand, suggestCommand,
   tokenizeCommandLine, setPrefetchedLocation, recordCommandOutput, BOOT_SCRIPT,
   TERMINAL_HOST_FALLBACK, getTerminalHost, setTerminalHost, getPrefetchedCity,
@@ -316,6 +316,9 @@ function executeCommand(input, term) {
   }
 
   const headToken = (trimmed.split(/\s+/, 1)[0] || 'unknown').toLowerCase();
+  // Live-uptime regions address absolute rows: stop the shared ticker before
+  // any new output can scroll them (the next live render restarts its own).
+  stopLiveUptime();
   // WAVE 10 picker fallback: bare 1/2/3 resolves a pending AI mode choice
   // (the chip bar's Esc path). Anything else falls through to the registry.
   if (/^[123]$/u.test(trimmed)) {
@@ -365,6 +368,9 @@ async function executeSingleCommand(trimmed, term, runSignal) {
     // wrapper forwards every call untouched, so golden bytes never change.
     const capturedChunks = [];
     const captureTerm = {
+      get cols() {
+        return term.cols;
+      },
       write(chunkText) {
         capturedChunks.push(String(chunkText));
         term.write(chunkText);

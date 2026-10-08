@@ -519,14 +519,6 @@ function getPrefetchedCity() {
   }
 }
 
-function uptimeStr() {
-  const totalSeconds = Math.floor((Date.now() - pageLoadTime) / 1000);
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  return `${days} days, ${hours} hours, ${minutes} minutes`;
-}
-
 function levenshtein(firstString, secondString) {
   const lenA = firstString.length, lenB = secondString.length;
   const distanceMatrix = Array.from({ length: lenA + 1 }, () => Array(lenB + 1).fill(0));
@@ -700,6 +692,11 @@ function neofetch(term) {
   // contrast. Values stay static-colored by design.
   const labelInk = infoLabelColor();
 
+  // Collect rows before printing (same bytes) so the ticker below knows the
+  // Uptime row index and the screen rows beneath it.
+  const renderedRows = [];
+  let uptimeRowIndex = -1;
+  let uptimeValueColumn = 9; // visible width of 'Uptime: ' + 1
   if (SHOW_TERMINAL_ART) {
     for (let index = 0; index < Math.max(artHeight + 2, infoLines.length + 2); index++) {
       const line = ASCII_ART[index] || '';
@@ -708,20 +705,52 @@ function neofetch(term) {
       let infoPart = '';
       if (infoIdx >= 0 && infoIdx < infoLines.length) {
         const info = infoLines[infoIdx];
-        infoPart = `${' '.repeat(gap)}${info.label ? `${labelInk}${info.label}${ANSI_RESET}: ` : ''}${info.value}`;
+        const labelPart = info.label ? `${labelInk}${info.label}${ANSI_RESET}: ` : '';
+        if (info.label === 'Uptime') {
+          uptimeRowIndex = renderedRows.length;
+          uptimeValueColumn = visibleLen(coloredArt) + gap + visibleLen(labelPart) + 1;
+        }
+        infoPart = `${' '.repeat(gap)}${labelPart}${info.value}`;
       }
-      term.writeln(coloredArt + infoPart);
+      renderedRows.push(coloredArt + infoPart);
     }
   } else {
     // Portrait hidden — a blank spacer separates the boot log from the banner,
     // then the compact info block follows.
-    term.writeln('');
-    term.writeln(`${ANSI_BOLD}${SITE_WHITE}db@${getTerminalHost()}${ANSI_RESET}`);
+    renderedRows.push('');
+    renderedRows.push(`${ANSI_BOLD}${SITE_WHITE}db@${getTerminalHost()}${ANSI_RESET}`);
     for (const info of infoLines.slice(1)) {
-      term.writeln(`${info.label ? `${labelInk}${info.label}${ANSI_RESET}: ` : ''}${info.value}`);
+      const labelPart = info.label ? `${labelInk}${info.label}${ANSI_RESET}: ` : '';
+      if (info.label === 'Uptime') {
+        uptimeRowIndex = renderedRows.length;
+        uptimeValueColumn = visibleLen(labelPart) + 1;
+      }
+      renderedRows.push(`${labelPart}${info.value}`);
     }
   }
+  for (const renderedRow of renderedRows) term.writeln(renderedRow);
 
+  // Live Uptime: rewrite the value segment in place every 1s (save, up,
+  // rewrite + clear tail, restore). Single-flight: re-render replaces it,
+  // next submit stops it. Write-only terms (no cols) stay static.
+  const termCols = typeof term?.cols === 'number' && term.cols > 0 ? term.cols : 80;
+  let rowsBelowUptime = 0;
+  let uptimeScreenRows = 1;
+  if (uptimeRowIndex >= 0) {
+    // +8 headroom for value growth so a later tick never wraps the row.
+    uptimeScreenRows = Math.max(1, Math.ceil((visibleLen(renderedRows[uptimeRowIndex]) + 8) / termCols));
+    for (let rowIndex = uptimeRowIndex + 1; rowIndex < renderedRows.length; rowIndex += 1) {
+      rowsBelowUptime += Math.max(1, Math.ceil(visibleLen(renderedRows[rowIndex]) / termCols));
+    }
+  }
+  const renderEpoch = uptimeEpochMillis();
+  // A wrapped Uptime row can't rewrite segment-only, so narrow screens stay static.
+  if (uptimeRowIndex >= 0 && rowsBelowUptime >= 1 && uptimeScreenRows === 1) {
+    startLiveUptime(term, rowsBelowUptime, () => `\x1b[${uptimeValueColumn}G${uptimeStr(renderEpoch)}`);
+  } else {
+    stopLiveUptime();
+  }
+  loadBuildInfo(); // warm the deploy-epoch cache for the next render (never rejects)
 }
 
 async function getLocation(runSignal) {
@@ -1124,8 +1153,18 @@ function runDateCommand(term) {
   term.writeln(`${SITE_WHITE}${new Date().toString()}${ANSI_RESET}`);
   return;
 }
-function runUptimeCommand(term) {
-  term.writeln(`\r${SITE_GREEN} up ${uptimeStr()}${ANSI_RESET}`);
+async function runUptimeCommand(term) {
+  await loadBuildInfo();
+  const renderEpoch = uptimeEpochMillis();
+  const uptimeLine = `\r${SITE_GREEN} up ${uptimeStr(renderEpoch)}${ANSI_RESET}`;
+  term.writeln(uptimeLine);
+  // Live view: the shared ticker rewrites that line in place every 1s until
+  // the next submit stops it (shell hook). Static when live addressing is
+  // unavailable (export capture, no cols) or the line wraps; +8 headroom.
+  const termCols = typeof term?.cols === 'number' && term.cols > 0 ? term.cols : 80;
+  if (Math.max(1, Math.ceil((visibleLen(uptimeLine) + 8) / termCols)) === 1) {
+    startLiveUptime(term, 1, () => `\r${SITE_GREEN} up ${uptimeStr(renderEpoch)}${ANSI_RESET}`);
+  }
   return;
 }
 // OSC-8 hyperlink wrapper for xterm output: link-aware terminals render
@@ -1165,6 +1204,53 @@ function buildInfoLine() {
   const runNumber = info.run_number === undefined || info.run_number === null ? 'unknown run' : `#${info.run_number}`;
   const builtAt = typeof info.built_at === 'string' && info.built_at.length > 0 ? info.built_at : 'unknown date';
   return { shortSha, runNumber, builtAt };
+}
+
+// Live-uptime clock shared by neofetch and `uptime`: epoch is the last
+// deploy (build-info.json built_at, once cached), else the session
+// pageLoadTime so local previews still tick. Missing/invalid falls back.
+function uptimeEpochMillis() {
+  const builtAt = cachedBuildInfo !== null && cachedBuildInfo !== undefined ? cachedBuildInfo.built_at : null;
+  const builtMillis = typeof builtAt === 'string' && builtAt.length > 0 ? Date.parse(builtAt) : NaN;
+  return Number.isFinite(builtMillis) ? builtMillis : pageLoadTime;
+}
+
+function uptimeStr(epochMillis) {
+  const epoch = typeof epochMillis === 'number' ? epochMillis : uptimeEpochMillis();
+  const totalSeconds = Math.max(0, Math.floor((Date.now() - epoch) / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`;
+}
+
+// Single-flight live ticker: starting a region stops the previous one, so
+// handoffs never leak intervals. Each tick rewrites one row segment in
+// place (no new lines); synchronous writes can't interleave mid-sequence.
+let liveUptimeTimerId = null;
+function stopLiveUptime() {
+  if (liveUptimeTimerId !== null) {
+    clearInterval(liveUptimeTimerId);
+    liveUptimeTimerId = null;
+  }
+}
+// Real xterm only: write-only terms (export capture) expose no cols, so
+// they print once statically instead of leaking a background tick.
+function canTickLive(term) {
+  return term !== null && term !== undefined && typeof term.write === 'function' && typeof term.cols === 'number';
+}
+function startLiveUptime(term, rowsUp, paintRow) {
+  stopLiveUptime();
+  if (canTickLive(term) === false || Number.isInteger(rowsUp) === false || rowsUp < 1) return false;
+  liveUptimeTimerId = setInterval(() => {
+    try {
+      term.write(`\x1b7\x1b[${rowsUp}A${paintRow()}\x1b[K\x1b8`);
+    } catch {
+      stopLiveUptime();
+    }
+  }, 1000);
+  return true;
 }
 
 // Client-side hardware/browser probe with guarded fallbacks: Chromium
@@ -3013,6 +3099,7 @@ function isAiCommandName(commandName) {
 
 export {
   ASCII_ART, vfs, RESUME, CMD_HISTORY, SHOW_TERMINAL_ART, neofetch, uptimeStr,
+  stopLiveUptime,
   ansiRGB, stripAnsi, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE,
   SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS,
   BOOT_SCRIPT, TERMINAL_HOST_FALLBACK, getTerminalHost, setTerminalHost,
@@ -3023,3 +3110,18 @@ export {
   commandCount, helpText, recordCommandOutput, readLastCommandOutput,
   formatWallMoniker,
 };
+
+// Runnable check: `node js/commands.js` verifies the uptime math (split,
+// future clamp, deploy-epoch parse, invalid-date fallback). Entry-point only,
+// so importers never hit it.
+if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('commands.js')) {
+  const checkEpoch = Date.now() - ((2 * 86400 + 3 * 3600 + 4 * 60 + 5) * 1000);
+  if (uptimeStr(checkEpoch) !== '2 days, 3 hours, 4 minutes, 5 seconds') throw new Error(`uptime split wrong: ${uptimeStr(checkEpoch)}`);
+  if (uptimeStr(Date.now() + 60000) !== '0 days, 0 hours, 0 minutes, 0 seconds') throw new Error('uptime future epoch not clamped');
+  cachedBuildInfo = { sha: 'abc123456789', run_number: 7, built_at: '2026-01-02T03:04:05Z' };
+  if (uptimeEpochMillis() !== Date.parse('2026-01-02T03:04:05Z')) throw new Error('uptime deploy epoch not parsed');
+  cachedBuildInfo = { sha: 'abc123456789', built_at: 'not-a-date' };
+  if (uptimeEpochMillis() !== pageLoadTime) throw new Error('uptime invalid built_at did not fall back');
+  cachedBuildInfo = null;
+  process.stdout.write('commands uptime self-check ok\n');
+}
