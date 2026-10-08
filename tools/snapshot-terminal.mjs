@@ -96,7 +96,7 @@ function countPrompts(streamText) {
 function maskTiming(streamText) {
   const escChar = String.fromCharCode(27);
   const clockPattern = new RegExp(`System clock: [^${escChar}\\n]*`, 'g');
-  const durationPattern = /\d+ days?, \d+ hours?, \d+ minutes?/g;
+  const durationPattern = /\d+ days?, \d+ hours?, \d+ minutes?(, \d+ seconds?)?/g;
   const datePattern = new RegExp(
     `(Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \\d{1,2} \\d{4} \\d{2}:\\d{2}:\\d{2}[^${escChar}\\n]*`,
     'g',
