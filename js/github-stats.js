@@ -3,7 +3,7 @@ import { combinedTimeoutSignal } from './fetch-timeout.js';
 const USER = 'aptitudepi';
 const JGR = `https://github-contributions-api.jogruber.de/v4/${USER}`;
 const GH_API = 'https://api.github.com';
-const CACHE_KEY = 'gh-stats-cache-v2';
+const CACHE_KEY = 'gh-stats-cache-v5';
 const CACHE_TTL = 6 * 3600 * 1000;
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const LEVEL_CLASSES = ['lvl-0', 'lvl-1', 'lvl-2', 'lvl-3', 'lvl-4'];
@@ -19,13 +19,42 @@ const DEFAULT_RADAR = {
   followers: 24
 };
 
-const ok = r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`));
+// Goal denominators per radar axis (100% ring). Stars/followers are
+// cumulative lifetime totals; prs/issues/reviews/commits numerators are
+// last-365-days counts (see fetchRadarAxes + commitsLastYear below).
+// Agreed show-growth goals (PR #21): set just above current totals so all
+// axes read as visible progress with headroom — commits 1000 keeps the 1yr
+// numerator (~619) mid-ring instead of pinned.
+const RADAR_GOALS = {
+  prs: 50,
+  issues: 15,
+  reviews: 10,
+  commits: 1000,
+  stars: 40,
+  followers: 100
+};
+
+const DAY_MILLIS = 24 * 3600 * 1000;
+
+// Shared live-fetch helper for the GH API → local fallback chain: short
+// timeout + no-store. Any failure (rate-limit 403/429, offline, 404,
+// timeout, bad JSON) resolves null so callers fall through to the v5 cache
+// then bundled DEFAULT_RADAR floors. Never rejects.
+async function ghFetchJson(url) {
+  try {
+    const resp = await fetch(url, { headers: { accept: 'application/json' }, cache: 'no-store', signal: combinedTimeoutSignal(null, 10000) });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch { return null; }
+}
 
 async function fetchContributions() {
+  const contribData = await ghFetchJson(JGR);
+  if (!contribData) {
+    console.warn('Contributions fetch fallback: live API unavailable, using cache');
+    return null;
+  }
   try {
-    const contribResp = await fetch(JGR, { headers: { accept: 'application/json' }, signal: combinedTimeoutSignal(null, 10000) });
-    if (!contribResp.ok) throw new Error(`HTTP ${contribResp.status}`);
-    const contribData = await contribResp.json();
     const total = contribData.total || {};
     const allTime = Object.values(total).reduce((sumTotal, yearCount) => sumTotal + (Number(yearCount) || 0), 0);
     return { total, allTime, contributions: Array.isArray(contribData.contributions) ? contribData.contributions : [] };
@@ -36,24 +65,33 @@ async function fetchContributions() {
 }
 
 async function fetchRadarAxes() {
+  // Fallback chain per field: live API → stale v5 cache → bundled default.
+  const staleRadar = readStaleCache()?.radar;
+  const num = (v, key) => Number.isFinite(v) ? v : (Number.isFinite(staleRadar?.[key]) ? staleRadar[key] : DEFAULT_RADAR[key]);
   try {
+    // Numerators for prs/issues/reviews cover the last 365 days only via the
+    // `created:` qualifier (item createdAt >= cutoff). Reviews use the
+    // reviewed PR's createdAt — the search API has no reviewed-date qualifier,
+    // so creation date is the closest proxy. Stars/followers stay cumulative.
+    const cutoff = fmt(new Date(Date.now() - 365 * DAY_MILLIS));
     const [user, repos, prs, issues, reviews] = await Promise.all([
-      fetch(`${GH_API}/users/${USER}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
-      fetch(`${GH_API}/users/${USER}/repos?per_page=100`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
-      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr author:${USER}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
-      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:issue author:${USER}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
-      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr reviewed-by:${USER}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
+      ghFetchJson(`${GH_API}/users/${USER}`),
+      ghFetchJson(`${GH_API}/users/${USER}/repos?per_page=100`),
+      ghFetchJson(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr author:${USER} created:>=${cutoff}`)}`),
+      ghFetchJson(`${GH_API}/search/issues?q=${encodeURIComponent(`type:issue author:${USER} created:>=${cutoff}`)}`),
+      ghFetchJson(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr reviewed-by:${USER} created:>=${cutoff}`)}`),
     ]);
+    if (!user && !repos && !prs && !issues && !reviews) return staleRadar ?? { ...DEFAULT_RADAR };
     const stars = (Array.isArray(repos) ? repos : []).reduce((s, r) => s + (Number(r.stargazers_count) || 0), 0);
     return {
-      prs: prs && Number.isFinite(prs.total_count) ? prs.total_count : DEFAULT_RADAR.prs,
-      issues: issues && Number.isFinite(issues.total_count) ? issues.total_count : DEFAULT_RADAR.issues,
-      reviews: reviews && Number.isFinite(reviews.total_count) ? reviews.total_count : DEFAULT_RADAR.reviews,
-      stars: stars > 0 ? stars : DEFAULT_RADAR.stars,
-      followers: user && Number.isFinite(user.followers) ? user.followers : DEFAULT_RADAR.followers,
+      prs: num(prs?.total_count, 'prs'),
+      issues: num(issues?.total_count, 'issues'),
+      reviews: num(reviews?.total_count, 'reviews'),
+      stars: stars > 0 ? stars : num(NaN, 'stars'),
+      followers: num(user?.followers, 'followers'),
     };
   } catch {
-    return DEFAULT_RADAR;
+    return staleRadar ?? { ...DEFAULT_RADAR };
   }
 }
 
@@ -70,7 +108,25 @@ function writeCache(data) {
   try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch { return; }
 }
 
-const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+// Stale read for the offline/rate-limit path: ignores CACHE_TTL so an
+// expired v5 entry still beats bundled defaults. Shape-guarded, never throws.
+function readStaleCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw).data;
+    return data && typeof data === 'object' ? data : null;
+  } catch { return null; }
+}
+
+function fmt(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+
+// Commits numerator: last-365-days sum over the contributions day array
+// (timestamp used = contribution day `date`), not the all-time total.
+function commitsLastYear(data) {
+  const cutoff = fmt(new Date(Date.now() - 365 * DAY_MILLIS));
+  return (data?.contributions || []).reduce((s, c) => s + (c.date >= cutoff ? (Number(c.count) || 0) : 0), 0);
+}
 
 function levelFor(n) {
   if (n <= 0) return 0;
@@ -224,8 +280,10 @@ function renderRadar(host, data) {
 
   const values = { ...DEFAULT_RADAR, ...data };
   const sqrt = v => Math.sqrt(Math.max(Number(v) || 0, 0));
-  const maxSqrt = Math.max(...RADAR_KEYS.map(k => sqrt(values[k])));
-  const ratio = k => maxSqrt ? Math.max(sqrt(values[k]) / maxSqrt, 0.15) : 0.2;
+  // Fixed-goal normalization (sqrt-compressed, clamped to the 100% ring,
+  // floored at 0.15 so small counts stay visible) — replaces the old
+  // relative-to-max scaling so each axis reads as progress toward its goal.
+  const ratio = k => Math.max(Math.min(sqrt(values[k]) / sqrt(RADAR_GOALS[k] || 1), 1), 0.15);
   const labels = { prs: 'Pull Requests', issues: 'Issues', reviews: 'Code Reviews', commits: 'Commits', stars: 'Stars', followers: 'Followers' };
   const fmtVal = k => String(values[k] && isFinite(values[k]) ? values[k].toLocaleString() : '0');
 
@@ -269,10 +327,11 @@ export function initGitHubStats() {
   // region — and the container reports busy until the refresh lands.
   host.setAttribute('aria-busy', 'true');
 
-  // Immediate render from cache or baseline fallback
-  const cached = readCache();
+  // Immediate render from fresh cache, else expired cache (stale-while-
+  // revalidate), else baseline fallback — the canvases paint on first pass.
+  const cached = readCache() ?? readStaleCache();
   const fallbackContrib = generateFallbackContributions();
-  const fallbackRadar = { ...DEFAULT_RADAR, commits: fallbackContrib.allTime };
+  const fallbackRadar = { ...DEFAULT_RADAR, commits: commitsLastYear(fallbackContrib) || DEFAULT_RADAR.commits };
 
   const initialContrib = cached?.contributions || fallbackContrib;
   const initialRadar = cached?.radar || fallbackRadar;
@@ -280,18 +339,23 @@ export function initGitHubStats() {
   renderHeatmap(host, initialContrib);
   renderRadar(host, initialRadar);
 
-  // Background refresh
+  // Background refresh (stale-while-revalidate: cached paint above is
+  // already on screen). try/finally + trailing catch guarantee aria-busy
+  // clears and no rejection escapes, even if a render throws.
   Promise.all([
     fetchContributions().catch(() => null),
     fetchRadarAxes().catch(() => null)
   ]).then(([contrib, axes]) => {
-    const finalContrib = contrib || initialContrib;
-    const finalRadar = axes ? { ...axes, commits: finalContrib.allTime } : initialRadar;
+    try {
+      const finalContrib = contrib || initialContrib;
+      const finalRadar = axes ? { ...axes, commits: commitsLastYear(finalContrib) } : initialRadar;
 
-    renderHeatmap(host, finalContrib);
-    renderRadar(host, finalRadar);
+      renderHeatmap(host, finalContrib);
+      renderRadar(host, finalRadar);
 
-    writeCache({ contributions: finalContrib, radar: finalRadar });
-    host.setAttribute('aria-busy', 'false');
-  });
+      writeCache({ contributions: finalContrib, radar: finalRadar });
+    } finally {
+      host.setAttribute('aria-busy', 'false');
+    }
+  }).catch(() => host.setAttribute('aria-busy', 'false'));
 }
