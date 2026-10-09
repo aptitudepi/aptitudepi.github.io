@@ -3,7 +3,7 @@ import { combinedTimeoutSignal } from './fetch-timeout.js';
 const USER = 'aptitudepi';
 const JGR = `https://github-contributions-api.jogruber.de/v4/${USER}`;
 const GH_API = 'https://api.github.com';
-const CACHE_KEY = 'gh-stats-cache-v3';
+const CACHE_KEY = 'gh-stats-cache-v4';
 const CACHE_TTL = 6 * 3600 * 1000;
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const LEVEL_CLASSES = ['lvl-0', 'lvl-1', 'lvl-2', 'lvl-3', 'lvl-4'];
@@ -22,14 +22,14 @@ const DEFAULT_RADAR = {
 // Goal denominators per radar axis (100% ring). Stars/followers are
 // cumulative lifetime totals; prs/issues/reviews/commits numerators are
 // last-365-days counts (see fetchRadarAxes + commitsLastYear below).
-// Commits goal reuses the existing fallback magnitude (1240) so the 1yr
-// numerator keeps today's near-full shape — previously relative scaling
+// Commits goal (2000) sits above the old fallback magnitude so the 1yr
+// numerator reads as headroom toward the goal — previously relative scaling
 // always maxed commits, so pinning preserves that look.
 const RADAR_GOALS = {
   prs: 100,
   issues: 50,
   reviews: 20,
-  commits: 1240,
+  commits: 2000,
   stars: 1000,
   followers: 500
 };
