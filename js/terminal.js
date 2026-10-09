@@ -1,4 +1,4 @@
-import { executeCommand, bootSequence, writePrompt, setHostRefreshRequester, vfs, CMD_HISTORY, stripAnsi } from './shell.js';
+import { executeCommand, bootSequence, writePrompt, repaintPromptLine, setHostRefreshRequester, vfs, CMD_HISTORY, stripAnsi } from './shell.js';
 import { COMMAND_COMPLETION_NAMES, stopLiveUptime } from './commands.js';
 import { isForegroundBusy, requestForegroundCancel } from './foreground.js';
 
@@ -220,7 +220,7 @@ function acceptCandidate(candidate) {
 
 function redrawInputLine() {
   term.write('\r\x1b[K');
-  writePrompt(term);
+  repaintPromptLine(term);
   term.write(inputBuffer);
 }
 
@@ -249,7 +249,7 @@ function requestTerminalHostRefresh() {
   const savedInput = inputBuffer;
   try {
     term.write('\r\x1b[K');
-    writePrompt(term);
+    repaintPromptLine(term);
     term.write(savedInput);
     refreshSuggestions();
   } catch (refreshError) {
@@ -285,7 +285,7 @@ function injectAndSubmitLine(commandLine) {
   if (cleanLine.trim().length === 0) return false;
   hideSuggestions();
   term.write('\r\x1b[K');
-  writePrompt(term);
+  repaintPromptLine(term);
   inputBuffer = cleanLine;
   term.write(cleanLine);
   submitBufferLine();
@@ -404,7 +404,7 @@ function handleV86Input(data) {
 
 function renderRecalledBufferLine() {
   term.write('\r\x1b[K');
-  writePrompt(term);
+  repaintPromptLine(term);
   term.write(inputBuffer);
   refreshSuggestions();
 }
