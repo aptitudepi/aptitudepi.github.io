@@ -3,7 +3,7 @@ import { combinedTimeoutSignal } from './fetch-timeout.js';
 const USER = 'aptitudepi';
 const JGR = `https://github-contributions-api.jogruber.de/v4/${USER}`;
 const GH_API = 'https://api.github.com';
-const CACHE_KEY = 'gh-stats-cache-v4';
+const CACHE_KEY = 'gh-stats-cache-v5';
 const CACHE_TTL = 6 * 3600 * 1000;
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const LEVEL_CLASSES = ['lvl-0', 'lvl-1', 'lvl-2', 'lvl-3', 'lvl-4'];
@@ -22,16 +22,16 @@ const DEFAULT_RADAR = {
 // Goal denominators per radar axis (100% ring). Stars/followers are
 // cumulative lifetime totals; prs/issues/reviews/commits numerators are
 // last-365-days counts (see fetchRadarAxes + commitsLastYear below).
-// Commits goal (2000) sits above the old fallback magnitude so the 1yr
-// numerator reads as headroom toward the goal — previously relative scaling
-// always maxed commits, so pinning preserves that look.
+// Agreed show-growth goals (PR #21): set just above current totals so all
+// axes read as visible progress with headroom — commits 1000 keeps the 1yr
+// numerator (~619) mid-ring instead of pinned.
 const RADAR_GOALS = {
-  prs: 100,
-  issues: 50,
-  reviews: 20,
-  commits: 2000,
-  stars: 1000,
-  followers: 500
+  prs: 50,
+  issues: 15,
+  reviews: 10,
+  commits: 1000,
+  stars: 40,
+  followers: 100
 };
 
 const DAY_MILLIS = 24 * 3600 * 1000;
