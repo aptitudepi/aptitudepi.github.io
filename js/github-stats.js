@@ -119,7 +119,7 @@ function readStaleCache() {
   } catch { return null; }
 }
 
-const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function fmt(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 
 // Commits numerator: last-365-days sum over the contributions day array
 // (timestamp used = contribution day `date`), not the all-time total.
