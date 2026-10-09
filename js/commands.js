@@ -642,7 +642,8 @@ const SHOW_TERMINAL_ART = false;
 
 const NEOFETCH_TRY_COMMANDS = ['matrix', 'vm', 'ai', 'weather', 'hn', 'md', 'wall'];
 
-function neofetch(term) {
+async function neofetch(term) {
+  await loadBuildInfo(); // resolve the deploy epoch before first paint (else Uptime starts at 0s)
   const artHeight = ASCII_ART.length;
   const gap = 4;
   const maxArtW = Math.max(...ASCII_ART.map(visibleLen));
@@ -765,7 +766,6 @@ function neofetch(term) {
   } else {
     stopLiveUptime();
   }
-  loadBuildInfo(); // warm the deploy-epoch cache for the next render (never rejects)
 }
 
 async function getLocation(runSignal) {

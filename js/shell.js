@@ -293,8 +293,9 @@ function bootSequence(term, onDone) {
   let i = 0;
   function writeNext() {
     if (i >= BOOT_MSGS.length) {
-      neofetch(term);
-      setTimeout(() => { writePrompt(term); if (onDone) onDone(); }, 80);
+      Promise.resolve(neofetch(term)).then(() => {
+        setTimeout(() => { writePrompt(term); if (onDone) onDone(); }, 80);
+      });
       return;
     }
     const msg = BOOT_MSGS[i];
