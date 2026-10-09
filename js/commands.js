@@ -1191,8 +1191,9 @@ function osc8Link(url, text) {
 
 // PR1 build metadata: CI writes build-info.json ({sha, run_number,
 // built_at}) between PDF verification and sitemap generation; the terminal
-// consumes it at runtime with fetch no-store. Absent locally (dev/snapshot)
-// every consumer falls back to static text, so goldens stay deterministic.
+// consumes it at runtime with fetch no-store. Absent (fresh clone,
+// ungenerated) every consumer falls back to static text, so goldens stay
+// deterministic.
 let cachedBuildInfo = null;
 let buildInfoPromise = null;
 function loadBuildInfo() {
@@ -1222,8 +1223,9 @@ function buildInfoLine() {
 }
 
 // Live-uptime clock shared by neofetch and `uptime`: epoch is the last
-// deploy (build-info.json built_at, once cached), else the session
-// pageLoadTime so local previews still tick. Missing/invalid falls back.
+// commit (build-info.json built_at, once cached; CI writes deploy time,
+// local previews generate it from git log). Missing/invalid falls back to
+// the session pageLoadTime so the clock still ticks.
 function uptimeEpochMillis() {
   const builtAt = cachedBuildInfo !== null && cachedBuildInfo !== undefined ? cachedBuildInfo.built_at : null;
   const builtMillis = typeof builtAt === 'string' && builtAt.length > 0 ? Date.parse(builtAt) : NaN;
