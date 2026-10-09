@@ -237,6 +237,25 @@ check(suggestCommand('hep') === 'help', 'hep suggests help');
   check(tickBytes[0].startsWith('\x1b7\x1b[5A'), 'live ticker addresses 5 up for 3 rows below');
 }
 
+// 11b. Live-uptime refit: a rowsBelow thunk re-addresses per tick over live
+// cols, so a webfont refit (reflow, no container resize) between arming and
+// a tick can't strand a stale offset on the divider.
+{
+  const keepTimer = globalThis.setInterval;
+  let tickFn = null;
+  globalThis.setInterval = (fn) => { tickFn = fn; return 8; };
+  const tickBytes = [];
+  const liveTerm = { cols: 90, write(chunk) { tickBytes.push(String(chunk)); } };
+  startLiveUptimeBelow(liveTerm, () => (liveTerm.cols >= 91 ? 3 : liveTerm.cols === 90 ? 5 : 6), () => 'v');
+  tickFn();
+  liveTerm.cols = 80; // refit narrows: divider/Try/helpHint reflow 5 rows into 6
+  tickFn();
+  globalThis.setInterval = keepTimer;
+  stopLiveUptime();
+  check(tickBytes[0].startsWith('\x1b7\x1b[7A'), 'live ticker thunk addresses 7 up pre-refit');
+  check(tickBytes[1].startsWith('\x1b7\x1b[8A'), 'live ticker thunk re-addresses 8 up post-refit');
+}
+
 if (failureCount > 0) {
   process.stderr.write(`assert-registry: ${failureCount} failure(s)\n`);
   process.exit(1);

@@ -9,8 +9,8 @@ no CI gate — run it before pushing a wave that touches `js/` or `css/`.
 
 | Asset | Measured gzip | Budget gzip | Headroom |
 |---|---|---|---|
-| `js/` total (37 modules) | 225,554 B (~220 KiB) | ≤ 226,000 B | ~0.2% |
-| `js/commands.js` (largest single module) | 63,818 B | ≤ 64,000 B | ~0.3% |
+| `js/` total (37 modules) | 225,554 B (~220 KiB) | ≤ 226,500 B | ~0.4% |
+| `js/commands.js` (largest single module) | 63,818 B | ≤ 64,600 B | ~1.2% |
 | `css/` total (12 sheets) | 23,309 B (~23 KiB) | ≤ 23,500 B | ~0.8% |
 | `index.html` | 9,975 B | ≤ 10,000 B | ~0.3% |
 
@@ -47,6 +47,11 @@ Budget history: feat/uptime-live (live in-place uptime ticker) bumped `js/`
 224,000→226,000: the delta is the shared deploy-epoch clock + single-flight
 1s rewrite in `commands.js` plus the shell submit stop-hook — no new modules,
 no CSS, and `js/commands.js` still holds its 64,000 B ceiling.
+Budget history: uptime-live follow-up (refit-safe ticker) bumped `js/`
+226,000→226,500 and `js/commands.js` 64,000→64,600: the rows-below offset
+became a per-tick thunk over live `term.cols` (plus an Uptime-wrap stop
+guard) so a webfont refit between arming and a tick can't strand a stale
+row on the divider — no new modules, no CSS.
 
 ## Lab targets (documented, verified on demand via Lighthouse)
 

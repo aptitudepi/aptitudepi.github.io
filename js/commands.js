@@ -732,21 +732,36 @@ function neofetch(term) {
 
   // Live Uptime: rewrite the value segment in place every 1s (save, up,
   // rewrite + clear tail, restore). Single-flight: re-render replaces it,
-  // next submit stops it. Write-only terms (no cols) stay static.
+  // next submit stops it. Write-only terms (no cols) stay static. The
+  // rows-below offset is a thunk over live term.cols (see
+  // startLiveUptimeBelow): a webfont refit between arming and a tick
+  // reflows wrapped rows with no container resize (no ResizeObserver, no
+  // freeze), so a frozen count would address a stale row and rewrite the
+  // divider tail every tick.
   const termCols = typeof term?.cols === 'number' && term.cols > 0 ? term.cols : 80;
-  let rowsBelowUptime = 0;
   let uptimeScreenRows = 1;
+  const belowLens = [];
   if (uptimeRowIndex >= 0) {
     // +8 headroom for value growth so a later tick never wraps the row.
     uptimeScreenRows = Math.max(1, Math.ceil((visibleLen(renderedRows[uptimeRowIndex]) + 8) / termCols));
     for (let rowIndex = uptimeRowIndex + 1; rowIndex < renderedRows.length; rowIndex += 1) {
-      rowsBelowUptime += Math.max(1, Math.ceil(visibleLen(renderedRows[rowIndex]) / termCols));
+      belowLens.push(visibleLen(renderedRows[rowIndex]));
     }
   }
   const renderEpoch = uptimeEpochMillis();
+  // Per-tick offset over live cols; -1 stops the ticker when the Uptime
+  // row itself no longer fits one screen row (live value length, same +8
+  // headroom: 8 cells of 'Uptime: ' label plus value).
+  const liveRowsBelow = () => {
+    const liveCols = typeof term?.cols === 'number' && term.cols > 0 ? term.cols : 80;
+    if (Math.max(1, Math.ceil((8 + uptimeStr(renderEpoch).length + 8) / liveCols)) !== 1) return -1;
+    let below = 0;
+    for (const rowLen of belowLens) below += Math.max(1, Math.ceil(rowLen / liveCols));
+    return below;
+  };
   // A wrapped Uptime row can't rewrite segment-only, so narrow screens stay static.
-  if (uptimeRowIndex >= 0 && rowsBelowUptime >= 1 && uptimeScreenRows === 1) {
-    startLiveUptimeBelow(term, rowsBelowUptime, () => `\x1b[${uptimeValueColumn}G${uptimeStr(renderEpoch)}`);
+  if (uptimeRowIndex >= 0 && belowLens.length >= 1 && uptimeScreenRows === 1) {
+    startLiveUptimeBelow(term, liveRowsBelow, () => `\x1b[${uptimeValueColumn}G${uptimeStr(renderEpoch)}`);
   } else {
     stopLiveUptime();
   }
@@ -1242,10 +1257,20 @@ function canTickLive(term) {
 }
 function startLiveUptime(term, rowsUp, paintRow) {
   stopLiveUptime();
-  if (canTickLive(term) === false || Number.isInteger(rowsUp) === false || rowsUp < 1) return false;
+  if (canTickLive(term) === false) return false;
+  // rowsUp is a count or a thunk re-evaluated per tick: neofetch passes a
+  // thunk over live term.cols so a webfont refit (reflow, no container
+  // resize, ticker still armed) between arming and a tick can't strand a
+  // stale offset on the divider. A per-tick value below 1 stops the ticker
+  // instead of misaddressing a row.
+  const rowsUpFn = typeof rowsUp === 'function' ? rowsUp : () => rowsUp;
+  const firstUp = rowsUpFn();
+  if (Number.isInteger(firstUp) === false || firstUp < 1) return false;
   liveUptimeTimerId = setInterval(() => {
     try {
-      term.write(`\x1b7\x1b[${rowsUp}A${paintRow()}\x1b[K\x1b8`);
+      const tickUp = rowsUpFn();
+      if (Number.isInteger(tickUp) === false || tickUp < 1) { stopLiveUptime(); return; }
+      term.write(`\x1b7\x1b[${tickUp}A${paintRow()}\x1b[K\x1b8`);
     } catch {
       stopLiveUptime();
     }
@@ -1253,8 +1278,16 @@ function startLiveUptime(term, rowsUp, paintRow) {
   return true;
 }
 // Shared by neofetch + uptime: writePrompt's blank and prompt rows land
-// pre-tick, so add 2 (ticks hit the target, never the input row).
+// pre-tick, so add 2 (ticks hit the target, never the input row). A
+// rowsBelow thunk is re-evaluated per tick (see startLiveUptime); a stop
+// signal (-1) passes through without the +2.
 function startLiveUptimeBelow(term, rowsBelow, paintRow) {
+  if (typeof rowsBelow === 'function') {
+    return startLiveUptime(term, () => {
+      const below = rowsBelow();
+      return Number.isInteger(below) && below >= 0 ? below + 2 : -1;
+    }, paintRow);
+  }
   return startLiveUptime(term, rowsBelow + 2, paintRow);
 }
 

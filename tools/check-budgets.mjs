@@ -25,8 +25,11 @@ const BUDGET_TABLE = [
   // live-uptime ticker in commands.js (deploy-epoch clock + single-flight 1s
   // in-place rewrite for neofetch/uptime) plus the shell executeCommand stop
   // hook; no new modules, no CSS.
-  { label: 'js/ total', kind: 'directory', relativePath: 'js', extension: '.js', maxGzipBytes: 226000 },
-  { label: 'js/commands.js', kind: 'file', relativePath: 'js/commands.js', extension: null, maxGzipBytes: 64000 },
+  // uptime-live follow-up (refit-safe ticker) raises js/ 226,000→226,500
+  // and commands.js 64,000→64,600: the rows-below offset is a per-tick thunk
+  // over live term.cols so a webfont refit can't strand a stale row.
+  { label: 'js/ total', kind: 'directory', relativePath: 'js', extension: '.js', maxGzipBytes: 226500 },
+  { label: 'js/commands.js', kind: 'file', relativePath: 'js/commands.js', extension: null, maxGzipBytes: 64600 },
   { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 23500 },
   { label: 'index.html', kind: 'file', relativePath: 'index.html', extension: null, maxGzipBytes: 10000 },
 ];
