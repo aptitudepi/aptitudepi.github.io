@@ -653,10 +653,15 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-terminal-border) tran
 /* ── GitHub Stats (heatmap + radar) ───────── */
 .github-stats {
   display: grid;
-  grid-template-columns: 1.45fr 1fr;
+  grid-template-columns: 2.2fr 1fr;
   gap: var(--space-6);
   max-width: 1060px;
   margin: var(--space-10) auto 0;
+}
+/* Break out of the section 960px cap (layout.css): the 53-week heatmap
+   needs ~720px inner, which the capped 1.45fr share cannot provide. */
+section:not(#hero-target) > .github-stats {
+  max-width: 1180px;
 }
 .gh-card {
   padding: var(--space-6);
@@ -666,6 +671,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-terminal-border) tran
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   overflow: hidden;
+  min-width: 0;
 }
 .gh-card-title {
   font-family: var(--font-display);
@@ -679,9 +685,10 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-terminal-border) tran
 
 /* Heatmap */
 .gh-heatmap {
-  --gh-cell: 11px;
+  --gh-cell: 10px;
   --gh-gap: 3px;
-  overflow-x: auto;
+  overflow-x: hidden;
+  overflow-x: clip;
   padding-bottom: var(--space-2);
 }
 .gh-heatmap .gh-months {

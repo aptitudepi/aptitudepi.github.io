@@ -31,9 +31,12 @@ const BUDGET_TABLE = [
   // feat/radar-goals raises js/ 226,500→228,000: the delta is the fixed-goal
   // radar normalization (RADAR_GOALS + last-365-day numerators) in
   // js/github-stats.js — no new modules, no CSS.
+  // feat/activity-wide raises css/ 23,500→23,600: the delta is the wider
+  // activity pane (1180px breakout + 2.2fr share, 10px cells, clip/auto
+  // overflow) — no new sheets, no JS.
   { label: 'js/ total', kind: 'directory', relativePath: 'js', extension: '.js', maxGzipBytes: 228000 },
   { label: 'js/commands.js', kind: 'file', relativePath: 'js/commands.js', extension: null, maxGzipBytes: 64600 },
-  { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 23500 },
+  { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 23600 },
   { label: 'index.html', kind: 'file', relativePath: 'index.html', extension: null, maxGzipBytes: 10000 },
 ];
 
