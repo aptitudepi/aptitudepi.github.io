@@ -11,7 +11,7 @@ no CI gate — run it before pushing a wave that touches `js/` or `css/`.
 |---|---|---|---|
 | `js/` total (37 modules) | 225,554 B (~220 KiB) | ≤ 226,500 B | ~0.4% |
 | `js/commands.js` (largest single module) | 63,818 B | ≤ 64,600 B | ~1.2% |
-| `css/` total (12 sheets) | 23,309 B (~23 KiB) | ≤ 23,500 B | ~0.8% |
+| `css/` total (12 sheets) | 23,309 B (~23 KiB) | ≤ 23,600 B | ~1.2% |
 | `index.html` | 9,975 B | ≤ 10,000 B | ~0.3% |
 
 Budget history: raised 2026-10-04 for the playground wave — `js/` gained the
@@ -56,6 +56,9 @@ Budget history: feat/radar-goals (fixed-goal radar normalization) bumped
 `js/` 226,500→228,000: the delta is `RADAR_GOALS` + last-365-day numerators
 (`created:>=` search qualifiers, `commitsLastYear`) in `js/github-stats.js`
 — no new modules, no CSS.
+Budget history: feat/activity-wide (no-h-scroll activity pane) bumped `css/`
+23,500→23,600: the delta is the wider pane (1180px breakout + 2.2fr share,
+10px cells, clip/auto overflow) — no new sheets, no JS.
 
 ## Lab targets (documented, verified on demand via Lighthouse)
 
