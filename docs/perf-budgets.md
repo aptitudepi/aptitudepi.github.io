@@ -52,6 +52,10 @@ Budget history: uptime-live follow-up (refit-safe ticker) bumped `js/`
 became a per-tick thunk over live `term.cols` (plus an Uptime-wrap stop
 guard) so a webfont refit between arming and a tick can't strand a stale
 row on the divider — no new modules, no CSS.
+Budget history: feat/radar-goals (fixed-goal radar normalization) bumped
+`js/` 226,500→228,000: the delta is `RADAR_GOALS` + last-365-day numerators
+(`created:>=` search qualifiers, `commitsLastYear`) in `js/github-stats.js`
+— no new modules, no CSS.
 
 ## Lab targets (documented, verified on demand via Lighthouse)
 

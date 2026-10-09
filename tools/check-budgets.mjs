@@ -28,7 +28,10 @@ const BUDGET_TABLE = [
   // uptime-live follow-up (refit-safe ticker) raises js/ 226,000→226,500
   // and commands.js 64,000→64,600: the rows-below offset is a per-tick thunk
   // over live term.cols so a webfont refit can't strand a stale row.
-  { label: 'js/ total', kind: 'directory', relativePath: 'js', extension: '.js', maxGzipBytes: 226500 },
+  // feat/radar-goals raises js/ 226,500→228,000: the delta is the fixed-goal
+  // radar normalization (RADAR_GOALS + last-365-day numerators) in
+  // js/github-stats.js — no new modules, no CSS.
+  { label: 'js/ total', kind: 'directory', relativePath: 'js', extension: '.js', maxGzipBytes: 228000 },
   { label: 'js/commands.js', kind: 'file', relativePath: 'js/commands.js', extension: null, maxGzipBytes: 64600 },
   { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 23500 },
   { label: 'index.html', kind: 'file', relativePath: 'index.html', extension: null, maxGzipBytes: 10000 },

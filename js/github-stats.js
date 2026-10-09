@@ -3,7 +3,7 @@ import { combinedTimeoutSignal } from './fetch-timeout.js';
 const USER = 'aptitudepi';
 const JGR = `https://github-contributions-api.jogruber.de/v4/${USER}`;
 const GH_API = 'https://api.github.com';
-const CACHE_KEY = 'gh-stats-cache-v2';
+const CACHE_KEY = 'gh-stats-cache-v3';
 const CACHE_TTL = 6 * 3600 * 1000;
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const LEVEL_CLASSES = ['lvl-0', 'lvl-1', 'lvl-2', 'lvl-3', 'lvl-4'];
@@ -18,6 +18,23 @@ const DEFAULT_RADAR = {
   stars: 52,
   followers: 24
 };
+
+// Goal denominators per radar axis (100% ring). Stars/followers are
+// cumulative lifetime totals; prs/issues/reviews/commits numerators are
+// last-365-days counts (see fetchRadarAxes + commitsLastYear below).
+// Commits goal reuses the existing fallback magnitude (1240) so the 1yr
+// numerator keeps today's near-full shape — previously relative scaling
+// always maxed commits, so pinning preserves that look.
+const RADAR_GOALS = {
+  prs: 100,
+  issues: 50,
+  reviews: 20,
+  commits: 1240,
+  stars: 1000,
+  followers: 500
+};
+
+const DAY_MILLIS = 24 * 3600 * 1000;
 
 const ok = r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`));
 
@@ -37,12 +54,17 @@ async function fetchContributions() {
 
 async function fetchRadarAxes() {
   try {
+    // Numerators for prs/issues/reviews cover the last 365 days only via the
+    // `created:` qualifier (item createdAt >= cutoff). Reviews use the
+    // reviewed PR's createdAt — the search API has no reviewed-date qualifier,
+    // so creation date is the closest proxy. Stars/followers stay cumulative.
+    const cutoff = fmt(new Date(Date.now() - 365 * DAY_MILLIS));
     const [user, repos, prs, issues, reviews] = await Promise.all([
       fetch(`${GH_API}/users/${USER}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
       fetch(`${GH_API}/users/${USER}/repos?per_page=100`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
-      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr author:${USER}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
-      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:issue author:${USER}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
-      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr reviewed-by:${USER}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
+      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr author:${USER} created:>=${cutoff}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
+      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:issue author:${USER} created:>=${cutoff}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
+      fetch(`${GH_API}/search/issues?q=${encodeURIComponent(`type:pr reviewed-by:${USER} created:>=${cutoff}`)}`, { signal: combinedTimeoutSignal(null, 10000) }).then(ok).catch(() => null),
     ]);
     const stars = (Array.isArray(repos) ? repos : []).reduce((s, r) => s + (Number(r.stargazers_count) || 0), 0);
     return {
@@ -71,6 +93,13 @@ function writeCache(data) {
 }
 
 const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Commits numerator: last-365-days sum over the contributions day array
+// (timestamp used = contribution day `date`), not the all-time total.
+function commitsLastYear(data) {
+  const cutoff = fmt(new Date(Date.now() - 365 * DAY_MILLIS));
+  return (data?.contributions || []).reduce((s, c) => s + (c.date >= cutoff ? (Number(c.count) || 0) : 0), 0);
+}
 
 function levelFor(n) {
   if (n <= 0) return 0;
@@ -224,8 +253,10 @@ function renderRadar(host, data) {
 
   const values = { ...DEFAULT_RADAR, ...data };
   const sqrt = v => Math.sqrt(Math.max(Number(v) || 0, 0));
-  const maxSqrt = Math.max(...RADAR_KEYS.map(k => sqrt(values[k])));
-  const ratio = k => maxSqrt ? Math.max(sqrt(values[k]) / maxSqrt, 0.15) : 0.2;
+  // Fixed-goal normalization (sqrt-compressed, clamped to the 100% ring,
+  // floored at 0.15 so small counts stay visible) — replaces the old
+  // relative-to-max scaling so each axis reads as progress toward its goal.
+  const ratio = k => Math.max(Math.min(sqrt(values[k]) / sqrt(RADAR_GOALS[k] || 1), 1), 0.15);
   const labels = { prs: 'Pull Requests', issues: 'Issues', reviews: 'Code Reviews', commits: 'Commits', stars: 'Stars', followers: 'Followers' };
   const fmtVal = k => String(values[k] && isFinite(values[k]) ? values[k].toLocaleString() : '0');
 
@@ -272,7 +303,7 @@ export function initGitHubStats() {
   // Immediate render from cache or baseline fallback
   const cached = readCache();
   const fallbackContrib = generateFallbackContributions();
-  const fallbackRadar = { ...DEFAULT_RADAR, commits: fallbackContrib.allTime };
+  const fallbackRadar = { ...DEFAULT_RADAR, commits: commitsLastYear(fallbackContrib) || DEFAULT_RADAR.commits };
 
   const initialContrib = cached?.contributions || fallbackContrib;
   const initialRadar = cached?.radar || fallbackRadar;
@@ -286,7 +317,7 @@ export function initGitHubStats() {
     fetchRadarAxes().catch(() => null)
   ]).then(([contrib, axes]) => {
     const finalContrib = contrib || initialContrib;
-    const finalRadar = axes ? { ...axes, commits: finalContrib.allTime } : initialRadar;
+    const finalRadar = axes ? { ...axes, commits: commitsLastYear(finalContrib) } : initialRadar;
 
     renderHeatmap(host, finalContrib);
     renderRadar(host, finalRadar);
