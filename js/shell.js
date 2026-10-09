@@ -252,8 +252,19 @@ fetchTerminalIdentity()
 
 let BOOT_MSGS = null;
 
+function promptText() {
+  return `${SITE_GREEN}db${ANSI_RESET}${SITE_WHITE}@${ANSI_RESET}${SITE_CYAN}${getTerminalHost()}${ANSI_RESET}${SITE_MUTED} ${ANSI_RESET}${SITE_BLUE}~${ANSI_RESET}${SITE_MUTED}❯ ${ANSI_RESET}`;
+}
+
 function writePrompt(term) {
-  term.write(`\r\n${SITE_GREEN}db${ANSI_RESET}${SITE_WHITE}@${ANSI_RESET}${SITE_CYAN}${getTerminalHost()}${ANSI_RESET}${SITE_MUTED} ${ANSI_RESET}${SITE_BLUE}~${ANSI_RESET}${SITE_MUTED}❯ ${ANSI_RESET}`);
+  term.write(`\r\n${promptText()}`);
+}
+
+// Mid-line repaint (no leading newline): writePrompt's \r\n here inserts a
+// row and strands the live ticker one low (value glued onto the divider).
+
+function repaintPromptLine(term) {
+  term.write(promptText());
 }
 
 // The foreground runner owns every post-completion prompt: shell registers
@@ -282,8 +293,9 @@ function bootSequence(term, onDone) {
   let i = 0;
   function writeNext() {
     if (i >= BOOT_MSGS.length) {
-      neofetch(term);
-      setTimeout(() => { writePrompt(term); if (onDone) onDone(); }, 80);
+      Promise.resolve(neofetch(term)).then(() => {
+        setTimeout(() => { writePrompt(term); if (onDone) onDone(); }, 80);
+      });
       return;
     }
     const msg = BOOT_MSGS[i];
@@ -412,7 +424,7 @@ window.executeTerminalCommand = executeCommand;
 const resfetch = neofetch;
 
 export {
-  executeCommand, bootSequence, neofetch, resfetch, writePrompt, setHostRefreshRequester, SITE_GREEN,
+  executeCommand, bootSequence, neofetch, resfetch, writePrompt, repaintPromptLine, setHostRefreshRequester, SITE_GREEN,
   SITE_CYAN, SITE_WHITE, SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_FAINT,
   ANSI_RESET,
 };

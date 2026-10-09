@@ -642,7 +642,8 @@ const SHOW_TERMINAL_ART = false;
 
 const NEOFETCH_TRY_COMMANDS = ['matrix', 'vm', 'ai', 'weather', 'hn', 'md', 'wall'];
 
-function neofetch(term) {
+async function neofetch(term) {
+  await loadBuildInfo(); // resolve the deploy epoch before first paint (else Uptime starts at 0s)
   const artHeight = ASCII_ART.length;
   const gap = 4;
   const maxArtW = Math.max(...ASCII_ART.map(visibleLen));
@@ -732,25 +733,39 @@ function neofetch(term) {
 
   // Live Uptime: rewrite the value segment in place every 1s (save, up,
   // rewrite + clear tail, restore). Single-flight: re-render replaces it,
-  // next submit stops it. Write-only terms (no cols) stay static.
+  // next submit stops it. Write-only terms (no cols) stay static. The
+  // rows-below offset is a thunk over live term.cols (see
+  // startLiveUptimeBelow): a webfont refit between arming and a tick
+  // reflows wrapped rows with no container resize (no ResizeObserver, no
+  // freeze), so a frozen count would address a stale row and rewrite the
+  // divider tail every tick.
   const termCols = typeof term?.cols === 'number' && term.cols > 0 ? term.cols : 80;
-  let rowsBelowUptime = 0;
   let uptimeScreenRows = 1;
+  const belowLens = [];
   if (uptimeRowIndex >= 0) {
     // +8 headroom for value growth so a later tick never wraps the row.
     uptimeScreenRows = Math.max(1, Math.ceil((visibleLen(renderedRows[uptimeRowIndex]) + 8) / termCols));
     for (let rowIndex = uptimeRowIndex + 1; rowIndex < renderedRows.length; rowIndex += 1) {
-      rowsBelowUptime += Math.max(1, Math.ceil(visibleLen(renderedRows[rowIndex]) / termCols));
+      belowLens.push(visibleLen(renderedRows[rowIndex]));
     }
   }
   const renderEpoch = uptimeEpochMillis();
+  // Per-tick offset over live cols; -1 stops the ticker when the Uptime
+  // row itself no longer fits one screen row (live value length, same +8
+  // headroom: 8 cells of 'Uptime: ' label plus value).
+  const liveRowsBelow = () => {
+    const liveCols = typeof term?.cols === 'number' && term.cols > 0 ? term.cols : 80;
+    if (Math.max(1, Math.ceil((8 + uptimeStr(renderEpoch).length + 8) / liveCols)) !== 1) return -1;
+    let below = 0;
+    for (const rowLen of belowLens) below += Math.max(1, Math.ceil(rowLen / liveCols));
+    return below;
+  };
   // A wrapped Uptime row can't rewrite segment-only, so narrow screens stay static.
-  if (uptimeRowIndex >= 0 && rowsBelowUptime >= 1 && uptimeScreenRows === 1) {
-    startLiveUptime(term, rowsBelowUptime, () => `\x1b[${uptimeValueColumn}G${uptimeStr(renderEpoch)}`);
+  if (uptimeRowIndex >= 0 && belowLens.length >= 1 && uptimeScreenRows === 1) {
+    startLiveUptimeBelow(term, liveRowsBelow, () => `\x1b[${uptimeValueColumn}G${uptimeStr(renderEpoch)}`);
   } else {
     stopLiveUptime();
   }
-  loadBuildInfo(); // warm the deploy-epoch cache for the next render (never rejects)
 }
 
 async function getLocation(runSignal) {
@@ -1158,12 +1173,12 @@ async function runUptimeCommand(term) {
   const renderEpoch = uptimeEpochMillis();
   const uptimeLine = `\r${SITE_GREEN} up ${uptimeStr(renderEpoch)}${ANSI_RESET}`;
   term.writeln(uptimeLine);
-  // Live view: the shared ticker rewrites that line in place every 1s until
-  // the next submit stops it (shell hook). Static when live addressing is
-  // unavailable (export capture, no cols) or the line wraps; +8 headroom.
+  // Live view: the shared ticker rewrites that line in place every 1s
+  // (frozen by keystroke/resize/submit hooks). Static when wrapped or
+  // write-only (export capture, no cols); +8 headroom.
   const termCols = typeof term?.cols === 'number' && term.cols > 0 ? term.cols : 80;
   if (Math.max(1, Math.ceil((visibleLen(uptimeLine) + 8) / termCols)) === 1) {
-    startLiveUptime(term, 1, () => `\r${SITE_GREEN} up ${uptimeStr(renderEpoch)}${ANSI_RESET}`);
+    startLiveUptimeBelow(term, 0, () => `\r${SITE_GREEN} up ${uptimeStr(renderEpoch)}${ANSI_RESET}`);
   }
   return;
 }
@@ -1176,8 +1191,9 @@ function osc8Link(url, text) {
 
 // PR1 build metadata: CI writes build-info.json ({sha, run_number,
 // built_at}) between PDF verification and sitemap generation; the terminal
-// consumes it at runtime with fetch no-store. Absent locally (dev/snapshot)
-// every consumer falls back to static text, so goldens stay deterministic.
+// consumes it at runtime with fetch no-store. Absent (fresh clone,
+// ungenerated) every consumer falls back to static text, so goldens stay
+// deterministic.
 let cachedBuildInfo = null;
 let buildInfoPromise = null;
 function loadBuildInfo() {
@@ -1207,8 +1223,9 @@ function buildInfoLine() {
 }
 
 // Live-uptime clock shared by neofetch and `uptime`: epoch is the last
-// deploy (build-info.json built_at, once cached), else the session
-// pageLoadTime so local previews still tick. Missing/invalid falls back.
+// commit (build-info.json built_at, once cached; CI writes deploy time,
+// local previews generate it from git log). Missing/invalid falls back to
+// the session pageLoadTime so the clock still ticks.
 function uptimeEpochMillis() {
   const builtAt = cachedBuildInfo !== null && cachedBuildInfo !== undefined ? cachedBuildInfo.built_at : null;
   const builtMillis = typeof builtAt === 'string' && builtAt.length > 0 ? Date.parse(builtAt) : NaN;
@@ -1242,15 +1259,38 @@ function canTickLive(term) {
 }
 function startLiveUptime(term, rowsUp, paintRow) {
   stopLiveUptime();
-  if (canTickLive(term) === false || Number.isInteger(rowsUp) === false || rowsUp < 1) return false;
+  if (canTickLive(term) === false) return false;
+  // rowsUp is a count or a thunk re-evaluated per tick: neofetch passes a
+  // thunk over live term.cols so a webfont refit (reflow, no container
+  // resize, ticker still armed) between arming and a tick can't strand a
+  // stale offset on the divider. A per-tick value below 1 stops the ticker
+  // instead of misaddressing a row.
+  const rowsUpFn = typeof rowsUp === 'function' ? rowsUp : () => rowsUp;
+  const firstUp = rowsUpFn();
+  if (Number.isInteger(firstUp) === false || firstUp < 1) return false;
   liveUptimeTimerId = setInterval(() => {
     try {
-      term.write(`\x1b7\x1b[${rowsUp}A${paintRow()}\x1b[K\x1b8`);
+      const tickUp = rowsUpFn();
+      if (Number.isInteger(tickUp) === false || tickUp < 1) { stopLiveUptime(); return; }
+      term.write(`\x1b7\x1b[${tickUp}A${paintRow()}\x1b[K\x1b8`);
     } catch {
       stopLiveUptime();
     }
   }, 1000);
   return true;
+}
+// Shared by neofetch + uptime: writePrompt's blank and prompt rows land
+// pre-tick, so add 2 (ticks hit the target, never the input row). A
+// rowsBelow thunk is re-evaluated per tick (see startLiveUptime); a stop
+// signal (-1) passes through without the +2.
+function startLiveUptimeBelow(term, rowsBelow, paintRow) {
+  if (typeof rowsBelow === 'function') {
+    return startLiveUptime(term, () => {
+      const below = rowsBelow();
+      return Number.isInteger(below) && below >= 0 ? below + 2 : -1;
+    }, paintRow);
+  }
+  return startLiveUptime(term, rowsBelow + 2, paintRow);
 }
 
 // Client-side hardware/browser probe with guarded fallbacks: Chromium
@@ -3099,7 +3139,7 @@ function isAiCommandName(commandName) {
 
 export {
   ASCII_ART, vfs, RESUME, CMD_HISTORY, SHOW_TERMINAL_ART, neofetch, uptimeStr,
-  stopLiveUptime,
+  stopLiveUptime, startLiveUptimeBelow,
   ansiRGB, stripAnsi, ANSI_RESET, ANSI_BOLD, SITE_GREEN, SITE_CYAN, SITE_WHITE,
   SITE_BLUE, SITE_MUTED, SITE_OK, SITE_ERR, SITE_LABEL, SITE_FAINT, COMMANDS,
   BOOT_SCRIPT, TERMINAL_HOST_FALLBACK, getTerminalHost, setTerminalHost,

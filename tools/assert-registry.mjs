@@ -30,6 +30,8 @@ import {
   isAiCommandName,
   renderMan,
   resolveCommand,
+  startLiveUptimeBelow,
+  stopLiveUptime,
   suggestCommand,
   tokenizeCommandLine,
 } from "../js/commands.js";
@@ -219,6 +221,40 @@ check(JSON.stringify(tokenizeCommandLine('')) === JSON.stringify([]), 'tokenizer
 check(isAiCommandName('ai') && isAiCommandName('llm') && !isAiCommandName('wall'), 'ai-queue routing covers ai+llm only');
 check(suggestCommand('unknown-cmd') === null, 'unknown-cmd gets no suggestion (golden pin)');
 check(suggestCommand('hep') === 'help', 'hep suggests help');
+
+// 11. Live-uptime addressing: writePrompt's blank + prompt rows land
+// pre-tick, so the shared helper maps 3 rows below to 5 up (fake timer).
+{
+  const keepTimer = globalThis.setInterval;
+  let tickFn = null;
+  globalThis.setInterval = (fn) => { tickFn = fn; return 7; };
+  const tickBytes = [];
+  const liveTerm = { cols: 80, write(chunk) { tickBytes.push(String(chunk)); } };
+  startLiveUptimeBelow(liveTerm, 3, () => 'v');
+  tickFn();
+  globalThis.setInterval = keepTimer;
+  stopLiveUptime();
+  check(tickBytes[0].startsWith('\x1b7\x1b[5A'), 'live ticker addresses 5 up for 3 rows below');
+}
+
+// 11b. Live-uptime refit: a rowsBelow thunk re-addresses per tick over live
+// cols, so a webfont refit (reflow, no container resize) between arming and
+// a tick can't strand a stale offset on the divider.
+{
+  const keepTimer = globalThis.setInterval;
+  let tickFn = null;
+  globalThis.setInterval = (fn) => { tickFn = fn; return 8; };
+  const tickBytes = [];
+  const liveTerm = { cols: 90, write(chunk) { tickBytes.push(String(chunk)); } };
+  startLiveUptimeBelow(liveTerm, () => (liveTerm.cols >= 91 ? 3 : liveTerm.cols === 90 ? 5 : 6), () => 'v');
+  tickFn();
+  liveTerm.cols = 80; // refit narrows: divider/Try/helpHint reflow 5 rows into 6
+  tickFn();
+  globalThis.setInterval = keepTimer;
+  stopLiveUptime();
+  check(tickBytes[0].startsWith('\x1b7\x1b[7A'), 'live ticker thunk addresses 7 up pre-refit');
+  check(tickBytes[1].startsWith('\x1b7\x1b[8A'), 'live ticker thunk re-addresses 8 up post-refit');
+}
 
 if (failureCount > 0) {
   process.stderr.write(`assert-registry: ${failureCount} failure(s)\n`);
