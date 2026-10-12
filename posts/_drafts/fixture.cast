@@ -1,0 +1,4 @@
+{"version": 2, "width": 80, "height": 24, "timestamp": 1760275200, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}
+[0.5, "o", "\u001b[32m$\u001b[0m echo hello-fixture\r\n"]
+[0.7, "o", "hello-fixture\r\n"]
+[1.2, "o", "\u001b[32m$\u001b[0m exit\r\n"]

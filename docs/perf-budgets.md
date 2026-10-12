@@ -60,6 +60,21 @@ Budget history: feat/activity-wide (no-h-scroll activity pane) bumped `css/`
 23,500→23,600: the delta is the wider pane (1180px breakout + 2.2fr share,
 10px cells, clip/auto overflow) — no new sheets, no JS.
 
+## Blog budgets (appended 2026-10-11, existing 4 entries untouched)
+
+| Asset | Budget gzip | Notes |
+|---|---|---|
+| `blog/` per-post HTML (max per file) | ≤ 15,000 B | Worst-file ceiling over `blog/**/*.html` (shell + `__META__` + body); missing dir = 0, passes |
+| blog images total (`assets/blog/` + `images/blog/`) | ≤ 500,000 B | Sum over AVIF/WebP/JPEG/PNG/GIF/SVG; post images belong in those dirs so base budgets stay unaffected |
+| `blog/` generated images (step 5–6, 2026-10-12) | included in blog images total | `check-budgets.mjs` image-total also scans `blog/` for image extensions (responsive `<picture>` variants under `blog/<slug>/img/` + OG cards; HTML/RSS/JSON untouched). `.gitignore` artifact rule re-scoped to root `/blog/` so `assets/blog/` + `images/blog/` stay committable. Read-UX island JS rides inline `__SCRIPTS__` (same island-exclusion as player/search). |
+
+Island-exclusion rule: blog islands (asciinema player, Pagefind search UI)
+ship via shell.html `__SCRIPTS__` as CDN/vendor payloads inside generated blog
+HTML — never under `js/` — so they are excluded from the `js/` total by
+construction (`check-budgets.mjs` does not scan `blog/` for JS). If an island
+ever gets vendored into `js/`, the `js/` ceiling gates it and must be bumped
+explicitly with a budget-history line like the ones above.
+
 ## Lab targets (documented, verified on demand via Lighthouse)
 
 | Metric | Target | Notes |

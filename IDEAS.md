@@ -587,6 +587,7 @@ Surface portfolio content directly through the terminal — not just links to it
 | **Visual regression** | Playwright snapshots of hero, terminal, cards. Catches unintended CSS changes. | Medium |
 | **A11y audit** | `axe-playwright` integration in CI. Scans each page section for WCAG violations. | Low |
 | **HTML validator** | `html-validate` or W3C validator in CI. Catches unclosed tags, duplicate IDs. | Very Low |
+| **Minify HTML/CSS/JS (TABLED)** | Optional CI step after Build HTML (html-minifier-terser / clean-css / terser). Conflicts with readable View-Source policy in `docs/perf-budgets.md` — needs explicit decision before enabling. | Low | Medium |
 
 ### Performance Budgets
 

@@ -8,7 +8,7 @@
 // Usage:
 //   npm run check:budgets
 
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,10 +38,41 @@ const BUDGET_TABLE = [
   { label: 'js/commands.js', kind: 'file', relativePath: 'js/commands.js', extension: null, maxGzipBytes: 64600 },
   { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 23600 },
   { label: 'index.html', kind: 'file', relativePath: 'index.html', extension: null, maxGzipBytes: 10000 },
+  // Blog extension (append-only, 2026-10-11): per-post HTML gzip ceiling +
+  // blog image-total ceiling. Island-exclusion rule: blog islands (asciinema
+  // player, Pagefind search UI) ship via shell.html __SCRIPTS__ as CDN/vendor
+  // payloads inside generated blog HTML — never under js!/ — so the js/ total
+  // above is unaffected by construction; the checker does not scan blog/ for
+  // JS. No new deps (node:fs/zlib only); missing blog dirs measure 0 and pass.
+  // Step 5–6 (2026-10-12): read-UX island JS is inline in __SCRIPTS__ (same
+  // exclusion); image-total also scans generated blog/ output (responsive
+  // <picture> variants under blog/<slug>/img/ + OG cards) — HTML/RSS/JSON
+  // files there are untouched (image extensions only).
+  { label: 'blog/ per-post HTML (max gzip per file)', kind: 'max-per-file', relativePath: 'blog', extension: '.html', maxGzipBytes: 15000 },
+  { label: 'blog images total', kind: 'image-total', relativePath: 'assets/blog,images/blog,blog', extension: null, maxGzipBytes: 500000 },
 ];
 
 function gzipSizeBytes(rawBuffer) {
   return gzipSync(rawBuffer).length;
+}
+
+const IMAGE_EXTENSIONS = new Set(['.avif', '.webp', '.jpg', '.jpeg', '.png', '.gif', '.svg']);
+
+// Recursively collect files under dir matching extension (or any of extSet,
+// or all files when both are null). Missing dirs yield [].
+function collectFiles(dir, extension, extSet = null) {
+  if (!existsSync(dir) || !statSync(dir).isDirectory()) return [];
+  const out = [];
+  for (const childName of readdirSync(dir).sort()) {
+    const full = join(dir, childName);
+    const stat = statSync(full);
+    if (stat.isDirectory()) {
+      out.push(...collectFiles(full, extension, extSet));
+    } else if (extSet ? [...extSet].some((ext) => childName.endsWith(ext)) : (!extension || childName.endsWith(extension))) {
+      out.push(full);
+    }
+  }
+  return out;
 }
 
 function measureEntry(budgetEntry) {
@@ -49,6 +80,33 @@ function measureEntry(budgetEntry) {
   if (budgetEntry.kind === 'file') {
     const rawBytes = readFileSync(absolutePath);
     return { rawBytes: rawBytes.length, gzipBytes: gzipSizeBytes(rawBytes) };
+  }
+  if (budgetEntry.kind === 'max-per-file') {
+    // Max gzip over every matching file under the dir (recursive). Missing
+    // dir (no posts yet) or zero matches measures 0 and passes.
+    const matches = collectFiles(absolutePath, budgetEntry.extension);
+    let worst = { rawBytes: 0, gzipBytes: 0, file: '(no posts yet)' };
+    for (const file of matches) {
+      const rawBytes = readFileSync(file);
+      const gzipBytes = gzipSizeBytes(rawBytes);
+      if (gzipBytes > worst.gzipBytes) worst = { rawBytes: rawBytes.length, gzipBytes, file };
+    }
+    return worst;
+  }
+  if (budgetEntry.kind === 'image-total') {
+    // Sum gzip over blog image dirs (comma-separated relativePaths). Missing
+    // dirs count 0 — put post images under assets/blog/ or images/blog/.
+    let rawTotal = 0;
+    let gzipTotal = 0;
+    for (const rel of budgetEntry.relativePath.split(',')) {
+      const dir = join(SITE_ROOT, rel);
+      for (const file of collectFiles(dir, null, IMAGE_EXTENSIONS)) {
+        const childBytes = readFileSync(file);
+        rawTotal += childBytes.length;
+        gzipTotal += gzipSizeBytes(childBytes);
+      }
+    }
+    return { rawBytes: rawTotal, gzipBytes: gzipTotal };
   }
   let rawTotal = 0;
   let gzipTotal = 0;
@@ -67,7 +125,8 @@ for (const budgetEntry of BUDGET_TABLE) {
   const holding = measured.gzipBytes <= budgetEntry.maxGzipBytes;
   if (!holding) breachCount += 1;
   const statusText = holding ? 'OK  ' : 'OVER';
-  process.stdout.write(`${statusText} ${budgetEntry.label}: gzip ${measured.gzipBytes} / budget ${budgetEntry.maxGzipBytes} (raw ${measured.rawBytes})\n`);
+  const detail = measured.file ? ` [worst: ${measured.file}]` : '';
+  process.stdout.write(`${statusText} ${budgetEntry.label}: gzip ${measured.gzipBytes} / budget ${budgetEntry.maxGzipBytes} (raw ${measured.rawBytes})${detail}\n`);
 }
 
 if (breachCount > 0) {

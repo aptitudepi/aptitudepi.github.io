@@ -114,12 +114,52 @@ jobs:
           pdftotext assets/cv.pdf - | grep -F -q "Texas A&M" \
             || { echo "cv.pdf missing content: Texas A&M"; exit 1; }
 
-      - name: Remove Full-CV checkout from artifact
-        run: rm -rf full-cv
+      - name: Remove Full-CV checkout and post sources from artifact
+        # posts/ holds md sources + _drafts (unpublished by definition): frozen
+        # blog/ HTML is the serve path (Flow A), so sources must never deploy —
+        # otherwise draft bodies would ship as static files with the artifact.
+        run: rm -rf full-cv posts
 
       # CI build metadata for the terminal (`uname -a`, `changelog`/`dmesg`):
       # consumed at runtime via fetch no-store; absent on local previews, so
       # those paths keep their static fallbacks.
+      # Blog (Flow A: posts/*.md → frozen blog/ HTML + rss.xml + posts.json).
+      # Runs before sitemap/IndexNow so per-post lastmod + URL lists include
+      # posts free via tools/site-urls.mjs. Drafts never build in CI prod
+      # (BUILD_DRAFTS unset → zero draft bytes); sources are stripped from the
+      # artifact below, so _drafts/ can never leak into the deploy.
+      # Image outputs rebuild clean every run (E6: build-blog.mjs rm -rf's
+      # blog/ — stale variants must never deploy); at ~10 posts/yr re-encode
+      # is seconds, while renderPostImages mtime-skip covers local rebuilds,
+      # so no actions/cache on image outputs. Bun store cached instead.
+      - name: Cache bun store
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install blog build deps
+        run: bun install
+
+      - name: Build blog
+        run: bun tools/build-blog.mjs
+
+      - name: Assert blog RSS
+        run: bun tools/assert-rss.mjs
+
+      # Pagefind search index, blog pages only (--glob scoping per E4; shell
+      # chrome carries data-pagefind-ignore via build-blog post-replace so the
+      # shared shell.html stays byte-identical, and draft articles carry
+      # ignore="all"). PAGEFIND=0 skips the index (heavy-gate); default on.
+      # Bundle lands in /pagefind/ (gitignored, deployed with the artifact);
+      # UI lazy-loads it on the blog index only — zero cost on post pages.
+      - name: Build Pagefind index
+        run: |
+          if [ "${PAGEFIND:-1}" = 0 ]; then echo "PAGEFIND=0 — skipping index"; exit 0; fi
+          bun run build:pagefind
+
       - name: Write build-info.json
         run: |
           printf '{"sha":"%s","run_number":"%s","built_at":"%s"}\n' \

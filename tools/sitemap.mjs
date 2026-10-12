@@ -4,15 +4,20 @@
 
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { SITE_URLS } from './site-urls.mjs';
+import { SITE_URLS, blogEntries } from './site-urls.mjs';
 
 const out = process.env.SITEMAP_OUT || join(import.meta.dirname, '..', 'sitemap.xml');
-const lastmod = (process.env.SITEMAP_LASTMOD || new Date().toISOString()).slice(0, 10);
+const deployStamp = (process.env.SITEMAP_LASTMOD || new Date().toISOString()).slice(0, 10);
 
-const body = SITE_URLS.map(
+// Per-entry lastmod wins (blog posts carry their frontmatter date via the
+// manifest); static pages keep the deploy stamp. Stamping deploy-date on
+// every URL lied for posts — fixed here (E4).
+const entries = [...SITE_URLS, ...blogEntries()];
+
+const body = entries.map(
   (u) => `  <url>
     <loc>${u.loc}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <lastmod>${u.lastmod ?? deployStamp}</lastmod>
     <changefreq>${u.changefreq}</changefreq>
     <priority>${u.priority}</priority>
   </url>`
@@ -25,4 +30,4 @@ ${body}
 `;
 
 writeFileSync(out, xml);
-process.stdout.write(`wrote ${out} (${SITE_URLS.length} URLs, lastmod=${lastmod})\n`);
+process.stdout.write(`wrote ${out} (${entries.length} URLs, deploy-lastmod=${deployStamp})\n`);
