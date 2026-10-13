@@ -5,9 +5,16 @@
   "scripts": {
     "snapshot": "node tools/snapshot-terminal.mjs",
     "check:budgets": "node tools/check-budgets.mjs",
-    "assert:registry": "node tools/assert-registry.mjs"
+    "assert:registry": "node tools/assert-registry.mjs",
+    "build:blog": "node tools/build-blog.mjs",
+    "build:pagefind": "pagefind --site . --glob 'blog/**/*.html'",
+    "assert:rss": "node tools/assert-rss.mjs"
   },
   "dependencies": {
-    "playwright": "^1.63.0"
+    "marked": "15.0.12",
+    "@11ty/gray-matter": "2.0.2",
+    "shiki": "4.5.0",
+    "sharp": "0.35.5",
+    "pagefind": "1.5.2"
   }
 }

@@ -21,8 +21,24 @@ function read(path) {
   return readFileSync(path, 'utf8');
 }
 
+// Default __NAV__ = resume/cv/man + blog (order + styling preserved; blog
+// self-links with no active state — nav.css has no active/aria-current rule).
+// Blog builds share this default via build-blog.mjs (same list, L2 note done).
+// META/HEAD_EXTRA/SCRIPTS default to '' (META = post header, HEAD_EXTRA =
+// Shiki vars/Pagefind attrs, SCRIPTS = player/search islands). man.html stays
+// a fork for now; collapsing it to a shell.html flag is a follow-up
+// (one-class diff, see PLAN-BLOG.md §9).
+// Declared before renderTemplate (use-before-define, DeepSource JS-0129).
+const DEFAULT_NAV = [
+  '    <a href="/resume">resume</a>',
+  '    <a href="/cv">cv</a>',
+  '    <a href="/man/">man</a>',
+  '    <a href="/blog/">blog</a>',
+].join('\n');
+
 function renderTemplate(name, vars) {
   let t = read(join(SITE, 'templates', name));
+  vars = { NAV: DEFAULT_NAV, META: '', HEAD_EXTRA: '', SCRIPTS: '', ...vars };
   for (const [key, value] of Object.entries(vars)) {
     t = t.split(`__${key}__`).join(value);
   }
@@ -114,6 +130,10 @@ for (const page of pages) {
     CRUMB_TEXT: page.crumbText,
     DOWNLOAD: page.download,
     BODY: page.body,
+    NAV: page.nav ?? DEFAULT_NAV,
+    META: page.meta ?? '',
+    HEAD_EXTRA: page.headExtra ?? '',
+    SCRIPTS: page.scripts ?? '',
   });
   writeFileSync(join(SITE, page.out), html);
   process.stdout.write(`wrote ${page.out} (${html.length} bytes)\n`);

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
 <title>Markdown Viewer</title>
 <style>
   :root {
@@ -134,21 +135,49 @@
 </div>
 <div id="content"><div class="loading"><div class="spinner"></div><br>Enter a URL above to render markdown</div></div>
 
-<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js"></script>
 <script>
 const content = document.getElementById('content');
 const urlInput = document.getElementById('urlInput');
 const goBtn = document.getElementById('goBtn');
 const statusEl = document.getElementById('status');
 
-function render(md) {
+function showError(msg) {
+  content.textContent = '';
+  const div = document.createElement('div');
+  div.className = 'error';
+  div.textContent = msg;
+  content.appendChild(div);
+}
+
+// ?url= allowlist: same-origin http(s) or any https host, except private
+// IPs/localhost (literal checks only — no DNS resolution in-browser).
+// NOTE: no ?draft= route (deferred per PLAN-BLOG.md E2 — unlisted+noindex
+// or PR previews instead of token URLs).
+function isAllowedUrl(raw) {
+  let parsedUrl;
+  try { parsedUrl = new URL(raw, window.location.href); } catch { return false; }
+  if (parsedUrl.origin === window.location.origin) return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+  if (parsedUrl.protocol !== 'https:') return false;
+  const host = parsedUrl.hostname.toLowerCase().replace(/\.$/, '');
+  if (host === 'localhost' || host === '::1' || host === '0.0.0.0') return false;
+  if (/^(127|0)\./.test(host)) return false;
+  if (/^10\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host)) return false;
+  const m172 = host.match(/^172\.(\d+)\./);
+  if (m172 && +m172[1] >= 16 && +m172[1] <= 31) return false;
+  if (host === 'fe80' || host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd')) return false;
+  if (host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.lan') || host.endsWith('.home.arpa')) return false;
+  return true;
+}
+
+function render(markdown) {
   if (!window.marked) {
     content.innerHTML = '<div class="error">Marked library failed to load. Reload the page.</div>';
     return;
   }
   marked.setOptions({ breaks: true, gfm: true });
-  const html = marked.parse(md);
+  const html = marked.parse(markdown);
   const clean = DOMPurify ? DOMPurify.sanitize(html) : html;
   content.innerHTML = clean;
   document.querySelectorAll('pre code').forEach(block => {
@@ -164,6 +193,11 @@ function render(md) {
 
 async function load(url) {
   if (!url) { content.innerHTML = '<div class="loading">Enter a URL above to render markdown</div>'; return; }
+  if (!isAllowedUrl(url)) {
+    statusEl.textContent = 'Blocked';
+    showError('Blocked: URL must be same-origin or https (no private IPs/localhost).');
+    return;
+  }
   content.innerHTML = '<div class="loading"><div class="spinner"></div><br>Loading...</div>';
   statusEl.textContent = 'Fetching...';
   try {
@@ -172,9 +206,9 @@ async function load(url) {
     const text = await resp.text();
     statusEl.textContent = `${(text.length / 1024).toFixed(1)} KB`;
     render(text);
-  } catch (e) {
+  } catch (loadError) {
     statusEl.textContent = 'Error';
-    content.innerHTML = `<div class="error">Failed to load markdown:<br>${e.message}</div>`;
+    showError('Failed to load markdown: ' + (loadError && loadError.message ? loadError.message : loadError));
   }
 }
 
@@ -186,7 +220,7 @@ if (initialUrl) {
 }
 
 goBtn.addEventListener('click', () => load(urlInput.value.trim()));
-urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') load(urlInput.value.trim()); });
+urlInput.addEventListener('keydown', event => { if (event.key === 'Enter') load(urlInput.value.trim()); });
 </script>
 </body>
 </html>

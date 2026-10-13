@@ -5,7 +5,7 @@
 // Submit once to the global endpoint; participating engines share the ping.
 // See https://www.indexnow.org/documentation.html
 
-import { HOST, URL_LIST } from './site-urls.mjs';
+import { HOST, allUrls } from './site-urls.mjs';
 
 const ENDPOINT = 'https://api.indexnow.org/indexnow';
 const KEY = process.env.INDEXNOW_KEY?.trim();
@@ -41,7 +41,7 @@ const payload = {
   host: HOST,
   key: KEY,
   keyLocation: keyUrl,
-  urlList: URL_LIST,
+  urlList: allUrls(),
 };
 
 const res = await fetch(ENDPOINT, {
@@ -59,4 +59,4 @@ if (res.status !== 200 && res.status !== 202) {
   process.exit(1);
 }
 
-process.stdout.write(`submitted ${URL_LIST.length} URLs\n`);
+process.stdout.write(`submitted ${payload.urlList.length} URLs\n`);
