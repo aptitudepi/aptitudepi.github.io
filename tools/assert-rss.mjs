@@ -27,10 +27,10 @@ check((xml.match(/<rss\b/g) || []).length === 1 && (xml.match(/<\/rss>/g) || [])
 for (const tag of ['<title>', '<link>https://', '<description>', '<language>en</language>']) {
   check(xml.includes(`<channel>\n  ${tag}`) || xml.includes(tag), `channel carries ${tag.replace(/[<>/]/g, '')}`);
 }
-const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => m[1]);
+const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((match) => match[1]);
 check(items.length === posts.length, `item count ${items.length} == published posts ${posts.length}`);
 for (const item of items) {
-  const has = (re) => re.test(item);
+  const has = (pattern) => pattern.test(item);
   check(has(/<title>[^<]+<\/title>/) && has(/<link>https:\/\/[^<]+<\/link>/) && has(/<guid isPermaLink="true">https:\/\/[^<]+<\/guid>/) && has(/<description>[\s\S]+<\/description>/) && has(/<content:encoded><!\[CDATA\[[\s\S]+\]\]><\/content:encoded>/), 'item has title/link/guid/description/content:encoded');
   const pubDate = item.match(/<pubDate>([^<]+)<\/pubDate>/)?.[1] ?? '';
   check(/^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/.test(pubDate) && !Number.isNaN(Date.parse(pubDate)), `item pubDate RFC-822 + parseable (${pubDate || 'missing'})`);

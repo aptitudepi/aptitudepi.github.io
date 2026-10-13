@@ -15,11 +15,11 @@ const deployStamp = (process.env.SITEMAP_LASTMOD || new Date().toISOString()).sl
 const entries = [...SITE_URLS, ...blogEntries()];
 
 const body = entries.map(
-  (u) => `  <url>
-    <loc>${u.loc}</loc>
-    <lastmod>${u.lastmod ?? deployStamp}</lastmod>
-    <changefreq>${u.changefreq}</changefreq>
-    <priority>${u.priority}</priority>
+  (entry) => `  <url>
+    <loc>${entry.loc}</loc>
+    <lastmod>${entry.lastmod ?? deployStamp}</lastmod>
+    <changefreq>${entry.changefreq}</changefreq>
+    <priority>${entry.priority}</priority>
   </url>`
 ).join('\n');
 

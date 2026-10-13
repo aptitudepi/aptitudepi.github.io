@@ -46,10 +46,10 @@ const DEFAULT_NAV = [
 ].join('\n');
 
 function renderTemplate(name, vars) {
-  let t = readFileSync(join(SITE, 'templates', name), 'utf8');
+  let template = readFileSync(join(SITE, 'templates', name), 'utf8');
   vars = { NAV: DEFAULT_NAV, META: '', HEAD_EXTRA: '', SCRIPTS: '', ...vars };
-  for (const [key, value] of Object.entries(vars)) t = t.split(`__${key}__`).join(value);
-  return t;
+  for (const [key, value] of Object.entries(vars)) template = template.split(`__${key}__`).join(value);
+  return template;
 }
 
 // E1 field set (astro content-layer checklist, plain asserts — no zod dep).
@@ -62,7 +62,7 @@ export function assertFrontmatter(data, file) {
   if (Number.isNaN(date.getTime())) fail(`date: parseable date required, saw ${JSON.stringify(data.date)}`);
   // Replace-don't-merge: tags is exactly the frontmatter array (E1 rule a).
   const tags = data.tags === undefined ? [] : data.tags;
-  if (!Array.isArray(tags) || !tags.every((t) => typeof t === 'string')) fail('tags: array of strings required');
+  if (!Array.isArray(tags) || !tags.every((tag) => typeof tag === 'string')) fail('tags: array of strings required');
   if (data.draft !== undefined && typeof data.draft !== 'boolean') fail('draft: boolean required');
   if (data.image !== undefined && (typeof data.image !== 'string' || !data.image.trim())) fail('image: non-empty string required');
   if (data.cast !== undefined && (typeof data.cast !== 'string' || !data.cast.trim())) fail('cast: non-empty string required');
@@ -75,39 +75,39 @@ function slugOf(file) {
   return slug;
 }
 
-function unescapeHtml(s) {
-  return s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+function unescapeHtml(value) {
+  return value.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 }
 
 // marked → Shiki build-time highlight (zero client JS). Single github-dark
 // theme keeps terminal look with no __HEAD_EXTRA__ vars needed.
-export async function markdownToHtml(md) {
-  let html = marked.parse(md, { gfm: true });
+export async function markdownToHtml(markdown) {
+  let html = marked.parse(markdown, { gfm: true });
   const blocks = [...html.matchAll(/<pre><code class="language-([\w+-]+)">([\s\S]*?)<\/code><\/pre>/g)];
   for (const [full, lang, esc] of blocks) {
-    let replacement;
+    let replacement = full; // unknown lang: keep marked's escaped block
     try {
       replacement = await codeToHtml(unescapeHtml(esc), { lang, theme: 'github-dark' });
     } catch {
-      replacement = full; // unknown lang: keep marked's escaped block
+      // keep marked's escaped block
     }
     html = html.replace(full, () => replacement);
   }
   return html;
 }
 
-export function escapeHtml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+export function escapeHtml(value) {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function readingMinutes(md) {
-  return Math.max(1, Math.ceil(md.split(/\s+/).length / 200));
+function readingMinutes(markdown) {
+  return Math.max(1, Math.ceil(markdown.split(/\s+/).length / 200));
 }
 
 function metaHtml(post) {
   const iso = post.date.toISOString();
   const day = iso.slice(0, 10);
-  const tags = post.tags.map((t) => `<a href="/blog/tag/${t}/">${escapeHtml(t)}</a>`).join(' ');
+  const tags = post.tags.map((tag) => `<a href="/blog/tag/${tag}/">${escapeHtml(tag)}</a>`).join(' ');
   return `<p class="post-meta"><time datetime="${iso}">${day}</time> &middot; ${post.minutes} min read${tags ? ` &middot; ${tags}` : ''}</p>\n`;
 }
 
@@ -121,14 +121,14 @@ function slugifyHeading(text) {
 export function addHeadingIds(html) {
   const seen = new Map();
   const headings = [];
-  html = html.replace(/<h([23])>([\s\S]*?)<\/h\1>/g, (m, level, inner) => {
+  html = html.replace(/<h([23])>([\s\S]*?)<\/h\1>/g, (match, level, inner) => {
     const text = inner.replace(/<[^>]+>/g, '').trim();
-    let id = slugifyHeading(text);
-    const n = seen.get(id) ?? 0;
-    seen.set(id, n + 1);
-    if (n > 0) id = `${id}-${n + 1}`;
-    headings.push({ level: Number(level), id, text });
-    return `<h${level} id="${id}">${inner}</h${level}>`;
+    let headingId = slugifyHeading(text);
+    const count = seen.get(headingId) ?? 0;
+    seen.set(headingId, count + 1);
+    if (count > 0) headingId = `${headingId}-${count + 1}`;
+    headings.push({ level: Number(level), id: headingId, text });
+    return `<h${level} id="${headingId}">${inner}</h${level}>`;
   });
   return { html, headings };
 }
@@ -136,7 +136,7 @@ export function addHeadingIds(html) {
 // TOC renders only when a post has 2+ sections — a one-entry TOC is noise.
 export function tocHtml(headings) {
   if (headings.length < 2) return '';
-  const lis = headings.map((h) => `  <li class="toc-h${h.level}"><a href="#${h.id}">${escapeHtml(h.text)}</a></li>`).join('\n');
+  const lis = headings.map((heading) => `  <li class="toc-h${heading.level}"><a href="#${heading.id}">${escapeHtml(heading.text)}</a></li>`).join('\n');
   return `<nav class="toc" data-pagefind-ignore aria-label="Contents"><p>contents</p>\n<ul>\n${lis}\n</ul>\n</nav>\n`;
 }
 
@@ -151,13 +151,13 @@ function absImage(image) {
 // per template by inspecting output, not per post.
 function ogHead({ title, description, canonical, date, tags = [], image }) {
   const published = date ? `\n<meta property="article:published_time" content="${date.toISOString()}">` : '';
-  const tagLines = tags.map((t) => `\n<meta property="article:tag" content="${escapeHtml(t)}">`).join('');
-  return `<meta property="og:type" content="article">\n` +
+  const tagLines = tags.map((tag) => `\n<meta property="article:tag" content="${escapeHtml(tag)}">`).join('');
+  return '<meta property="og:type" content="article">\n' +
     `<meta property="og:title" content="${escapeHtml(title)}">\n` +
     `<meta property="og:description" content="${escapeHtml(description)}">\n` +
     `<meta property="og:url" content="${canonical}">\n` +
     `<meta property="og:image" content="${absImage(image)}">\n` +
-    `<meta name="twitter:card" content="summary_large_image">\n` +
+    '<meta name="twitter:card" content="summary_large_image">\n' +
     `<meta name="twitter:title" content="${escapeHtml(title)}">\n` +
     `<meta name="twitter:description" content="${escapeHtml(description)}">${published}${tagLines}`;
 }
@@ -170,7 +170,7 @@ function shareFooter(title, canonical) {
   const subj = encodeURIComponent(title);
   const url = encodeURIComponent(canonical);
   const text = encodeURIComponent(`${title} ${canonical}`);
-  return `<footer class="share-footer" data-pagefind-ignore><p>share this post: ` +
+  return '<footer class="share-footer" data-pagefind-ignore><p>share this post: ' +
     `<button type="button" id="copy-link" data-canonical="${canonical}">copy link</button> ` +
     `<a href="mailto:?subject=${subj}&amp;body=${url}">email</a> ` +
     `<a href="https://twitter.com/intent/tweet?text=${subj}&amp;url=${url}" target="_blank" rel="noopener">x</a> ` +
@@ -185,27 +185,27 @@ const PROGRESS_DIV = '<div class="read-progress" data-pagefind-ignore aria-hidde
 // JS in __SCRIPTS__ — never under js/, so the js/ budget excludes it by
 // construction (island-exclusion rule). No new deps.
 function postScripts() {
-  return `<script>\n(function () {\n` +
-    `  try {\n` +
-    `    var u = new URL(window.location.href);\n` +
-    `    var drop = [];\n` +
-    `    u.searchParams.forEach(function (v, k) { if (k === 'ref' || k.slice(0, 4) === 'utm_') drop.push(k); });\n` +
-    `    if (drop.length) { drop.forEach(function (k) { u.searchParams.delete(k); }); window.history.replaceState(null, '', u.pathname + u.search + u.hash); }\n` +
-    `  } catch (e) {}\n` +
-    `  var btn = document.getElementById('copy-link');\n` +
-    `  if (btn && navigator.clipboard) btn.addEventListener('click', function () {\n` +
-    `    navigator.clipboard.writeText(window.location.href).then(function () { btn.textContent = 'copied'; });\n` +
-    `  });\n` +
-    `  var bar = document.querySelector('.read-progress');\n` +
-    `  if (bar) {\n` +
-    `    var onScroll = function () {\n` +
-    `      var max = document.documentElement.scrollHeight - window.innerHeight;\n` +
-    `      bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + '%';\n` +
-    `    };\n` +
-    `    window.addEventListener('scroll', onScroll, { passive: true });\n` +
-    `    onScroll();\n` +
-    `  }\n` +
-    `})();\n</script>`;
+  return '<script>\n(function () {\n' +
+    '  try {\n' +
+    '    var u = new URL(window.location.href);\n' +
+    '    var drop = [];\n' +
+    "    u.searchParams.forEach(function (v, k) { if (k === 'ref' || k.slice(0, 4) === 'utm_') drop.push(k); });\n" +
+    "    if (drop.length) { drop.forEach(function (k) { u.searchParams.delete(k); }); window.history.replaceState(null, '', u.pathname + u.search + u.hash); }\n" +
+    '  } catch (e) {}\n' +
+    "  var btn = document.getElementById('copy-link');\n" +
+    "  if (btn && navigator.clipboard) btn.addEventListener('click', function () {\n" +
+    "    navigator.clipboard.writeText(window.location.href).then(function () { btn.textContent = 'copied'; });\n" +
+    '  });\n' +
+    "  var bar = document.querySelector('.read-progress');\n" +
+    '  if (bar) {\n' +
+    '    var onScroll = function () {\n' +
+    '      var max = document.documentElement.scrollHeight - window.innerHeight;\n' +
+    "      bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + '%';\n" +
+    '    };\n' +
+    "    window.addEventListener('scroll', onScroll, { passive: true });\n" +
+    '    onScroll();\n' +
+    '  }\n' +
+    '})();\n</script>';
 }
 
 // Step-6 sharp island (E3 recipe, AVIF-primary): local relative <img> refs
@@ -232,15 +232,15 @@ export async function renderPostImages(html, { srcDir, outDir, outUrl }) {
       continue;
     }
     const meta = await sharp(srcFile).metadata();
-    const targets = [...IMG_WIDTHS.filter((w) => w < meta.width), meta.width];
+    const targets = [...IMG_WIDTHS.filter((width) => width < meta.width), meta.width];
     const base = (leaf.slice(0, leaf.lastIndexOf('.')) || 'img').replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
     const ratio = meta.height / meta.width;
-    const srcsetFor = (fmt) => targets.map((w) => `${outUrl}/${base}-${w}w.${fmt} ${w}w`).join(', ');
-    for (const w of targets) {
+    const srcsetFor = (fmt) => targets.map((width) => `${outUrl}/${base}-${width}w.${fmt} ${width}w`).join(', ');
+    for (const width of targets) {
       for (const [fmt, opts] of [['avif', { quality: 60, effort: 6 }], ['webp', { quality: 80 }], ['jpg', { quality: 85 }]]) {
-        const out = join(outDir, `${base}-${w}w.${fmt}`);
+        const out = join(outDir, `${base}-${width}w.${fmt}`);
         if (existsSync(out) && statSync(out).mtimeMs >= statSync(srcFile).mtimeMs) continue;
-        await sharp(srcFile).resize({ width: w }).toFormat(fmt, opts).toFile(out);
+        await sharp(srcFile).resize({ width }).toFormat(fmt, opts).toFile(out);
       }
     }
     const lqip = await sharp(srcFile).resize({ width: 32 }).jpeg({ quality: 15 }).toBuffer();
@@ -258,7 +258,7 @@ export async function renderPostImages(html, { srcDir, outDir, outUrl }) {
 // per tag. Hidden spans ride inside the body div — harmless body text, zero UI.
 function pagefindMeta(post) {
   const day = post.date.toISOString().slice(0, 10);
-  const filters = post.tags.map((t) => `<span hidden data-pagefind-filter="tag">${escapeHtml(t)}</span>`).join('');
+  const filters = post.tags.map((tag) => `<span hidden data-pagefind-filter="tag">${escapeHtml(tag)}</span>`).join('');
   return `<span hidden data-pagefind-meta="title">${escapeHtml(post.title)}</span>` +
     `<span hidden data-pagefind-meta="date:${day}"></span>` +
     `<span hidden data-pagefind-sort="date:${day}"></span>${filters}`;
@@ -314,26 +314,26 @@ async function castEmbed(post, srcDir, slugDir, urlBase) {
 // then create() with poster + idle cap. preload:false default kept (poster
 // forces preload only for the in-view embed — E5 refinement).
 function castScripts() {
-  return `<script>\n(function () {\n` +
-    `  var el = document.querySelector('.cast-player');\n` +
-    `  if (!el) return;\n` +
-    `  function init() {\n` +
-    `    if (el.dataset.done) return; el.dataset.done = '1';\n` +
-    `    var s = document.createElement('script');\n` +
+  return '<script>\n(function () {\n' +
+    "  var el = document.querySelector('.cast-player');\n" +
+    '  if (!el) return;\n' +
+    '  function init() {\n' +
+    "    if (el.dataset.done) return; el.dataset.done = '1';\n" +
+    "    var s = document.createElement('script');\n" +
     `    s.src = '${CAST_JS}';\n` +
-    `    s.onload = function () {\n` +
-    `      window.AsciinemaPlayer.create(el.dataset.castSrc, el, { poster: 'npt:0:05', idleTimeLimit: 2, cols: 80, rows: 24, theme: 'monokai' });\n` +
-    `    };\n` +
-    `    document.head.appendChild(s);\n` +
-    `  }\n` +
-    `  if ('IntersectionObserver' in window) { new IntersectionObserver(function (es, o) { es.forEach(function (e) { if (e.isIntersecting) { init(); o.disconnect(); } }); }).observe(el); }\n` +
-    `  else init();\n` +
-    `  var btn = document.querySelector('[data-copy-transcript]');\n` +
-    `  if (btn && navigator.clipboard) btn.addEventListener('click', function () {\n` +
-    `    var pre = btn.parentNode.querySelector('pre');\n` +
-    `    if (pre) navigator.clipboard.writeText(pre.textContent).then(function () { btn.textContent = 'copied'; });\n` +
-    `  });\n` +
-    `})();\n</script>`;
+    '    s.onload = function () {\n' +
+    "      window.AsciinemaPlayer.create(el.dataset.castSrc, el, { poster: 'npt:0:05', idleTimeLimit: 2, cols: 80, rows: 24, theme: 'monokai' });\n" +
+    '    };\n' +
+    '    document.head.appendChild(s);\n' +
+    '  }\n' +
+    "  if ('IntersectionObserver' in window) { new IntersectionObserver(function (es, o) { es.forEach(function (e) { if (e.isIntersecting) { init(); o.disconnect(); } }); }).observe(el); }\n" +
+    '  else init();\n' +
+    "  var btn = document.querySelector('[data-copy-transcript]');\n" +
+    "  if (btn && navigator.clipboard) btn.addEventListener('click', function () {\n" +
+    "    var pre = btn.parentNode.querySelector('pre');\n" +
+    "    if (pre) navigator.clipboard.writeText(pre.textContent).then(function () { btn.textContent = 'copied'; });\n" +
+    '  });\n' +
+    '})();\n</script>';
 }
 
 // Full article body: TOC + content (+ cast embed; RSS keeps post.html =
@@ -348,7 +348,7 @@ async function buildPostBody(post, srcDir, slugDir, imgUrl, urlBase) {
 
 // C1 getFilteredByTag 5-liner over frontmatter tags.
 export function getFilteredByTag(posts, tag) {
-  return posts.filter((p) => p.tags.includes(tag));
+  return posts.filter((post) => post.tags.includes(tag));
 }
 
 function loadDir(dir) {
@@ -356,20 +356,20 @@ function loadDir(dir) {
   // Underscore-prefixed .md (e.g. posts/_TEMPLATE.md) are authoring aids,
   // never posts — skipped before parsing so the template stays 0 bytes in
   // prod AND under BUILD_DRAFTS=1 (its draft:true is the second guard).
-  return readdirSync(dir).filter((f) => f.endsWith('.md') && !f.startsWith('_') && !f.startsWith('.')).sort().map((f) => {
-    const raw = readFileSync(join(dir, f));
+  return readdirSync(dir).filter((file) => file.endsWith('.md') && !file.startsWith('_') && !file.startsWith('.')).sort().map((file) => {
+    const raw = readFileSync(join(dir, file));
     const parsed = matter(raw.toString());
-    const fm = assertFrontmatter(parsed.data, f);
-    const slug = slugOf(f);
-    return { ...fm, slug, body: parsed.content, minutes: readingMinutes(parsed.content), draftHash: createHash('sha256').update(raw).digest('hex').slice(0, 12) };
+    const frontmatter = assertFrontmatter(parsed.data, file);
+    const slug = slugOf(file);
+    return { ...frontmatter, slug, body: parsed.content, minutes: readingMinutes(parsed.content), draftHash: createHash('sha256').update(raw).digest('hex').slice(0, 12) };
   });
 }
 
 const now = new Date();
-const isScheduledDraft = (p) => p.draft || p.date > now;
+const isScheduledDraft = (post) => post.draft || post.date > now;
 const all = [...loadDir(POSTS_DIR), ...loadDir(DRAFTS_DIR)];
 // Sort by parsed-date UTC explicitly (E1 rule b — no deploy-order/TZ bugs).
-const published = all.filter((p) => !isScheduledDraft(p)).sort((a, b) => b.date - a.date);
+const published = all.filter((post) => !isScheduledDraft(post)).sort((first, second) => second.date - first.date);
 const drafts = all.filter(isScheduledDraft);
 
 // E6: clean blog/ every build (artifact deploy makes full-clean free;
@@ -404,42 +404,42 @@ for (const post of published) {
 // pages, never render-blocking. Result links built via DOM (no innerHTML of
 // index content). Ignored by the js/ budget by construction (inline island).
 function searchScripts() {
-  return `<script>\n(function () {\n` +
-    `  var input = document.getElementById('blog-search');\n` +
-    `  if (!input) return;\n` +
-    `  var list = document.getElementById('blog-search-results');\n` +
-    `  var loaded = null;\n` +
-    `  var load = function () {\n` +
-    `    if (!loaded) loaded = import('/pagefind/pagefind.js').catch(function () { return null; });\n` +
-    `    return loaded;\n` +
-    `  };\n` +
-    `  input.addEventListener('focus', load, { once: true });\n` +
-    `  var t;\n` +
-    `  input.addEventListener('input', function () {\n` +
-    `    clearTimeout(t);\n` +
-    `    var q = input.value.trim();\n` +
-    `    if (!q) { list.innerHTML = ''; return; }\n` +
-    `    t = setTimeout(function () {\n` +
-    `      load().then(function (pf) {\n` +
-    `        if (!pf) return;\n` +
-    `        pf.search(q).then(function (r) {\n` +
-    `          return Promise.all((r.results || []).slice(0, 8).map(function (x) { return x.data(); }));\n` +
-    `        }).then(function (found) {\n` +
-    `          list.innerHTML = '';\n` +
-    `          found.forEach(function (d) {\n` +
-    `            var a = document.createElement('a');\n` +
-    `            a.href = d.url; a.textContent = (d.meta && d.meta.title) || d.url;\n` +
-    `            var li = document.createElement('li'); li.appendChild(a); list.appendChild(li);\n` +
-    `          });\n` +
-    `        });\n` +
-    `      });\n` +
-    `    }, 200);\n` +
-    `  });\n` +
-    `})();\n</script>`;
+  return '<script>\n(function () {\n' +
+    "  var input = document.getElementById('blog-search');\n" +
+    '  if (!input) return;\n' +
+    "  var list = document.getElementById('blog-search-results');\n" +
+    '  var loaded = null;\n' +
+    '  var load = function () {\n' +
+    "    if (!loaded) loaded = import('/pagefind/pagefind.js').catch(function () { return null; });\n" +
+    '    return loaded;\n' +
+    '  };\n' +
+    "  input.addEventListener('focus', load, { once: true });\n" +
+    '  var t;\n' +
+    "  input.addEventListener('input', function () {\n" +
+    '    clearTimeout(t);\n' +
+    '    var q = input.value.trim();\n' +
+    "    if (!q) { list.innerHTML = ''; return; }\n" +
+    '    t = setTimeout(function () {\n' +
+    '      load().then(function (pf) {\n' +
+    '        if (!pf) return;\n' +
+    '        pf.search(q).then(function (r) {\n' +
+    '          return Promise.all((r.results || []).slice(0, 8).map(function (x) { return x.data(); }));\n' +
+    '        }).then(function (found) {\n' +
+    "          list.innerHTML = '';\n" +
+    '          found.forEach(function (d) {\n' +
+    "            var a = document.createElement('a');\n" +
+    '            a.href = d.url; a.textContent = (d.meta && d.meta.title) || d.url;\n' +
+    "            var li = document.createElement('li'); li.appendChild(a); list.appendChild(li);\n" +
+    '          });\n' +
+    '        });\n' +
+    '      });\n' +
+    '    }, 200);\n' +
+    '  });\n' +
+    '})();\n</script>';
 }
 
 // Index page (published only — drafts never listed).
-const items = published.map((p) => `  <li><a href="/blog/${p.slug}/">${escapeHtml(p.title)}</a> — ${p.date.toISOString().slice(0, 10)}</li>`).join('\n');
+const items = published.map((post) => `  <li><a href="/blog/${post.slug}/">${escapeHtml(post.title)}</a> — ${post.date.toISOString().slice(0, 10)}</li>`).join('\n');
 const INDEX_OG = ogHead({ title: 'Blog — dvxb.io', description: 'Posts on systems, reliability, and tooling.', canonical: `${SITE_URL}/blog/` });
 writeFileSync(join(OUT_DIR, 'index.html'), ignoreChrome(renderTemplate('shell.html', {
   TITLE: 'Blog — dvxb.io',
@@ -454,10 +454,10 @@ writeFileSync(join(OUT_DIR, 'index.html'), ignoreChrome(renderTemplate('shell.ht
 })));
 
 // Tag pages (published only).
-const tags = [...new Set(published.flatMap((p) => p.tags))].sort();
+const tags = [...new Set(published.flatMap((post) => post.tags))].sort();
 for (const tag of tags) {
   const tagged = getFilteredByTag(published, tag);
-  const lis = tagged.map((p) => `  <li><a href="/blog/${p.slug}/">${escapeHtml(p.title)}</a></li>`).join('\n');
+  const lis = tagged.map((post) => `  <li><a href="/blog/${post.slug}/">${escapeHtml(post.title)}</a></li>`).join('\n');
   const dir = join(OUT_DIR, 'tag', tag);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'index.html'), ignoreChrome(renderTemplate('shell.html', {
@@ -474,20 +474,20 @@ for (const tag of tags) {
 
 // posts.json manifest (published only): feeds sitemap per-post lastmod +
 // IndexNow URL list via tools/site-urls.mjs. Drafts never listed.
-writeFileSync(join(OUT_DIR, 'posts.json'), `${JSON.stringify(published.map((p) => ({ slug: p.slug, date: p.date.toISOString(), tags: p.tags })), null, 2)}\n`);
+writeFileSync(join(OUT_DIR, 'posts.json'), `${JSON.stringify(published.map((post) => ({ slug: post.slug, date: post.date.toISOString(), tags: post.tags })), null, 2)}\n`);
 
 // Hand-rolled rss.xml (~20 lines, zero dep — astro-rss item shape as model:
 // title/description/link/pubDate; E4 hardening: absolute URLs, XML-escaped
 // fields, guid permalink, content:encoded full text, RFC-822 dates).
-const rfc822 = (d) => d.toUTCString();
+const rfc822 = (date) => date.toUTCString();
 const cdata = (html) => html.replace(/]]>/g, ']]&gt;');
-const feedItems = published.map((p) => `  <item>
-    <title>${escapeHtml(p.title)}</title>
-    <link>${SITE_URL}/blog/${p.slug}/</link>
-    <guid isPermaLink="true">${SITE_URL}/blog/${p.slug}/</guid>
-    <pubDate>${rfc822(p.date)}</pubDate>
-    <description>${escapeHtml(p.description)}</description>
-    <content:encoded><![CDATA[${cdata(p.html)}]]></content:encoded>
+const feedItems = published.map((post) => `  <item>
+    <title>${escapeHtml(post.title)}</title>
+    <link>${SITE_URL}/blog/${post.slug}/</link>
+    <guid isPermaLink="true">${SITE_URL}/blog/${post.slug}/</guid>
+    <pubDate>${rfc822(post.date)}</pubDate>
+    <description>${escapeHtml(post.description)}</description>
+    <content:encoded><![CDATA[${cdata(post.html)}]]></content:encoded>
   </item>`).join('\n');
 writeFileSync(join(OUT_DIR, 'rss.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">

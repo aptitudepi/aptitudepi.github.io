@@ -156,11 +156,11 @@ function showError(msg) {
 // NOTE: no ?draft= route (deferred per PLAN-BLOG.md E2 — unlisted+noindex
 // or PR previews instead of token URLs).
 function isAllowedUrl(raw) {
-  let u;
-  try { u = new URL(raw, window.location.href); } catch (_) { return false; }
-  if (u.origin === window.location.origin) return u.protocol === 'http:' || u.protocol === 'https:';
-  if (u.protocol !== 'https:') return false;
-  const host = u.hostname.toLowerCase().replace(/\.$/, '');
+  let parsedUrl;
+  try { parsedUrl = new URL(raw, window.location.href); } catch { return false; }
+  if (parsedUrl.origin === window.location.origin) return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+  if (parsedUrl.protocol !== 'https:') return false;
+  const host = parsedUrl.hostname.toLowerCase().replace(/\.$/, '');
   if (host === 'localhost' || host === '::1' || host === '0.0.0.0') return false;
   if (/^(127|0)\./.test(host)) return false;
   if (/^10\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host)) return false;
@@ -171,13 +171,13 @@ function isAllowedUrl(raw) {
   return true;
 }
 
-function render(md) {
+function render(markdown) {
   if (!window.marked) {
     content.innerHTML = '<div class="error">Marked library failed to load. Reload the page.</div>';
     return;
   }
   marked.setOptions({ breaks: true, gfm: true });
-  const html = marked.parse(md);
+  const html = marked.parse(markdown);
   const clean = DOMPurify ? DOMPurify.sanitize(html) : html;
   content.innerHTML = clean;
   document.querySelectorAll('pre code').forEach(block => {
@@ -206,9 +206,9 @@ async function load(url) {
     const text = await resp.text();
     statusEl.textContent = `${(text.length / 1024).toFixed(1)} KB`;
     render(text);
-  } catch (e) {
+  } catch (loadError) {
     statusEl.textContent = 'Error';
-    showError('Failed to load markdown: ' + (e && e.message ? e.message : e));
+    showError('Failed to load markdown: ' + (loadError && loadError.message ? loadError.message : loadError));
   }
 }
 
@@ -220,7 +220,7 @@ if (initialUrl) {
 }
 
 goBtn.addEventListener('click', () => load(urlInput.value.trim()));
-urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') load(urlInput.value.trim()); });
+urlInput.addEventListener('keydown', event => { if (event.key === 'Enter') load(urlInput.value.trim()); });
 </script>
 </body>
 </html>

@@ -37,20 +37,20 @@ export function readBlogManifest() {
 export function blogEntries() {
   const posts = readBlogManifest();
   if (posts.length === 0) return [];
-  const latest = posts.map((p) => p.date.slice(0, 10)).sort().at(-1);
+  const latest = posts.map((post) => post.date.slice(0, 10)).sort().at(-1);
   const entries = [
     { loc: `https://${HOST}/blog/`, changefreq: 'weekly', priority: '0.8', lastmod: latest },
     { loc: `https://${HOST}/blog/rss.xml`, changefreq: 'weekly', priority: '0.4', lastmod: latest },
   ];
-  for (const p of posts) {
-    entries.push({ loc: `https://${HOST}/blog/${p.slug}/`, changefreq: 'monthly', priority: '0.7', lastmod: p.date.slice(0, 10) });
+  for (const post of posts) {
+    entries.push({ loc: `https://${HOST}/blog/${post.slug}/`, changefreq: 'monthly', priority: '0.7', lastmod: post.date.slice(0, 10) });
   }
-  for (const tag of [...new Set(posts.flatMap((p) => p.tags))].sort()) {
+  for (const tag of [...new Set(posts.flatMap((post) => post.tags))].sort()) {
     entries.push({ loc: `https://${HOST}/blog/tag/${tag}/`, changefreq: 'weekly', priority: '0.5', lastmod: latest });
   }
   return entries;
 }
 
 export function allUrls() {
-  return [...URL_LIST, ...blogEntries().map((e) => e.loc)];
+  return [...URL_LIST, ...blogEntries().map((entry) => entry.loc)];
 }
