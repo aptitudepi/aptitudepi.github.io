@@ -1441,3 +1441,167 @@ prod state (`blog/` = index/posts.json/rss.xml, 0 draft bytes).
 Skipped: `__NAV__` slot conversion for `man.html` (hardcoded +1 line holds;
 fork-collapse stays a §9 follow-up), md-viewer (own toolbar, no doc nav),
 footers (no page links).
+
+---
+## Appendix M — Easiest authoring flow proposal (2026-10-13 UTC, design-only, nothing built)
+
+Goal: 3-command flow — `bun new-post <slug>` → write → `bun preview` → push.
+Foundation reused as-is: `posts/_TEMPLATE.md` (double-guarded `_*.md` skip +
+`draft:true`), `tools/build-blog.mjs` draft gate (`draft:true`/future-date →
+zero prod bytes; `BUILD_DRAFTS=1` → `blog/draft/<sha12>/` + `noindex`), 11
+shell slots, RSS + `assert-rss.mjs`, Pagefind (`build:pagefind` + `PAGEFIND=0`
+gate), sharp AVIF→WebP→JPEG island, vendored asciinema 3.17.0, `static.yml`
+(blog→rss→pagefind→sitemap→IndexNow, `rm -rf full-cv posts` from artifact),
+`docs/buttondown.md` bridge, branch `feat/blog-foundation` (PR #24).
+Ranked by impact/effort (impact = mistakes prevented × frequency). Each item
+lists exact commands/files; nothing here is implemented.
+
+### M1. `bun new-post <slug>` — scaffolder (DO FIRST; ~30 lines, highest leverage)
+- **Why first:** #1 authoring failure is slug-regex (`^[a-z0-9-]+$`) +
+  frontmatter-key (`description` not `desc`, `tags` array, date parseable) →
+  CI-red in `assertFrontmatter`. Scaffolder kills the whole class.
+- **Files:** new `tools/new-post.mjs` (~30 lines, no deps: `node:fs`,
+  `node:path` only) + 1 line in `package.json`:
+  `"new-post": "bun tools/new-post.mjs"`.
+- **Behavior:** `bun new-post my-slug` → validates slug regex (same as
+  `slugOf()`), refuses on collision (`posts/<slug>.md` or `_drafts/<slug>.md`
+  exists), copies `posts/_TEMPLATE.md`, stamps `date: "<today YYYY-MM-DD>"`,
+  strips the `draft:true` guard comment? No — keeps `draft:true` (safe
+  default; publish = delete the line), prints next steps
+  (`bun preview` URL shape + publish checklist). `--drafts` flag writes to
+  `posts/_drafts/<slug>.md` instead (default: `posts/<slug>.md` with
+  `draft:true`, so the file is visible but unshipped).
+- **Verify:** `bun new-post bad_Slug` exits 1 with the regex hint;
+  `bun new-post ok-slug` → prod build 0 new bytes, `BUILD_DRAFTS=1` build
+  renders `blog/draft/<sha12>/`; delete the test file after.
+
+### M2. `bun preview` — watch+serve (DO SECOND; 1–2 lines, no new file)
+- **Why:** `_TEMPLATE.md` comment documents a 2-step preview
+  (`BUILD_DRAFTS=1 node tools/build-blog.mjs + python3 -m http.server`);
+  one command makes it stick.
+- **Files:** `package.json` only:
+  `"preview": "BUILD_DRAFTS=1 bun tools/build-blog.mjs && python3 -m http.server 8000"`,
+  `"preview:watch": "BUILD_DRAFTS=1 bun --watch tools/build-blog.mjs"`
+  (serve in a second terminal; `bun --watch` re-runs on `posts/**` saves —
+  no chokidar/nodemon dep).
+- **Verify:** `bun preview` → draft URL prints from build output
+  (`wrote blog/draft/<sha12>/index.html`); open `http://localhost:8000/`
+  + index. No CI change (prod never sets `BUILD_DRAFTS`).
+
+### M3. VSCode snippet + tasks (~15 min, zero runtime, zero risk)
+- **Files:** new `.vscode/blog.code-snippets` (frontmatter skeleton with
+  `description`/`tags: [""]`/`draft: true` placeholders + `![alt](./hero.png)`
+  + `## / ###` stubs — catches `desc`-vs-`description` at type time),
+  new `.vscode/tasks.json` (tasks: `blog: new-post` (input slug),
+  `blog: preview` (`preview:watch`), `blog: build-prod`,
+  `blog: check` (M5); problemMatcher `$node` so `assertFrontmatter` throws
+  surface in VSCode). `.vscode/settings.json` exists (3 lines) — extend,
+  don't replace.
+- **Verify:** `Cmd+Shift+P → Run Task → blog: preview` works from a fresh
+  clone with only `bun install`.
+
+### M4. Friendlier frontmatter errors (~10-line diff, no new file)
+- **File:** `tools/build-blog.mjs` `assertFrontmatter()` only.
+- **Change:** keep every current check (no schema loosening), but format
+  throws as `posts/<file>: field '<key>' — <what's wrong> — fix: <one-liner>`
+  + print the valid keys line
+  (`title/description/date/tags/image/cast/draft`) and the slug rule on
+  slug failures. Add optional `bun check:post <file>` alias that parses one
+  file through `matter` + `assertFrontmatter` + `slugOf` without building
+  (fast pre-flight; reuses the same functions, ~10 lines in the same file
+  guarded by `process.argv`).
+- **Verify:** each violation class (missing title, `desc:` key, string tags,
+  unparseable date, non-boolean draft, bad slug) prints file + fix hint;
+  existing green/red cases unchanged.
+
+### M5. `bun check` pre-push aggregate (compose gates, no new logic)
+- **Files:** `package.json` 1 line:
+  `"check": "bun tools/build-blog.mjs && BUILD_DRAFTS=1 bun tools/build-blog.mjs && bun run assert:rss && bun run check:budgets"`.
+  Optional: `.git/hooks/pre-push` 3-liner calling `bun run check`
+  (committed as `docs/pre-push.sample`, copied manually — NO husky/lefthook
+  dep at ~10 posts/yr).
+- **Why this order:** prod build (zero-draft-bytes) → preview build (draft
+  renders) → feed assert → budgets (worst-post 15k gzip + images 500k).
+  Mirrors `static.yml` sequence locally so push-day CI-red disappears.
+- **Verify:** `bun run check` green on the fixture-only tree; temp published
+  post keeps it green; missing-image/missing-cast fixtures turn it red.
+
+### M6. Image/cast micro-helpers (docs + tiny wrapper, NO new pipeline)
+- **Reality:** `renderPostImages` already resizes/converts/validates (sharp
+  AVIF q60/WebP q80/JPEG q85, never-upscale, LQIP, CI-red on miss);
+  `castEmbed` already copies/validates/transcribes. Don't build a resizer —
+  document the two one-liners and add one read-only checker.
+- **Files:** (a) 10-line section appended to `posts/_TEMPLATE.md` comment:
+  `asciinema rec posts/<slug>/demo.cast` (v3 file, cap 80×24 at record time)
+  + `![alt](./hero.png)` naming rule; (b) optional
+  `package.json` alias `"check:media": "bun tools/build-blog.mjs"`
+  (the build IS the checker — missing source already throws); (c) defer
+  `bun poster <cast>` (extract `npt:0:05` still) until a second cast post
+  proves the need — poster is already a player opt, not a build step.
+- **Verify:** oversized hero still builds (sharp caps at native width);
+  missing `./hero.png`/`.cast` still CI-red with the source dir in the message.
+
+### M7. Buttondown bridge checklist (docs-only, already exists)
+- **Files:** `docs/buttondown.md` EXISTS (feed URL, create-draft mode,
+  canonical passthrough, archive = web-version, drafts-can't-email by
+  construction). Change = 3-line footer appended to `posts/_TEMPLATE.md`
+  comment linking it + publish checklist (publish `posts/<slug>.md` →
+  CI green → approve drafted Buttondown issue → verify OG unfurl once per
+  template). Optional alias `"check:feed": "bun run assert:rss"`.
+- **Explicitly manual (correct):** account creation, RSS-automation setup,
+  per-issue approval stay dashboard clicks — no code, no webhook, no Worker.
+- **Verify:** feed for a temp published post passes `assert:rss` and shows
+  the approved draft in Buttondown; draft/future posts never appear in feed.
+
+### M8. Terminal `blog` command (LAST, only if trivial after M1–M7)
+- **File:** `js/commands.js` registry only (~20 lines, same shape as `wall`
+  read path): `blog` → fetch `blog/posts.json` (static, no backend, no auth)
+  → list latest 8 (title + date); `blog <slug>` → `window.open('/blog/<slug>/')`.
+  Reuses the existing fetch-timeout + error-text pattern; no KV/R2/Worker.
+- **Why last:** zero authoring gain (discovery only), touches snapshot goldens
+  (`logs/terminal-goldens/`) + `assert-registry.mjs` count (36 → 37) + help
+  text. Gating: build only when M1–M5 are landed and goldens regen is already
+  scheduled for another reason.
+- **Verify:** `blog` offline prints the static fallback; registry count bump
+  asserted; goldens regen reviewed (no unrelated diffs).
+
+### M9. Explicitly NOT building (ponytail cuts)
+- Per-dir `posts/posts.json` defaults (C1), generated OG social cards
+  (`image:` override suffices), R2 media overflow (D4.1 size trigger only),
+  WYSIWYG/CMS/admin UI (violates no-auth + git-history wins, App D5), `zod`
+  (asserts suffice, E1), DOMPurify-at-build (trusted own-authored MD; stays
+  client-side), hook frameworks (husky/lefthook — one sample file max),
+  file watchers beyond `bun --watch`, `?draft=` token URLs (no static-native
+  gate exists, E2), comments/`/r` beacon/D1 (locked out of v1, K1/L6).
+
+### M10. Landing order
+M1 → M2 (first productive afternoon; both unblock daily writing) → M3+M4
+(same PR, polish) → M5 (before first real post) → M6-docs + M7-link (with
+first real post) → M8 (only opportunistic). Total new code if all built:
+~70 lines (`new-post.mjs` ~30 + asserts polish ~10 + tasks/snippets JSON ~30)
+plus 4–5 `package.json` script lines. No new npm deps. No CI behavior change
+until a real `posts/<slug>.md` lands.
+
+---
+## Authoring wins — new-post scaffolder + npm/VSCode shortcuts (2026-10-13 UTC)
+
+**Added:** `tools/new-post.mjs` (stdlib only, node+bun) — `"Title"` → slugify →
+`posts/<slug>.md` from `_TEMPLATE.md` with title/date filled (+ `--desc/--tags/--image/--slug/--date`
+overrides), `draft: true` forced. Fail-loud exit 1: missing title, bad slug
+(`^[a-z0-9-]+$`, `--slug` verbatim), overwrite (`posts/` + `posts/_drafts/`),
+bad `--date`, missing template. Usage: `bun tools/new-post.mjs "My Title" --tags a,b --image ./hero.png`.
+`package.json`: `new-post`, `preview` (`BUILD_DRAFTS=1` build + `python3 -m http.server 8000`),
+`preview:prod` (prod build + serve). `.vscode/tasks.json` (new-post w/ title prompt,
+preview, prod build) + `.vscode/blog-post.code-snippets` (`post` prefix frontmatter).
+Zero new deps; no existing tool touched.
+
+**Verify:** scaffolder create → frontmatter correct (title/date/desc/tags, draft:true);
+no-args / bad-`--slug` / overwrite all exit 1; bun path confirmed. Prod build with
+scaffolded draft present: 2 drafts skipped, `blog/draft/` absent, slug in none of
+index/rss/posts.json. `BUILD_DRAFTS=1`: fixture draft → `blog/draft/<sha12>/`;
+rebuilt prod after (tree left prod: index/posts.json/rss.xml, 0 draft bytes; temp
+posts deleted). Budgets 6/6, registry 52/36, rss green (0 items). Old 5 pages
+(resume/cv/man-index/man-resume/man-dvxb.io.7.html) `sha256sum -c` identical.
+
+Skipped: `--watch` mode (no watcher infra; rerun build), snippet `cast:`/`image:`
+lines (template comment covers them; scaffold keeps template defaults unless flagged).
