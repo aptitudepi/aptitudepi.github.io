@@ -292,11 +292,17 @@ function castTranscript(castText) {
       if (evt[1] === 'o' && typeof evt[2] === 'string') out.push(evt[2]);
     } catch { /* malformed event line: skip, player still plays the file */ }
   }
-  // Strip ANSI escapes (libterm/cell-term fallback pattern, build-time).
-  return out.join('').replace(/\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b[()][0-9A-B]/g, '').replace(/\r/g, '').slice(0, 8000);
+  // Strip ANSI escapes (libterm/cell-term fallback pattern, build-time). ESC
+  // (27) and BEL (7) are composed via fromCharCode so no control characters
+  // appear in the regex source (JS-0004/W1035); the u flag (JS-0117) keeps
+  // the character class semantics explicit.
+  const esc = String.fromCharCode(27);
+  const bel = String.fromCharCode(7);
+  const ansi = new RegExp(`${esc}\\[[0-9;?]*[a-zA-Z]|${esc}\\][^${bel}]*${bel}|${esc}[()][0-9A-B]`, 'gu');
+  return out.join('').replace(ansi, '').replace(/\r/g, '').slice(0, 8000);
 }
 
-async function castEmbed(post, srcDir, slugDir, urlBase) {
+function castEmbed(post, srcDir, slugDir, urlBase) {
   const srcFile = post.cast.startsWith('/') ? join(SITE, post.cast.slice(1)) : join(srcDir, post.cast);
   if (!existsSync(srcFile)) throw new Error(`cast ${post.cast}: not found relative to ${srcDir}`);
   const leaf = post.cast.slice(post.cast.lastIndexOf('/') + 1);
