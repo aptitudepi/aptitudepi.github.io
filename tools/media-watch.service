@@ -1,0 +1,10 @@
+[Unit]
+Description=media-watch folder action (inbox to R2)
+After=network-online.target
+[Service]
+Type=simple
+ExecStart=%h/repos/aptitudepi.github.io/tools/media-watch.sh
+Restart=on-failure
+RestartSec=10
+[Install]
+WantedBy=default.target

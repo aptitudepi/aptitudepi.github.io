@@ -10,7 +10,7 @@
     {
       "label": "blog: preview (drafts)",
       "type": "shell",
-      "command": "BUILD_DRAFTS=1 node tools/build-blog.mjs && python3 -m http.server 8000",
+      "command": "BUILD_DRAFTS=1 node tools/build-blog.mjs && python3 -m http.server 8089",
       "problemMatcher": []
     },
     {
