@@ -261,6 +261,53 @@ body::before {
   color: var(--color-text);
 }
 
+/* ── Gallery — CSS-only carousel ──────────────
+   Post-image galleries are a horizontal snap scroller; prev/next are plain
+   fragment links, so no JS is involved. Progressive enhancement only: post
+   pages inject a <noscript> sheet that reverts .gallery to the stacked block,
+   which is what noscript/RSS readers get. */
+.gallery {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding-bottom: var(--space-2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-terminal-border) transparent;
+}
+.gallery-item {
+  flex: 0 0 auto;
+  margin: 0;
+  scroll-snap-align: center;
+}
+.gallery-item img { max-height: 60vh; }
+.gallery-item figcaption {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+}
+.gallery-nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.gallery-nav-btn {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  transition: color var(--transition-interactive), border-color var(--transition-interactive);
+}
+.gallery-nav-btn:hover { color: var(--color-primary); border-color: var(--color-primary); }
+@media (prefers-reduced-motion: reduce) {
+  .gallery { scroll-behavior: auto; }
+}
+
 /* ── Misc inline ─────────────────────────── */
 .math-text { font-style: normal; }
 .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; }
@@ -275,6 +322,24 @@ body::before {
   padding: 0 0.35em;
   font-size: 0.9em;
 }
+
+/* ── Blog posts ──────────────────────────── */
+.post-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--space-3);
+  color: var(--color-text);
+}
+.post-meta {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-8);
+}
+.doc-panel h2 { font-size: 1.25rem; line-height: 1.3; margin: var(--space-8) 0 var(--space-3); }
+.doc-panel h3 { font-size: 1.0625rem; line-height: 1.35; margin: var(--space-6) 0 var(--space-2); }
 
 /* ── Responsive ──────────────────────────── */
 @media (max-width: 640px) {

@@ -9,9 +9,9 @@ no CI gate — run it before pushing a wave that touches `js/` or `css/`.
 
 | Asset | Measured gzip | Budget gzip | Headroom |
 |---|---|---|---|
-| `js/` total (37 modules) | 225,554 B (~220 KiB) | ≤ 226,500 B | ~0.4% |
-| `js/commands.js` (largest single module) | 63,818 B | ≤ 64,600 B | ~1.2% |
-| `css/` total (12 sheets) | 23,309 B (~23 KiB) | ≤ 23,600 B | ~1.2% |
+| `js/` total (37 modules) | 225,554 B (~220 KiB) | ≤ 229,000 B | ~1.5% |
+| `js/commands.js` (largest single module) | 63,818 B | ≤ 65,600 B | ~2.6% |
+| `css/` total (12 sheets) | 23,963 B (~23 KiB) | ≤ 24,100 B | ~0.6% |
 | `index.html` | 9,975 B | ≤ 10,000 B | ~0.3% |
 
 Budget history: raised 2026-10-04 for the playground wave — `js/` gained the
@@ -59,14 +59,85 @@ Budget history: feat/radar-goals (fixed-goal radar normalization) bumped
 Budget history: feat/activity-wide (no-h-scroll activity pane) bumped `css/`
 23,500→23,600: the delta is the wider pane (1180px breakout + 2.2fr share,
 10px cells, clip/auto overflow) — no new sheets, no JS.
+Budget history: feat/blog-dx (gallery carousel) bumped `css/` 23,600→24,100
+(measured gzip 23,963): the delta is the `.gallery` / `.gallery-item` /
+`.gallery-nav` block in `doc.css` — flex row, `overflow-x:auto`,
+`scroll-snap-type:x mandatory`, `scroll-behavior:smooth` with a
+`prefers-reduced-motion` opt-out, and a thin scrollbar themed with existing
+`--color-terminal-border`. Pure CSS enhancement over the existing stacked
+`<figure>` markup: post pages inject a `<noscript>` sheet that reverts
+`.gallery` to the vertical stack, and the prev/next controls are fragment
+links, so the carousel costs zero JS and no-JS/RSS readers keep every photo
+stacked in document order. No new sheets, no new colours, no new tokens.
+Budget history: feat/blog-dx (`ring` easter egg) bumped `js/commands.js`
+64,600→65,000: the delta is the unlisted registry entry + `runRingCommand`
+(ASCII art + 3 lines, no help row, no allowlist change — 36/34 goldens hold).
+Budget history: feat/blog-dx (`ring` art upgrade) bumped `js/`
+228,000→229,000 and `js/commands.js` 65,000→65,500: the 4-line glyph
+became a 23-line converter-rendered ring-face seal (official Association
+art, mono `SITE_WHITE`, facts + publishing-soon link order unchanged).
+Budget history: feat/blog-dx (`ring` aspect fix) bumped `js/commands.js`
+65,500→65,600 (measured gzip 65,502): the 50-wide seal was sampled
+pixel-faithful from its 700x370 source with no cell-aspect correction, so
+1:2 terminal cells stretched the oval ~1.8x tall; the replacement 64x25
+art is the same official crop center-cut to the seal, sampled at the
+cell-corrected height (`H = W·Hs/(2·Ws)`), default charset.
+Budget history: feat/blog-dx (terminal/thermal height fix) bumped `js/`
+229,000→229,500 (measured gzip 229,181): the delta is `syncRowsToThermal`
+in `js/terminal.js` (thermal-matched row resize + column/chrome observers,
+no terminal strings changed — goldens hold).
+Budget history: feat/blog-dx (`ring` braille upgrade) bumped `js/`
+229,500→230,000 and `js/commands.js` 65,600→66,200 (measured gzip 65,718):
+the 23-line mono ASCII seal became a 14-line braille seal (36 cols max,
+72x56 dots, equalize + plain threshold from the same face-tight official
+crop, mono `SITE_WHITE`, facts + publishing-soon link order unchanged,
+still unlisted — 53/36 goldens hold).
+Budget history: feat/blog-dx (`ring` mono revert) needs no bump
+(measured gzip 65,505, under the 66,200 ceiling): the 14-line braille
+seal became a 20-line mono seal (64 cols, cell-corrected 64x20 from a
+tighter 560x345 face crop of the same official art, autocontrast +
+contrast + sharpen, mono `SITE_WHITE`, facts + publishing-soon link
+order unchanged, still unlisted — 53/36 hold).
+Budget history: feat/blog-dx (`ring` crest re-render) bumped `js/`
+230,000→230,600 and `js/commands.js` 66,200→66,800 (measured gzip
+66,376): the 13-line seal became a 20-line bg-removed crest (52 cols
+max, `-W 64` braille at threshold 170, margin-trimmed, mono
+`SITE_WHITE`, facts + publishing-soon link order unchanged, still
+unlisted — 53/36 hold).
+Budget history: feat/blog-dx (`ring` art 65-wide) bumped `js/`
+230,600→231,200 and `js/commands.js` 66,800→67,500 (measured gzip
+66,981): the 20-line 52-col crest became the 25-line 65-col crest
+(raw `-W 81` braille at threshold 170, margin-trimmed, mono
+`SITE_WHITE`, facts + publishing-soon link order unchanged, still
+unlisted — 53/36 hold).
+Budget history: feat/blog-dx (`ring` responsive dual art) bumped `js/`
+231,200→233,000 and `js/commands.js` 67,500→69,000 (measured gzip
+68,426 / `js/` total 232,105): both arts ship — 25-line 65-col detailed
+crest at term.cols >= 75, 20-line 52-col compact crest below/fallback —
+picked at runtime from `term.cols` (bytes ~ sum: the compact 20-liner
+duplicates the crest with no shared encoding, the lazy tradeoff for zero
+runtime cost), facts + publishing-soon link order unchanged, still
+unlisted.
 
 ## Blog budgets (appended 2026-10-11, existing 4 entries untouched)
 
 | Asset | Budget gzip | Notes |
 |---|---|---|
 | `blog/` per-post HTML (max per file) | ≤ 15,000 B | Worst-file ceiling over `blog/**/*.html` (shell + `__META__` + body); missing dir = 0, passes |
-| blog images total (`assets/blog/` + `images/blog/`) | ≤ 500,000 B | Sum over AVIF/WebP/JPEG/PNG/GIF/SVG; post images belong in those dirs so base budgets stay unaffected |
+| blog images total (`assets/blog/` + `images/blog/`) | ≤ 2,000,000 B | Sum over AVIF/WebP/JPEG/PNG/GIF/SVG; post images belong in those dirs so base budgets stay unaffected |
 | `blog/` generated images (step 5–6, 2026-10-12) | included in blog images total | `check-budgets.mjs` image-total also scans `blog/` for image extensions (responsive `<picture>` variants under `blog/<slug>/img/` + OG cards; HTML/RSS/JSON untouched). `.gitignore` artifact rule re-scoped to root `/blog/` so `assets/blog/` + `images/blog/` stay committable. Read-UX island JS rides inline `__SCRIPTS__` (same island-exclusion as player/search). |
+
+Budget history: gallery fallback (2026-10-14, App Q3 evidence): blog images
+total 500,000→2,000,000 — 500k fits zero real photos (one 3024px hero ≈
+5.5 MB raw, images barely gzip); 2 MB fits 1–2 photos + OG card while still
+gating a 24-photo repeat of App P. Native tier capped at 1920 the same pass
+(Q1: the >1920 tier serves nobody at 960 CSS px).
+Budget history: variant cut (2026-10-16): 5 widths × 3 formats (≤15 files)
+→ single 960w AVIF + JPEG (2 files per photo, 768w for the 768-native
+dinner shot; WebP dropped as redundant between AVIF and JPEG). Measured
+aggie-ring 5-photo total 2.43 MB (1280w) → 1.60 MB gzip, so the 2,000,000
+ceiling holds unchanged with ~20% headroom. sizes already capped at 960
+CSS px, so 960w is exact-fit at 1x, soft at 2x retina (accepted tradeoff).
 
 Island-exclusion rule: blog islands (asciinema player, Pagefind search UI)
 ship via shell.html `__SCRIPTS__` as CDN/vendor payloads inside generated blog
