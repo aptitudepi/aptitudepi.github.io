@@ -114,11 +114,9 @@ jobs:
           pdftotext assets/cv.pdf - | grep -F -q "Texas A&M" \
             || { echo "cv.pdf missing content: Texas A&M"; exit 1; }
 
-      - name: Remove Full-CV checkout and post sources from artifact
-        # posts/ holds md sources + _drafts (unpublished by definition): frozen
-        # blog/ HTML is the serve path (Flow A), so sources must never deploy —
-        # otherwise draft bodies would ship as static files with the artifact.
-        run: rm -rf full-cv posts
+      - name: Remove Full-CV checkout from artifact
+        # full-cv/ is a build-only checkout; never shipped.
+        run: rm -rf full-cv
 
       # CI build metadata for the terminal (`uname -a`, `changelog`/`dmesg`):
       # consumed at runtime via fetch no-store; absent on local previews, so
@@ -185,6 +183,12 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
+      - name: Remove post sources from artifact
+        # posts/ holds md sources + _drafts (unpublished by definition): frozen
+        # blog/ HTML is the serve path, so sources must never deploy — otherwise
+        # draft bodies would ship as static files. Must run AFTER build-blog.
+        run: rm -rf posts
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
