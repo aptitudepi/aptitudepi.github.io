@@ -1500,7 +1500,7 @@ function runMatrixCommand(term) {
   }
   return;
 }
-function runVmCommand(term, runSignal) {
+function runVmCommand(term, args, runSignal) {
   term.writeln(`${SITE_MUTED}Run Linux in your browser — booting Buildroot Linux (5–15s to boot)...${ANSI_RESET}`);
   if (typeof window.bootVM === 'function') {
     return window.bootVM(term, runSignal);
