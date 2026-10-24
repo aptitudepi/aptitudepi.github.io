@@ -1,6 +1,6 @@
 # Performance budgets (Phase 5)
 
-Measured 2026-09-09 on `dev-20260907` (after the Phase 5 pause/hardening wave).
+Measured 2026-10-23 on `feat/blog-dx` (prior measurement 2026-09-09 on `dev-20260907`).
 Sizes are gzip (level 6, Node zlib default) over the working-tree files.
 Enforced locally by `npm run check:budgets` (`tools/check-budgets.mjs`);
 no CI gate — run it before pushing a wave that touches `js/` or `css/`.
@@ -9,10 +9,10 @@ no CI gate — run it before pushing a wave that touches `js/` or `css/`.
 
 | Asset | Measured gzip | Budget gzip | Headroom |
 |---|---|---|---|
-| `js/` total (37 modules) | 225,554 B (~220 KiB) | ≤ 229,000 B | ~1.5% |
-| `js/commands.js` (largest single module) | 63,818 B | ≤ 65,600 B | ~2.6% |
-| `css/` total (12 sheets) | 23,963 B (~23 KiB) | ≤ 24,100 B | ~0.6% |
-| `index.html` | 9,975 B | ≤ 10,000 B | ~0.3% |
+| `js/` total (37 modules) | 231,474 B (~226 KiB) | ≤ 233,000 B | ~0.7% |
+| `js/commands.js` (largest single module) | 68,634 B | ≤ 69,000 B | ~0.5% |
+| `css/` total (12 sheets) | 24,023 B (~23 KiB) | ≤ 24,100 B | ~0.3% |
+| `index.html` | 9,928 B | ≤ 10,000 B | ~0.7% |
 
 Budget history: raised 2026-10-04 for the playground wave — `js/` gained the
 lazy-loaded `pg-life.js` module (dynamic import, `pg life` only) and `css/`
