@@ -28,4 +28,4 @@ if (!vcfLines.some((l) => l.startsWith('EMAIL'))) fail('vCard is missing EMAIL')
 if (vcfLines[vcfLines.length - 1] !== 'END:VCARD') fail('vCard does not end with END:VCARD');
 if (/^TEL/m.test(vcf)) fail('vCard unexpectedly contains a phone number');
 
-console.log(`ok: card noindex + robots disallow + phone-free vCard (${vcfLines.length} lines)`);
+process.stdout.write(`ok: card noindex + robots disallow + phone-free vCard (${vcfLines.length} lines)\n`);
