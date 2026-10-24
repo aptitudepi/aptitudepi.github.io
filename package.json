@@ -8,7 +8,12 @@
     "assert:registry": "node tools/assert-registry.mjs",
     "build:blog": "node tools/build-blog.mjs",
     "build:pagefind": "pagefind --site . --glob 'blog/**/*.html'",
-    "assert:rss": "node tools/assert-rss.mjs"
+    "assert:rss": "node tools/assert-rss.mjs",
+    "new-post": "node tools/new-post.mjs",
+    "preview": "BUILD_DRAFTS=1 node tools/build-blog.mjs && python3 -m http.server 8089",
+    "preview:prod": "node tools/build-blog.mjs && python3 -m http.server 8000",
+    "media:push": "node tools/media-push.mjs",
+    "media:watch": "bash tools/media-watch.sh"
   },
   "dependencies": {
     "marked": "15.0.12",

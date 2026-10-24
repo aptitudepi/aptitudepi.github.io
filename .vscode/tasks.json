@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "blog: new post",
+      "type": "shell",
+      "command": "node tools/new-post.mjs \"${input:postTitle}\"",
+      "problemMatcher": []
+    },
+    {
+      "label": "blog: preview (drafts)",
+      "type": "shell",
+      "command": "BUILD_DRAFTS=1 node tools/build-blog.mjs && python3 -m http.server 8089",
+      "problemMatcher": []
+    },
+    {
+      "label": "blog: build (prod)",
+      "type": "shell",
+      "command": "node tools/build-blog.mjs",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "postTitle",
+      "type": "promptString",
+      "description": "Post title (slug derived automatically)"
+    }
+  ]
+}

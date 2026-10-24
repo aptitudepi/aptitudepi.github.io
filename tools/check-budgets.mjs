@@ -34,9 +34,49 @@ const BUDGET_TABLE = [
   // feat/activity-wide raises css/ 23,500→23,600: the delta is the wider
   // activity pane (1180px breakout + 2.2fr share, 10px cells, clip/auto
   // overflow) — no new sheets, no JS.
-  { label: 'js/ total', kind: 'directory', relativePath: 'js', extension: '.js', maxGzipBytes: 228000 },
-  { label: 'js/commands.js', kind: 'file', relativePath: 'js/commands.js', extension: null, maxGzipBytes: 64600 },
-  { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 23600 },
+  // feat/blog-dx `ring` easter egg raises commands.js 64,600→65,000: the
+  // delta is the unlisted registry entry + runRingCommand (ASCII art + 3
+  // lines, no help row, no allowlist change — 36/34 goldens hold).
+  // feat/blog-dx `ring` art upgrade raises js/ 228,000→229,000 and
+  // commands.js 65,000→65,500: the 4-line glyph becomes a 23-line
+  // converter-rendered ring-face seal (official art, mono SITE_WHITE).
+  { label: 'js/ total', kind: 'directory', relativePath: 'js', extension: '.js', maxGzipBytes: 233000 },
+  // feat/blog-dx `ring` art re-render raises commands.js 65,500→65,600:
+  // the 50-wide seal rendered its 700x370 source pixel-faithful (no
+  // cell-aspect correction), stretching the oval ~1.8x tall on 1:2
+  // cells; the new 64x25 art is the same official Association crop
+  // center-cut (neighbor rings + caption glow out) sampled at the
+  // cell-corrected height, default charset (zero JS-escaping risk).
+  // feat/blog-dx `ring` braille upgrade raises js/ 229,500→230,000 and
+  // commands.js 65,600→66,200: the 23-line mono ASCII seal becomes a
+  // 14-line braille seal (36 cols max, 72x56 dots, equalize + threshold
+  // from the same face-tight official crop, mono SITE_WHITE, facts +
+  // publishing-soon link order unchanged, still unlisted — 53/36 hold).
+  // feat/blog-dx `ring` crest re-render raises js/ 230,000→230,600 and
+  // commands.js 66,200→66,800 (measured gzip 66,376): the 13-line seal
+  // becomes the 20-line bg-removed crest (52 cols max, -W 64 braille,
+  // threshold 170, margin-trimmed, mono SITE_WHITE, facts +
+  // publishing-soon link order unchanged, still unlisted — 53/36 hold).
+  // feat/blog-dx `ring` art 65-wide raises js/ 230,600→231,200 and
+  // commands.js 66,800→67,500 (measured gzip 66,981): the 20-line
+  // 52-col crest becomes the 25-line 65-col crest (raw -W 81 braille
+  // at threshold 170, margin-trimmed, mono SITE_WHITE, facts +
+  // publishing-soon link order unchanged, still unlisted — 53/36 hold).
+  // feat/blog-dx `ring` responsive dual art needs no bump (measured gzip
+  // 67,401 under the 67,500 ceiling; js/ total 230,530 under 231,200):
+  // both arts ship — 25-line 65-col crest at term.cols >= 75, 20-line
+  // 52-col compact crest below/fallback — picked at runtime.
+  // feat/blog-dx `ring` responsive dual art raises js/ 231,200→233,000
+  // and commands.js 67,500→69,000 (measured gzip 68,426 / 232,105): both
+  // arts ship (bytes ~ sum — the compact 20-liner duplicates the crest,
+  // no shared encoding; the lazy tradeoff for zero runtime cost), picked
+  // at runtime from term.cols, facts + link order unchanged, unlisted.
+  { label: 'js/commands.js', kind: 'file', relativePath: 'js/commands.js', extension: null, maxGzipBytes: 69000 },
+  // feat/blog-dx gallery carousel raises css/ 23,600→24,100 (measured gzip
+  // 23,963): the delta is the .gallery/.gallery-nav block in doc.css (flex +
+  // scroll-snap + thin themed scrollbar + reduced-motion opt-out) — the
+  // carousel is CSS-only, no new sheets, no JS.
+  { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 24100 },
   { label: 'index.html', kind: 'file', relativePath: 'index.html', extension: null, maxGzipBytes: 10000 },
   // Blog extension (append-only, 2026-10-11): per-post HTML gzip ceiling +
   // blog image-total ceiling. Island-exclusion rule: blog islands (asciinema
@@ -48,8 +88,12 @@ const BUDGET_TABLE = [
   // exclusion); image-total also scans generated blog/ output (responsive
   // <picture> variants under blog/<slug>/img/ + OG cards) — HTML/RSS/JSON
   // files there are untouched (image extensions only).
+  // Gallery fallback (2026-10-14, App Q3 evidence): image-total 500,000→
+  // 2,000,000 — 500k fits zero real photos (one 3024px hero ≈ 5.5 MB raw,
+  // images barely gzip); 2 MB fits 1–2 photos + OG card while still gating
+  // a 24-photo repeat of App P (gallery stays under the 1-hero rule).
   { label: 'blog/ per-post HTML (max gzip per file)', kind: 'max-per-file', relativePath: 'blog', extension: '.html', maxGzipBytes: 15000 },
-  { label: 'blog images total', kind: 'image-total', relativePath: 'assets/blog,images/blog,blog', extension: null, maxGzipBytes: 500000 },
+  { label: 'blog images total', kind: 'image-total', relativePath: 'assets/blog,images/blog,blog', extension: null, maxGzipBytes: 2000000 },
 ];
 
 function gzipSizeBytes(rawBuffer) {

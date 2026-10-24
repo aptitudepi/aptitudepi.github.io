@@ -27,10 +27,16 @@ HEADINGS/TOC: ## and ### get build-time ids (slugified; dupes get -2/-3).
   <nav class=toc> renders only at 2+ headings — a single h2 = no TOC noise.
 
 IMAGES: ![alt](./file.png) — relative refs resolve against THIS md's dir and
-  become <picture> AVIF→WebP→JPEG × widths [320,640,960,1280,1920] capped at
-  native width (never upscale), w/h attrs, loading=lazy, zero-JS LQIP backdrop;
-  variants land in blog/<slug>/img/. Absolute (/...) and remote (https:) srcs
-  pass through; svg/gif copy through. Missing source = CI-red throw.
+  become a <picture> AVIF + JPEG pair at 960px (capped at native width, never
+  upscale), w/h attrs, loading=lazy, zero-JS LQIP backdrop; two variants land
+  in blog/<slug>/img/. Absolute (/...) and remote (https:) srcs pass through
+  untouched (no variants, no dimensions); svg/gif copy through. Missing
+  source = CI-red throw.
+
+GALLERY: a ```gallery fence holds one ![alt](./file) caption per line and
+  expands to a CSS scroll-snap carousel (figure + caption; first/last fragment
+  links). With scripting off it stacks vertically. Remote https: images work
+  but ship without width/height or variants.
 
 CAST: `cast:` file resolved against this md's dir (/-absolute = site root),
   copied to blog/<slug>/, lazy IntersectionObserver vendored player
@@ -48,7 +54,8 @@ RSS/SITEMAP: published posts ONLY — rss.xml item = title/link/guid/pubDate
   (RFC-822)/description/content:encoded (full HTML); blog/posts.json manifest
   feeds per-post <lastmod> (frontmatter date, never deploy date) + IndexNow.
   Drafts/future posts appear in NONE of index/tag/RSS/sitemap/manifest/feed.
-  Preview: BUILD_DRAFTS=1 node tools/build-blog.mjs + python3 -m http.server.
+  Preview: BUILD_DRAFTS=1 node tools/build-blog.mjs + python3 -m http.server 8089
+  (or `npm run preview`, which does both).
 
 Delete this comment block when starting (or keep — HTML comments don't render).
 -->

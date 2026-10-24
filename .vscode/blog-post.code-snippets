@@ -1,0 +1,18 @@
+{
+  "Blog post frontmatter": {
+    "prefix": "post",
+    "scope": "markdown",
+    "description": "Frontmatter for posts/<slug>.md (full docs in posts/_TEMPLATE.md)",
+    "body": [
+      "---",
+      "title: \"${1:Post title}\"",
+      "description: \"${2:1-2 sentence summary.}\"",
+      "date: \"${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}\"",
+      "tags: [\"${3:systems}\"]",
+      "draft: true",
+      "---",
+      "",
+      "$0"
+    ]
+  }
+}

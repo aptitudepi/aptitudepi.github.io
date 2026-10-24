@@ -1,0 +1,6 @@
+[Unit]
+Description=media-watch inbox trigger
+[Path]
+PathChanged=%h/Pictures/Blog-Inbox
+[Install]
+WantedBy=default.target
