@@ -68,6 +68,8 @@
         </a>
       </div>
 
+      <p class="card-hint card-save-hint" id="card-save-hint" hidden>On Android, tap save contact, then open the downloaded .vcf to add me.</p>
+
       <nav class="card-links" aria-label="Profiles">
         <a href="https://dvxb.io">dvxb.io</a>
         <a href="https://github.com/aptitudepi" target="_blank" rel="me noopener noreferrer">github.com/aptitudepi</a>
@@ -146,6 +148,7 @@
   .card .card-links a { color: var(--color-text-muted); text-decoration: none; width: fit-content; }
   .card .card-links a:hover, .card .card-links a:focus-visible { color: var(--color-primary); }
   .card .card-hint { color: var(--color-text-faint); font-size: 0.78rem; line-height: 1.5; margin: 0; }
+  .card .card-save-hint { margin: 0 0 var(--space-6); }
   .card .card-hint a { color: var(--color-text-muted); text-decoration: underline; text-underline-offset: 3px; }
   .card .card-hint code { font-family: var(--font-mono); color: var(--color-text-muted); }
   @media (max-width: 760px) {
@@ -176,8 +179,17 @@
     const vcf = save.getAttribute('href');
     const ua = navigator.userAgent;
     const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
-    const otherIOSBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
-    if (!ios || otherIOSBrowser || window.top !== window.self) return;
+    const android = /Android/i.test(ua);
+    const hint = document.getElementById('card-save-hint');
+
+    // Android and desktop download the file; iOS hands the bare .vcf URL to
+    // the system contact sheet. A readable filename helps after the download.
+    if (!ios) save.setAttribute('download', 'Devkumar Banerjee.vcf');
+    if (android && hint) hint.hidden = false;
+
+    // Safari and every WebKit browser on iOS can open the contact sheet from a
+    // top-level navigation. Do it once per session.
+    if (!ios || window.top !== window.self) return;
     try {
       if (sessionStorage.getItem('dvxb-card-vcf')) return;
       sessionStorage.setItem('dvxb-card-vcf', '1');
