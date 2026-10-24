@@ -46,7 +46,7 @@ const dateStr = opts.date ?? new Date().toISOString().slice(0, 10);
 if (Number.isNaN(new Date(dateStr).getTime())) fail(`bad --date ${JSON.stringify(dateStr)}: parseable date required`);
 const desc = opts.desc ?? opts.description;
 if (desc !== undefined && !desc.trim()) fail('--desc: non-empty string required');
-let tags;
+let tags = null;
 if (opts.tags !== undefined) {
   tags = opts.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
   if (!tags.length) fail('--tags: comma-separated list required (e.g. a,b)');
