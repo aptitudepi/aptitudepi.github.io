@@ -567,7 +567,9 @@ function createTerminal(container) {
   // outer scroll; the xterm viewport keeps internal scroll.
   function syncRowsToThermal() {
     if (!term || !fitAddon) return;
-    try { fitAddon.fit(); } catch (_) {}
+    try { fitAddon.fit(); } catch (_) {
+      // best-effort: fit can fail before the terminal is laid out
+    }
     // Stacked layout piles columns vertically — no sync.
     if (window.innerWidth <= 900) return;
     const thermal = document.querySelector('.thermal-column');
@@ -579,7 +581,11 @@ function createTerminal(container) {
     if (target <= 0) return;
     const cellH = (container.clientHeight / Math.max(1, term.rows)) || measureCellSize().height || 20;
     const rows = Math.max(5, Math.floor(target / cellH));
-    if (rows !== term.rows) { try { term.resize(term.cols, rows); } catch (_) {} }
+    if (rows !== term.rows) {
+      try { term.resize(term.cols, rows); } catch (_) {
+        // best-effort: resize can fail while the terminal is mid-layout
+      }
+    }
   }
 
   // Refit once webfonts arrive: measuring with the fallback font
@@ -606,7 +612,9 @@ function createTerminal(container) {
       const mo = new MutationObserver(() => syncRowsToThermal());
       for (const node of chromeNodes) mo.observe(node, { childList: true, subtree: true, characterData: true, attributes: true });
     }
-  } catch (_) {}
+  } catch (_) {
+    // best-effort: toolbar or guided panel may be absent
+  }
   syncRowsToThermal();
 
   // Ghost text is cursor-anchored: hide it while the buffer scrolls under
