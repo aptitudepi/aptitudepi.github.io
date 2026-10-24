@@ -62,7 +62,7 @@ const tmp = join(tmpdir(), `media-push-${nonce}${outExt}`);
 const hdr = join(tmpdir(), `media-push-${nonce}.hdr`);
 
 const has = (cmd) => { try { execFileSync('which', [cmd], { stdio: 'ignore' }); return true; } catch { return false; } };
-const put = (cmd, cmdArgs, attempt) => execFileSync(cmd, cmdArgs, { stdio: 'inherit' });
+const put = (cmd, cmdArgs) => execFileSync(cmd, cmdArgs, { stdio: 'inherit' });
 
 try {
   // rotate() with no args applies EXIF orientation to pixels FIRST, then drops
@@ -121,7 +121,7 @@ try {
   } else if (has('rclone')) {
     for (let attempt = 1; attempt <= 3 && !uploaded; attempt++) {
       try {
-        put('rclone', ['copyto', tmp, `${REMOTE}/${key}`, '--header-upload', `Content-Type: ${contentType}`, '--header-upload', `Cache-Control: ${IMMUTABLE}`], attempt);
+        put('rclone', ['copyto', tmp, `${REMOTE}/${key}`, '--header-upload', `Content-Type: ${contentType}`, '--header-upload', `Cache-Control: ${IMMUTABLE}`]);
         uploaded = true;
       } catch { lastErr = `rclone attempt ${attempt}/3 failed`; }
     }
@@ -129,7 +129,7 @@ try {
   } else if (has('wrangler')) {
     for (let attempt = 1; attempt <= 3 && !uploaded; attempt++) {
       try {
-        put('wrangler', ['r2', 'object', 'put', `${BUCKET}/${key}`, '--file', tmp, '--content-type', contentType, '--cache-control', IMMUTABLE, '--remote'], attempt);
+        put('wrangler', ['r2', 'object', 'put', `${BUCKET}/${key}`, '--file', tmp, '--content-type', contentType, '--cache-control', IMMUTABLE, '--remote']);
         uploaded = true;
       } catch { lastErr = `wrangler attempt ${attempt}/3 failed`; }
     }
