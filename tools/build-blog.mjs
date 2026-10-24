@@ -149,10 +149,10 @@ function absImage(image) {
 // Per-post OG tags (+ default card, + image: frontmatter override) for
 // __HEAD_EXTRA__. Absolute URLs throughout; card validity is verified once
 // per template by inspecting output, not per post.
-function ogHead({ title, description, canonical, date, tags = [], image }) {
+function ogHead({ type = 'article', title, description, canonical, date, tags = [], image }) {
   const published = date ? `\n<meta property="article:published_time" content="${date.toISOString()}">` : '';
   const tagLines = tags.map((tag) => `\n<meta property="article:tag" content="${escapeHtml(tag)}">`).join('');
-  return '<meta property="og:type" content="article">\n' +
+  return `<meta property="og:type" content="${type}">\n` +
     `<meta property="og:title" content="${escapeHtml(title)}">\n` +
     `<meta property="og:description" content="${escapeHtml(description)}">\n` +
     `<meta property="og:url" content="${canonical}">\n` +
@@ -423,6 +423,7 @@ rmSync(OUT_DIR, { recursive: true, force: true });
 mkdirSync(OUT_DIR, { recursive: true });
 
 const NOINDEX = '<meta name="robots" content="noindex, nofollow">';
+const RSS_LINK = '<link rel="alternate" type="application/rss+xml" title="dvxb.io blog" href="/blog/rss.xml">\n';
 // No-script half of the gallery carousel: the linked sheets make .gallery a
 // horizontal scroller, so a noscript UA needs them reverted to the stacked
 // block. Injected per post page (not shell.html — keeps index.html's 10k
@@ -445,7 +446,7 @@ for (const post of published) {
     DOWNLOAD: '',
     BODY: `${PROGRESS_DIV}${article}${shareFooter(post.title, canonical)}`,
     META: metaHtml(post),
-    HEAD_EXTRA: `${NO_JS_CSS}${post.cast ? `<link rel="stylesheet" href="${CAST_CSS}">\n` : ''}${ogHead({ ...post, canonical })}`,
+    HEAD_EXTRA: `${NO_JS_CSS}${RSS_LINK}${post.cast ? `<link rel="stylesheet" href="${CAST_CSS}">\n` : ''}${ogHead({ ...post, canonical })}`,
     SCRIPTS: `${postScripts()}${post.cast ? castScripts() : ''}`,
   })));
   process.stdout.write(`wrote blog/${post.slug}/index.html\n`);
@@ -492,7 +493,7 @@ function searchScripts() {
 
 // Index page (published only — drafts never listed).
 const items = published.map((post) => `  <li><a href="/blog/${post.slug}/">${escapeHtml(post.title)}</a> — ${post.date.toISOString().slice(0, 10)}</li>`).join('\n');
-const INDEX_OG = ogHead({ title: 'Blog — dvxb.io', description: 'Posts on systems, reliability, and tooling.', canonical: `${SITE_URL}/blog/` });
+const INDEX_OG = ogHead({ type: 'website', title: 'Blog — dvxb.io', description: 'Posts on systems, reliability, and tooling.', canonical: `${SITE_URL}/blog/` });
 writeFileSync(join(OUT_DIR, 'index.html'), ignoreChrome(renderTemplate('shell.html', {
   TITLE: 'Blog — dvxb.io',
   DESC: 'Posts on systems, reliability, and tooling.',
@@ -501,7 +502,7 @@ writeFileSync(join(OUT_DIR, 'index.html'), ignoreChrome(renderTemplate('shell.ht
   CRUMB_TEXT: 'blog',
   DOWNLOAD: '',
   BODY: published.length ? `<p class="blog-search"><input id="blog-search" type="search" placeholder="search posts" aria-label="Search posts" autocomplete="off"><ul id="blog-search-results" aria-live="polite"></ul></p>\n<ul class="post-index">\n${items}\n</ul>\n` : '<p>No posts yet.</p>\n',
-  HEAD_EXTRA: INDEX_OG,
+  HEAD_EXTRA: RSS_LINK + INDEX_OG,
   SCRIPTS: published.length ? searchScripts() : '',
 })));
 
@@ -520,7 +521,7 @@ for (const tag of tags) {
     CRUMB_TEXT: 'blog',
     DOWNLOAD: '',
     BODY: `<ul class="post-index">\n${lis}\n</ul>\n`,
-    HEAD_EXTRA: ogHead({ title: `#${tag} — dvxb.io blog`, description: `Posts tagged ${tag}.`, canonical: `${SITE_URL}/blog/tag/${tag}/` }),
+    HEAD_EXTRA: RSS_LINK + ogHead({ type: 'website', title: `#${tag} — dvxb.io blog`, description: `Posts tagged ${tag}.`, canonical: `${SITE_URL}/blog/tag/${tag}/` }),
   })));
 }
 
