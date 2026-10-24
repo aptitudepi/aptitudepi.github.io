@@ -93,7 +93,6 @@
 /* ── Two-column layout (thermal ASCII + xterm) ───── */
 .terminal-body.two-column {
   display: flex;
-  align-items: stretch;
   /* no gap - seamless single pane look */
   height: 100%;
   min-height: 0;
@@ -117,12 +116,9 @@
 .terminal-column {
   flex: 1;
   min-width: 300px;
-  height: 100%;
-  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   max-height: 70vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 /* Hide scrollbar but keep scroll */
 .terminal-column::-webkit-scrollbar { display: none; }
@@ -135,7 +131,7 @@
 .terminal-body ::-webkit-scrollbar { display: none; }
 /* Touch owns vertical drags inside the terminal (buffer scroll is
    synthesized in terminal.js); the browser must not also scroll/zoom. */
-#terminal-container { touch-action: none; flex: 1; min-height: 0; overflow: hidden; }
+#terminal-container { touch-action: none; }
 
 /* Thermal canvas transparent */
 #thermal-ascii {
@@ -155,7 +151,6 @@
   }
   .terminal-column {
     min-width: 0;
-    height: auto;
     max-height: 60vh;
   }
 }

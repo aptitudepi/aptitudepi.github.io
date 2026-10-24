@@ -23,9 +23,7 @@
 // same way (null helpDisplay/helpPos); its chart module lazy-imports on first
 // run. Playground: `pg <demo>` (first
 // demo: `pg life`, lazy-imported pg-life.js) is likewise unlisted with null
-// helpDisplay/helpPos. The 36/34 golden pins hold. `ring` (Aggie Ring easter
-// egg) is unlisted the same way; the post is still a draft so its link line
-// notes "publishing soon".
+// helpDisplay/helpPos. The 36/34 golden pins hold.
 
 import { isAbortError } from './foreground.js';
 import { sanitizeTerminalText, renderMarkdown } from './markdown.js';
@@ -2092,73 +2090,6 @@ async function runDevmodeCommand(term) {
   return;
 }
 
-// Easter egg: Aggie Ring milestone. Unlisted on purpose (like the WAVE 8
-// portfolio set) so `help` output and the COMMANDS count stay byte-identical
-// to the goldens; the palette, tab completion and `man` pick it up from the
-// registry automatically. Post is still a draft — the link 404s until publish.
-// Responsive ring art: 65-wide detailed crest on wide terminals, 52-wide
-// compact crest below 75 cols (or when width is unknown — compact never
-// wraps). Facts/link order, unlisted status and mono SITE_WHITE unchanged.
-const RING_ART_WIDE = [
-  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣤⣤⣤⣤⣴⣶⣶⣶⣶⣶⣶⣶⣶⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣶⣶⣶⣤⣤⣤⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⣠⣴⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣶⣦⣤⣀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠿⠿⠾⠛⠛⠛⢛⣿⠛⣿⡟⣹⣿⣤⣧⡌⣩⣭⣝⠛⡛⠛⠛⠿⠿⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⡄⠀⠀⠀⠀',
-  '⠀⠀⠀⣠⣴⣿⣿⡿⠿⠿⠿⠟⠛⠛⣋⠉⠉⠠⠒⠖⣂⠴⢊⢡⣶⣏⣿⠏⠺⠛⠙⣫⠉⠛⠛⠛⢻⠋⠻⠿⢿⣮⣍⡛⠳⣶⠠⣤⠈⣉⡙⡛⠛⠿⠿⠿⢿⣿⣿⣿⣇⠀⠀⠀⠀',
-  '⠀⠀⣼⣡⡞⠛⢻⠷⢶⣤⣄⣠⡀⠈⢁⣒⣀⣤⠔⢚⣥⣺⣿⠸⢛⡀⠁⠘⡟⢦⠞⣿⠀⠀⠀⠀⢸⡟⠀⡰⠚⣏⠉⣴⣶⠄⠑⠄⠀⢥⢄⡍⢈⠃⠀⢠⣤⣶⣦⣭⣯⢻⣦⠀⠀',
-  '⠀⣼⣿⠏⡀⠚⡱⠖⢦⣄⣉⠛⢷⣴⠾⠟⡉⠀⣠⣾⡿⠉⢡⣎⡡⢴⣆⠀⠷⠀⠀⣛⡃⠀⠀⠀⠘⠧⠴⠃⡔⢻⡇⢠⠀⠾⠷⠀⠙⢶⣶⡄⣠⣴⠞⢋⣉⠉⠁⣴⣿⡿⢿⣧⠀',
-  '⢰⣿⡿⠀⠟⢋⡡⠜⢁⠤⢘⡤⠊⢈⡀⠀⢡⣄⡟⢉⡀⠀⠀⠻⠷⠚⣡⣤⣴⠶⠾⠛⠛⠛⠷⠶⢶⣦⣄⡈⠁⢸⡷⠁⣠⡷⠜⠻⠆⠀⠘⠱⢫⡰⢾⡏⢀⣴⣾⡟⢿⠳⠾⢦⡆',
-  '⣿⣿⣇⣤⢴⠻⡵⠚⣉⠔⠋⣠⣴⠋⠝⢠⣼⡏⢴⠛⡿⢷⠖⢀⣠⡾⠛⠉⠀⢠⣄⠀⠉⠒⠂⠀⠀⠀⠉⠻⢶⣄⠀⠺⠋⢀⡾⠖⠻⡦⠀⢢⡀⠙⠳⣌⠻⠿⠟⣿⣾⣇⢠⣿⣷',
-  '⣿⣿⣿⣿⡄⠀⡠⠊⣡⣴⡿⠋⢀⡶⢀⣼⠏⠀⠀⢻⡀⠀⣰⡿⣋⣤⣤⡄⠀⠃⠈⠛⣶⣾⣾⠃⠀⠀⣶⣦⢄⠙⢷⣄⠀⢿⡡⠤⢆⠻⡦⠀⠤⡄⠀⢠⣼⣷⣿⡿⣿⣿⣿⣿⣿',
-  '⣿⣿⣯⣿⣆⣠⣶⣿⠿⠋⠀⢀⣧⠀⢸⡏⠀⠀⠀⠀⠀⣼⠏⠀⢡⣿⣿⡇⠀⠀⠀⠸⣿⣿⡟⠃⠀⠀⣿⣿⡦⠠⠀⢻⣆⠀⢤⣴⠞⣦⢿⡄⠠⣆⣠⠿⠟⣿⠁⠀⣹⣿⣿⣿⠿',
-  '⠙⣿⣿⣿⡿⢛⣩⣤⣄⣀⡄⡀⠛⠀⡟⣻⢻⡟⡆⢀⣼⠃⠎⡀⠀⠠⠿⢇⠀⠤⠀⣊⠽⢯⣁⠳⠠⣴⡏⠃⠀⠀⠐⠀⢻⣇⠘⣆⠁⠞⡠⣶⠈⢉⠉⣴⣸⡟⢠⣾⣿⣿⣿⣿⡇',
-  '⠀⣽⣿⣿⣿⣄⢻⣿⣿⣏⡞⡴⠁⢸⠓⠧⠾⣰⠃⣼⡏⠀⠀⠛⠁⡀⢰⠒⠒⠊⣉⠀⣤⡠⢈⠉⠓⠒⢢⠀⠀⠈⠃⡀⠀⣿⡄⢰⣶⠚⡇⣬⡀⠋⢸⢟⡡⠼⢿⣿⣿⣿⣿⣿⠁',
-  '⠀⠸⠏⠙⣿⣿⣆⠙⢿⢸⢰⡇⠀⣼⣦⣤⣤⣤⢀⣿⠀⣸⢀⣠⠀⠀⢸⠀⠿⠂⠛⠃⠋⠃⠘⠃⠸⠟⢸⠀⠀⢀⠀⠱⠀⢸⣧⠀⡾⠶⠃⣨⡁⠧⠀⠁⠀⠀⠀⠈⣿⣿⠟⠋⠀',
-  '⠀⠀⢳⣷⡟⢿⣿⣷⡀⠛⢎⠇⠀⣳⠚⠤⣇⡀⢸⣿⠀⠓⢷⠟⢄⠀⠸⡉⢸⡇⣿⠉⡏⢹⠉⡏⢹⠉⢹⠀⠀⠀⠲⠀⠑⢸⣿⠀⡆⡖⢣⢙⠃⣼⡷⠿⣷⣿⡇⢠⣿⡟⡜⠀⠀',
-  '⠀⠀⠈⢿⣿⣌⢻⣿⣷⡀⠀⡀⠀⢹⡱⣄⢀⣅⢸⣿⠀⠀⢰⣆⠀⢰⠆⣇⢸⠇⣿⢸⡇⢸⠀⡇⢸⢀⠇⣶⠀⢠⡀⢣⠀⢸⣿⠀⡧⠇⠎⠻⠀⡔⠁⢊⡐⣯⢻⣦⣿⡿⠁⠀⠀',
-  '⠀⠀⠀⠈⢿⡏⣡⣿⣿⣿⡄⠺⣇⠸⡁⣶⠟⢭⠈⣿⠀⠀⠘⠿⠀⢸⡷⠈⢺⠀⣿⢸⡇⢸⠀⡇⢸⠋⠰⡛⠀⠀⠁⠈⠀⢸⡟⢰⠶⠶⠇⡶⢀⢻⠓⢾⣗⠃⣸⣟⡿⠃⠀⠀⠀',
-  '⠀⠀⠀⠀⠈⢻⡹⣿⣿⣯⡿⣄⠠⠄⢏⢠⠄⠲⡄⢻⣇⠀⢲⣒⠄⡤⣅⠐⠆⠑⢟⢸⡇⢸⢀⠗⠁⢀⠄⣴⣔⢖⠒⠓⢀⣿⢃⣄⣐⡖⣴⠁⡋⠈⣠⠏⢽⣷⠉⡿⠃⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠻⣿⣍⡛⢷⡝⢾⡂⠈⡇⢢⠷⠿⠌⢿⡄⠀⠤⣪⠔⢠⠀⡌⠂⠀⠙⠣⠞⠁⠀⠀⠀⢦⠀⠈⠓⠀⠀⣼⠏⠈⠉⡽⢡⠍⠚⢀⣾⡻⠅⣀⣴⡞⠁⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠀⠘⢷⣍⠓⠿⢦⡀⠒⡘⡆⢶⣀⣴⣌⢻⣄⠀⠁⠀⠁⠘⠀⡴⠒⢢⡀⣴⠒⠒⣆⠀⠀⠁⠀⠀⢀⣼⠏⢾⡶⠶⢣⠌⠜⣡⣟⣡⠔⣂⣽⠋⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣿⣦⣉⠸⣿⡇⠈⢆⠫⠄⠀⠀⠙⢦⡀⠀⠀⠀⠀⡴⠖⠛⠀⠉⠒⠚⡿⠀⠀⠀⠀⣠⡾⠃⠀⠀⠱⡶⢈⣴⡾⣯⢌⣤⣾⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⢿⣷⣿⣻⣷⠦⢑⡆⢀⣱⣦⡎⠙⠶⣄⡀⠀⠓⠒⠚⠀⠈⠒⠊⠁⢀⣠⡴⠞⢉⣶⡾⠥⣠⢎⠁⡊⠁⣸⣷⡿⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠻⣿⣿⣧⣬⣿⣓⣆⠛⠉⠀⠠⣬⠍⢛⣲⡶⠶⢶⣶⡶⠶⢟⣿⢿⣂⠀⠈⣈⠡⢂⣌⣴⣾⣶⣿⠟⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠻⢿⣿⣿⣿⣿⣥⣤⡜⠃⠀⡿⠀⣽⠀⠋⣩⡿⠃⠘⢿⠄⣯⢄⣞⣥⡶⢿⣻⡿⠟⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠛⠻⠿⣿⣿⣿⣿⣶⣾⣦⡶⣾⠴⠿⠂⠚⠛⢛⣛⣩⡭⠶⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠙⠛⠛⠛⠛⠛⠛⠛⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀',
-];
-const RING_ART_COMPACT = [
-  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⣀⣀⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⣀⣠⣤⣴⣶⣶⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣶⣤⣤⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠿⠿⠿⢿⠿⣿⡟⣿⣛⣛⠛⣛⡿⠿⠿⠿⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣦⣄⠀⠀⠀⠀',
-  '⠀⠀⢀⣤⣾⣿⠿⠿⠿⠛⠛⣛⠉⠉⠄⠖⡢⢔⡀⣴⣺⡿⢰⠛⢘⡍⠛⠛⠻⡟⠻⠿⣷⣥⡒⠶⡄⢬⢉⣉⢛⠛⠿⠿⠿⢿⣿⣯⡀⠀⠀⠀',
-  '⠀⢠⣯⠞⣉⢛⠓⠶⢦⣤⠀⢡⣮⡤⠖⢩⣶⡿⢉⠩⠀⠀⠟⠳⢹⡇⠀⠀⠀⡟⠀⡞⢹⡍⠾⢗⣈⠃⣀⠖⠰⠈⠁⣀⣶⠶⠦⢾⣝⣦⡀⠀',
-  '⢀⣿⡏⢰⠥⢋⠍⢓⠦⢉⠟⠉⠁⠂⣸⠿⠃⠀⢷⣎⠿⢂⢈⣀⣤⣦⣤⣄⣀⣉⠋⠰⢉⣇⠜⢨⡉⣥⡈⠙⠷⡶⢋⣡⠖⢂⣸⣿⣿⣹⣃⠀',
-  '⣼⣿⣁⣤⢞⡩⠚⡩⠊⣁⡴⠲⢀⣾⢡⠞⣶⡤⠀⣠⡶⠛⠉⢡⡀⠀⠠⠄⠈⠉⠛⠶⣄⠁⢴⠋⣡⡦⢶⡄⠠⡈⠳⢍⠰⢿⢿⣾⣇⢀⣿⡄',
-  '⣿⣿⣿⡆⠀⠔⣉⣴⡿⠋⡴⠀⣾⠁⠀⢻⠀⢠⡞⣫⣤⣤⠀⠁⠉⢲⣶⣾⠀⠀⣶⡦⠌⠳⣄⠰⠯⠤⢆⠳⠀⠠⠄⢀⣴⣷⡿⢿⣿⣿⣿⡇',
-  '⢻⣿⣿⣧⣴⠿⠛⠁⠀⢸⠄⣸⣥⣠⡀⠀⣰⠏⠀⠰⢻⣿⠀⠀⢀⢻⡿⠏⡀⠀⣹⡟⠂⠀⠹⣦⠰⡶⠛⡞⢓⠐⡧⠎⠋⣿⠀⣬⣿⣿⣿⠃',
-  '⠈⣻⣿⣿⡐⣾⣿⣶⡔⡠⢀⡧⣇⡞⡝⢰⡏⠈⠴⠀⠈⣩⠤⠤⠐⢊⠉⠒⠤⠉⡁⠁⠀⠄⠀⢹⡆⢑⣠⢴⢙⡂⠆⢸⠗⣣⣾⣿⣿⣿⣿⠀',
-  '⠀⢻⠛⢿⣷⡘⠿⣿⢰⠁⢸⣦⣤⣬⠁⣿⠀⡆⣠⠀⠀⡅⠶⠀⠓⠘⠃⠘⠂⠶⢸⠀⠀⠀⠠⠀⣿⠈⡵⠼⢉⡃⠄⠉⠁⠀⠈⢹⣿⡟⠃⠀',
-  '⠀⠈⢷⣾⢻⣿⣆⠙⠾⠄⢸⡞⠰⢤⠀⡟⠘⠹⠟⠂⠀⠃⢈⠁⡇⡏⢸⢸⠁⡇⠸⠀⠀⠐⠀⠁⣿⠀⣶⡞⣌⡃⢾⠚⠷⣿⡆⢸⣟⡌⠀⠀',
-  '⠀⠀⠘⣿⡧⢹⣿⣦⠀⣤⠘⡎⣢⣴⠀⣷⠀⠀⣷⠀⢾⡘⣤⠀⡇⡇⢸⢸⠀⣧⢃⡇⠀⠆⠰⠀⣿⢀⣛⣈⢈⠁⣦⣈⣄⡟⢹⣿⡟⠀⠀⠀',
-  '⠀⠀⠀⠈⢷⢾⣿⣿⣧⠘⡀⠓⢋⠈⡅⢻⡄⠠⡌⠀⣙⠁⡌⢠⡇⡇⢸⢸⡔⠁⡈⣠⣠⣤⠄⢠⡟⡈⠩⣍⡘⠐⠘⡨⢳⣦⢻⡞⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠈⢳⣯⣛⢯⡳⡖⠘⡆⠴⠾⠌⢷⡀⠨⣪⠆⡄⡀⠀⠀⠃⠜⠀⠀⠀⢢⠀⠑⠄⠀⣼⠁⠉⡝⡤⠑⢃⣾⠯⢀⣭⠞⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠙⣮⣙⠻⣄⣀⡘⣖⢦⠴⠌⢷⡀⠀⠀⠀⠀⠖⢑⡆⢰⡉⣱⠀⠀⠀⠀⢀⡾⠓⢷⠚⠱⢐⣡⢿⠔⣊⡼⠃⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠀⠈⠻⣷⣬⣻⢧⣈⢠⡁⠀⣀⣙⢦⣀⠀⠀⠏⠉⠄⠠⠀⠼⠀⠀⣀⡴⣏⣠⠀⣀⠟⡴⠛⣿⣵⡾⠋⠀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠿⣿⣷⣐⣷⢮⠹⠓⠀⢨⡗⠲⣤⣤⣤⣤⣤⠤⣶⣿⠁⠀⠛⠫⢌⣃⣴⣧⣾⠟⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⢿⣿⣿⣧⣤⣞⣀⡼⠈⠇⠘⣩⡟⠀⣻⣄⣯⣰⣯⢶⣛⡿⠟⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀',
-  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠛⠛⠿⠿⠿⣿⣖⣛⣒⣋⣈⣭⠭⠭⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀',
-];
-function runRingCommand(term) {
-  const termCols = term && typeof term.cols === 'number' ? term.cols : 0;
-  const ringArt = termCols >= 75 ? RING_ART_WIDE : RING_ART_COMPACT;
-  term.writeln(`${SITE_WHITE}${ANSI_RESET}`);
-  for (const ringLine of ringArt) term.writeln(`${SITE_WHITE}${ringLine}${ANSI_RESET}`);
-  term.writeln(`  ${SITE_WHITE}Ordered May 18, 2026 · picked up Oct 9, 2026${ANSI_RESET}`);
-  term.writeln(`  ${SITE_WHITE}Texas A&M University · Class of 2029${ANSI_RESET}`);
-  term.writeln(`  ${SITE_MUTED}Full story: /blog/aggie-ring/ (first post, publishing soon)${ANSI_RESET}`);
-  return;
-}
-
 const COMMAND_REGISTRY = [
   {
     name: "whoami",
@@ -3106,24 +3037,6 @@ const COMMAND_REGISTRY = [
     bareOnly: false,
     aiQueue: false,
     run: runChangelogCommand,
-  },
-  {
-    name: "ring",
-    aliases: [],
-    aliasOf: null,
-    plain: "Show the Aggie Ring milestone (first blog post, publishing soon)",
-    category: "CORE",
-    argsSpec: "",
-    examples: ["ring"],
-    helpDisplay: null,
-    helpDesc: null,
-    helpPos: null,
-    extraHelpRows: [],
-    listed: false,
-    allow: false,
-    bareOnly: false,
-    aiQueue: false,
-    run: runRingCommand,
   },
 ];
 

@@ -36,17 +36,3 @@ package-lock.json
 .codegraph/
 .opencode/
 /log
-
-# Folder-action inbox + media-push tmp — workstation-only, never committed
-# (patterns only; the default ~/Pictures/Blog-Inbox lives outside the repo)
-.done/
-Blog-Inbox/
-Inbox/
-media-push-*
-
-# Draft post images — image binaries stay local, never committed (media-push
-# writes .jpg/.jpeg/.png next to the draft .md; the .md itself is still tracked)
-# gitignore has no brace expansion, so the three extensions are listed
-posts/_drafts/*.jpeg
-posts/_drafts/*.jpg
-posts/_drafts/*.png

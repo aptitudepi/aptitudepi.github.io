@@ -562,60 +562,19 @@ function createTerminal(container) {
     try { fitAddon.fit(); } catch (_) {}
   }
 
-  // Match xterm rows to the thermal sibling height (minus toolbar /
-  // guided chrome + xterm padding) so both columns stay equal with no
-  // outer scroll; the xterm viewport keeps internal scroll.
-  function syncRowsToThermal() {
-    if (!term || !fitAddon) return;
-    try { fitAddon.fit(); } catch (_) {
-      // best-effort: fit can fail before the terminal is laid out
-    }
-    // Stacked layout piles columns vertically — no sync.
-    if (window.innerWidth <= 900) return;
-    const thermal = document.querySelector('.thermal-column');
-    if (!thermal) return;
-    const toolbar = document.getElementById('terminal-toolbar');
-    const guided = document.getElementById('guided-panel');
-    const chrome = (toolbar?.offsetHeight || 0) + ((guided && !guided.hidden) ? guided.offsetHeight : 0);
-    const target = thermal.getBoundingClientRect().height - chrome - 16; // .xterm 8px top+bottom padding
-    if (target <= 0) return;
-    const cellH = (container.clientHeight / Math.max(1, term.rows)) || measureCellSize().height || 20;
-    const rows = Math.max(5, Math.floor(target / cellH));
-    if (rows !== term.rows) {
-      try { term.resize(term.cols, rows); } catch (_) {
-        // best-effort: resize can fail while the terminal is mid-layout
-      }
-    }
-  }
-
   // Refit once webfonts arrive: measuring with the fallback font
   // under-reports cell width and permanently narrows the terminal.
   if (document.fonts?.ready) {
-    document.fonts.ready.then(() => { syncRowsToThermal(); });
+    document.fonts.ready.then(() => { if (fitAddon) try { fitAddon.fit(); } catch (_) { /* best-effort refit; ignore errors */ } });
   }
 
   const ro = new ResizeObserver(() => {
     cachedCellSize = null;
     // Refit stales row addressing: freeze the ticker.
     stopLiveUptime();
-    syncRowsToThermal();
+    if (fitAddon) try { fitAddon.fit(); } catch (_) {}
   });
   ro.observe(container);
-  const terminalColumn = container.closest('.terminal-column');
-  if (terminalColumn && terminalColumn !== container) ro.observe(terminalColumn);
-
-  // Toolbar / guided-panel size changes (toggle, wrap, panel fill) alter
-  // the chrome subtracted above — re-sync on their mutations.
-  try {
-    const chromeNodes = [document.getElementById('terminal-toolbar'), document.getElementById('guided-panel')].filter(Boolean);
-    if (chromeNodes.length) {
-      const mo = new MutationObserver(() => syncRowsToThermal());
-      for (const node of chromeNodes) mo.observe(node, { childList: true, subtree: true, characterData: true, attributes: true });
-    }
-  } catch (_) {
-    // best-effort: toolbar or guided panel may be absent
-  }
-  syncRowsToThermal();
 
   // Ghost text is cursor-anchored: hide it while the buffer scrolls under
   // it so a stale overlay never floats over old output.

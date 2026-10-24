@@ -32,7 +32,7 @@ const BUILD_DRAFTS = process.env.BUILD_DRAFTS === '1';
 // never upscale); post images resolve relative to their md file, absolute
 // (/...) and remote srcs pass through untouched.
 const OG_DEFAULT = '/assets/blog/og-default.png';
-const IMG_WIDTH = 960;
+const IMG_WIDTHS = [320, 640, 960, 1280, 1920];
 
 // Same split-join + defaults as tools/build.mjs so existing pages are
 // unaffected (this file never touches resume/cv/man). DEFAULT_NAV mirrors
@@ -108,7 +108,7 @@ function metaHtml(post) {
   const iso = post.date.toISOString();
   const day = iso.slice(0, 10);
   const tags = post.tags.map((tag) => `<a href="/blog/tag/${tag}/">${escapeHtml(tag)}</a>`).join(' ');
-  return `<h1 class="post-title">${escapeHtml(post.title)}</h1>\n<p class="post-meta"><time datetime="${iso}">${day}</time> &middot; ${post.minutes} min read${tags ? ` &middot; ${tags}` : ''}</p>\n`;
+  return `<p class="post-meta"><time datetime="${iso}">${day}</time> &middot; ${post.minutes} min read${tags ? ` &middot; ${tags}` : ''}</p>\n`;
 }
 
 function slugifyHeading(text) {
@@ -149,10 +149,10 @@ function absImage(image) {
 // Per-post OG tags (+ default card, + image: frontmatter override) for
 // __HEAD_EXTRA__. Absolute URLs throughout; card validity is verified once
 // per template by inspecting output, not per post.
-function ogHead({ type = 'article', title, description, canonical, date, tags = [], image }) {
+function ogHead({ title, description, canonical, date, tags = [], image }) {
   const published = date ? `\n<meta property="article:published_time" content="${date.toISOString()}">` : '';
   const tagLines = tags.map((tag) => `\n<meta property="article:tag" content="${escapeHtml(tag)}">`).join('');
-  return `<meta property="og:type" content="${type}">\n` +
+  return '<meta property="og:type" content="article">\n' +
     `<meta property="og:title" content="${escapeHtml(title)}">\n` +
     `<meta property="og:description" content="${escapeHtml(description)}">\n` +
     `<meta property="og:url" content="${canonical}">\n` +
@@ -208,51 +208,16 @@ function postScripts() {
     '})();\n</script>';
 }
 
-// Appendix P3 (no JS island): ```gallery fences (one ![alt](./file) caption
-// per line) expand pre-render to a <figure> list inside a .gallery wrapper.
-// Each <img> flows through renderPostImages below, so gallery files get the
-// same variants + missing-file CI-red as inline images.
-//
-// The carousel is pure CSS enhancement (scroll-snap + fragment-link controls,
-// css/doc.css) over the same stacked markup: NO_JS_CSS below reverts .gallery
-// to a vertical stack when scripting is off, so noscript + RSS readers still
-// get every photo stacked in document order. No counter in the controls row —
-// tracking scroll position would need JS, and the row works without it.
-export function expandGalleryFences(markdown, file) {
-  let galleryIndex = 0;
-  return markdown.replace(/```gallery[ \t]*\n([\s\S]*?)```/g, (fence, body) => {
-    const items = [];
-    for (const line of body.split('\n')) {
-      if (!line.trim()) continue;
-      const item = /^!\[([^\]]*)\]\(([^)\s]+)\)\s*(.*)$/.exec(line.trim());
-      if (!item) throw new Error(`gallery ${file}: bad line ${JSON.stringify(line)} — fix: one ![alt](./file) caption per line`);
-      items.push(item);
-    }
-    if (!items.length) throw new Error(`gallery ${file}: empty fence — fix: add ![alt](./file) lines or delete the fence`);
-    // Figures are fragment-link targets, so ids are per-gallery prefixed: a
-    // post with two fences must not emit duplicate ids.
-    const prefix = `g${++galleryIndex}-`;
-    const figures = items.map((item, position) =>
-      `<figure class="gallery-item" id="${prefix}${position + 1}"><img src="${item[2]}" alt="${escapeHtml(item[1])}"><figcaption>${escapeHtml(item[3].trim())}</figcaption></figure>`);
-    const count = figures.length;
-    const nav = count > 1
-      ? `\n<nav class="gallery-nav" aria-label="Gallery photos">\n<a class="gallery-nav-btn" href="#${prefix}1" aria-label="Show first photo">&#8249;&nbsp;first</a>\n<a class="gallery-nav-btn" href="#${prefix}${count}" aria-label="Show last photo">last&nbsp;&#8250;</a>\n</nav>`
-      : '';
-    return `<div class="gallery" role="group" aria-label="Photo gallery">\n${figures.join('\n')}\n</div>${nav}`;
-  });
-}
-
 // Step-6 sharp island (E3 recipe, AVIF-primary): local relative <img> refs
-// resolved against the md file's dir become a <picture> AVIF→JPEG pair at a
-// single IMG_WIDTH capped at native width (never upscale; one width keeps
-// each photo to 2 files — the 5-width srcset served nobody: sizes caps at
-// 960 CSS px, so 960w is exact-fit at 1x, soft at 2x retina — App Q1) with w/h attrs (CLS-safe), loading=lazy, and a zero-JS LQIP (32px
-// q15 JPEG data-URI as a backdrop span — no ThumbHash dep). Variants land in
-// blog/<slug>/img/ (artifact dir, deployed, gated by the image-total
-// budget); make-style mtime skip keeps rebuilds incremental. svg/gif copy
-// through with no variants. Missing source throws (CI-red, never a broken
-// image). data-pagefind-body wrapper is step-7 prep (zero cost, no UI).
-export async function renderPostImages(html, { srcDir, outDir, outUrl, label = 'post' }) {
+// resolved against the md file's dir become <picture> AVIF→WebP→JPEG across
+// IMG_WIDTHS capped at native width (never upscale) with w/h attrs
+// (CLS-safe), loading=lazy, and a zero-JS LQIP (32px q15 JPEG data-URI as a
+// backdrop span — no ThumbHash dep). Variants land in blog/<slug>/img/
+// (artifact dir, deployed, gated by the image-total budget); make-style
+// mtime skip keeps rebuilds incremental. svg/gif copy through with no
+// variants. Missing source throws (CI-red, never a broken image).
+// data-pagefind-body wrapper is step-7 prep (zero cost, no UI).
+export async function renderPostImages(html, { srcDir, outDir, outUrl }) {
   for (const [tag, pre, src, postAttrs] of html.matchAll(/<img([^>]*?)\ssrc="([^"]+)"([^>]*?)>/g)) {
     if (/^(https?:|data:|\/)/.test(src)) continue;
     const srcFile = join(srcDir, src);
@@ -263,29 +228,25 @@ export async function renderPostImages(html, { srcDir, outDir, outUrl, label = '
     const leaf = src.slice(src.lastIndexOf('/') + 1);
     if (/\.(svg|gif)$/i.test(leaf)) {
       writeFileSync(join(outDir, leaf), readFileSync(srcFile));
-      process.stdout.write(`img ${label}/${leaf} copy-through\n`);
       html = html.replace(tag, () => `<img${pre} src="${outUrl}/${leaf}"${postAttrs}>`);
       continue;
     }
     const meta = await sharp(srcFile).metadata();
-    const width = Math.min(meta.width, IMG_WIDTH);
-    const targets = [width];
-    const formats = [['avif', { quality: 60, effort: 6 }], ['jpg', { quality: 85 }]];
-    process.stdout.write(`img ${label}/${leaf} ${meta.width}x${meta.height} -> ${targets.length * formats.length} variants\n`);
+    const targets = [...IMG_WIDTHS.filter((width) => width < meta.width), meta.width];
     const base = (leaf.slice(0, leaf.lastIndexOf('.')) || 'img').replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
     const ratio = meta.height / meta.width;
-    const srcsetFor = (fmt) => targets.map((w) => `${outUrl}/${base}-${w}w.${fmt} ${w}w`).join(', ');
-    for (const w of targets) {
-      for (const [fmt, opts] of formats) {
-        const out = join(outDir, `${base}-${w}w.${fmt}`);
+    const srcsetFor = (fmt) => targets.map((width) => `${outUrl}/${base}-${width}w.${fmt} ${width}w`).join(', ');
+    for (const width of targets) {
+      for (const [fmt, opts] of [['avif', { quality: 60, effort: 6 }], ['webp', { quality: 80 }], ['jpg', { quality: 85 }]]) {
+        const out = join(outDir, `${base}-${width}w.${fmt}`);
         if (existsSync(out) && statSync(out).mtimeMs >= statSync(srcFile).mtimeMs) continue;
-        await sharp(srcFile).resize({ width: w }).toFormat(fmt, opts).toFile(out);
+        await sharp(srcFile).resize({ width }).toFormat(fmt, opts).toFile(out);
       }
     }
     const lqip = await sharp(srcFile).resize({ width: 32 }).jpeg({ quality: 15 }).toBuffer();
     const big = targets[targets.length - 1];
     html = html.replace(tag, () => `<span class="lqip" style="background-image:url(data:image/jpeg;base64,${lqip.toString('base64')})">` +
-      `<picture><source type="image/avif" srcset="${srcsetFor('avif')}">` +
+      `<picture><source type="image/avif" srcset="${srcsetFor('avif')}"><source type="image/webp" srcset="${srcsetFor('webp')}">` +
       `<img src="${outUrl}/${base}-${big}w.jpg" srcset="${srcsetFor('jpg')}" sizes="(max-width: 960px) 100vw, 960px" ` +
       `width="${big}" height="${Math.round(big * ratio)}" alt="${alt}"${rest} loading="lazy" decoding="async"></picture></span>`);
   }
@@ -384,8 +345,8 @@ function castScripts() {
 // Full article body: TOC + content (+ cast embed; RSS keeps post.html =
 // content only, no TOC/share/cast chrome).
 async function buildPostBody(post, srcDir, slugDir, imgUrl, urlBase) {
-  const headed = addHeadingIds(await markdownToHtml(expandGalleryFences(post.body, post.slug)));
-  const content = await renderPostImages(headed.html, { srcDir, outDir: join(slugDir, 'img'), outUrl: imgUrl, label: post.slug });
+  const headed = addHeadingIds(await markdownToHtml(post.body));
+  const content = await renderPostImages(headed.html, { srcDir, outDir: join(slugDir, 'img'), outUrl: imgUrl });
   post.html = content;
   const cast = post.cast ? await castEmbed(post, srcDir, slugDir, urlBase) : '';
   return `${tocHtml(headed.headings)}<div data-pagefind-body>\n${pagefindMeta(post)}\n${content}</div>\n${cast}`;
@@ -423,14 +384,6 @@ rmSync(OUT_DIR, { recursive: true, force: true });
 mkdirSync(OUT_DIR, { recursive: true });
 
 const NOINDEX = '<meta name="robots" content="noindex, nofollow">';
-const RSS_LINK = '<link rel="alternate" type="application/rss+xml" title="dvxb.io blog" href="/blog/rss.xml">\n';
-// No-script half of the gallery carousel: the linked sheets make .gallery a
-// horizontal scroller, so a noscript UA needs them reverted to the stacked
-// block. Injected per post page (not shell.html — keeps index.html's 10k
-// ceiling untouched); it lands after the <link> tags, so it wins at equal
-// specificity. Parsed as a stylesheet only when scripting is off, which is
-// exactly the UA that must not get the carousel.
-const NO_JS_CSS = '<noscript><style>.gallery{display:block;overflow:visible}</style></noscript>\n';
 
 for (const post of published) {
   const canonical = `${SITE_URL}/blog/${post.slug}/`;
@@ -446,7 +399,7 @@ for (const post of published) {
     DOWNLOAD: '',
     BODY: `${PROGRESS_DIV}${article}${shareFooter(post.title, canonical)}`,
     META: metaHtml(post),
-    HEAD_EXTRA: `${NO_JS_CSS}${RSS_LINK}${post.cast ? `<link rel="stylesheet" href="${CAST_CSS}">\n` : ''}${ogHead({ ...post, canonical })}`,
+    HEAD_EXTRA: `${post.cast ? `<link rel="stylesheet" href="${CAST_CSS}">\n` : ''}${ogHead({ ...post, canonical })}`,
     SCRIPTS: `${postScripts()}${post.cast ? castScripts() : ''}`,
   })));
   process.stdout.write(`wrote blog/${post.slug}/index.html\n`);
@@ -493,7 +446,7 @@ function searchScripts() {
 
 // Index page (published only — drafts never listed).
 const items = published.map((post) => `  <li><a href="/blog/${post.slug}/">${escapeHtml(post.title)}</a> — ${post.date.toISOString().slice(0, 10)}</li>`).join('\n');
-const INDEX_OG = ogHead({ type: 'website', title: 'Blog — dvxb.io', description: 'Posts on systems, reliability, and tooling.', canonical: `${SITE_URL}/blog/` });
+const INDEX_OG = ogHead({ title: 'Blog — dvxb.io', description: 'Posts on systems, reliability, and tooling.', canonical: `${SITE_URL}/blog/` });
 writeFileSync(join(OUT_DIR, 'index.html'), ignoreChrome(renderTemplate('shell.html', {
   TITLE: 'Blog — dvxb.io',
   DESC: 'Posts on systems, reliability, and tooling.',
@@ -502,7 +455,7 @@ writeFileSync(join(OUT_DIR, 'index.html'), ignoreChrome(renderTemplate('shell.ht
   CRUMB_TEXT: 'blog',
   DOWNLOAD: '',
   BODY: published.length ? `<p class="blog-search"><input id="blog-search" type="search" placeholder="search posts" aria-label="Search posts" autocomplete="off"><ul id="blog-search-results" aria-live="polite"></ul></p>\n<ul class="post-index">\n${items}\n</ul>\n` : '<p>No posts yet.</p>\n',
-  HEAD_EXTRA: RSS_LINK + INDEX_OG,
+  HEAD_EXTRA: INDEX_OG,
   SCRIPTS: published.length ? searchScripts() : '',
 })));
 
@@ -521,7 +474,7 @@ for (const tag of tags) {
     CRUMB_TEXT: 'blog',
     DOWNLOAD: '',
     BODY: `<ul class="post-index">\n${lis}\n</ul>\n`,
-    HEAD_EXTRA: RSS_LINK + ogHead({ type: 'website', title: `#${tag} — dvxb.io blog`, description: `Posts tagged ${tag}.`, canonical: `${SITE_URL}/blog/tag/${tag}/` }),
+    HEAD_EXTRA: ogHead({ title: `#${tag} — dvxb.io blog`, description: `Posts tagged ${tag}.`, canonical: `${SITE_URL}/blog/tag/${tag}/` }),
   })));
 }
 
@@ -558,12 +511,11 @@ process.stdout.write(`wrote blog/rss.xml (${published.length} items) + blog/post
 // Drafts: BUILD_DRAFTS=1 only, hash URL + noindex, excluded from
 // index/tag/RSS/sitemap/Pagefind (G5.2 unlisted-preview semantics).
 if (BUILD_DRAFTS) {
-  process.stdout.write(`build-blog: draft preview start (${drafts.length} drafts)\n`);
   for (const post of drafts) {
     const canonical = `${SITE_URL}/blog/draft/${post.draftHash}/`;
     const dir = join(OUT_DIR, 'draft', post.draftHash);
     mkdirSync(dir, { recursive: true });
-    const article = await buildPostBody(post, DRAFTS_DIR, dir, `/blog/draft/${post.draftHash}/img`, `/blog/draft/${post.draftHash}`);
+    const article = await buildPostBody(post, DRAFTS_DIR, dir, `${SITE_URL}/blog/draft/${post.draftHash}/img`, `/blog/draft/${post.draftHash}`);
     writeFileSync(join(dir, 'index.html'), ignoreChrome(renderTemplate('shell.html', {
       TITLE: `[draft] ${post.title} — dvxb.io`,
       DESC: post.description,
@@ -573,7 +525,7 @@ if (BUILD_DRAFTS) {
       DOWNLOAD: '',
       BODY: `<p class="draft-banner">draft preview — not published</p>\n${PROGRESS_DIV}${article}${shareFooter(post.title, canonical)}`,
       META: metaHtml(post),
-      HEAD_EXTRA: `${NOINDEX}\n${NO_JS_CSS}${post.cast ? `<link rel="stylesheet" href="${CAST_CSS}">\n` : ''}${ogHead({ ...post, canonical })}`,
+      HEAD_EXTRA: `${NOINDEX}\n${post.cast ? `<link rel="stylesheet" href="${CAST_CSS}">\n` : ''}${ogHead({ ...post, canonical })}`,
       SCRIPTS: `${postScripts()}${post.cast ? castScripts() : ''}`,
       // Drafts are unlisted previews: exclude the whole article from Pagefind
       // (G5.2) on top of the noindex/RSS/sitemap exclusions. ignoreChrome runs
@@ -581,7 +533,6 @@ if (BUILD_DRAFTS) {
     })).replace('<article class="doc-panel">', '<article class="doc-panel" data-pagefind-ignore="all">'));
     process.stdout.write(`wrote blog/draft/${post.draftHash}/index.html (draft, noindex)\n`);
   }
-  process.stdout.write(`build-blog: draft preview done (${drafts.length} drafts)\n`);
 }
 
 process.stdout.write(`build-blog: ${published.length} published, ${drafts.length} drafts (${BUILD_DRAFTS ? 'previewed' : 'skipped'})\n`);
