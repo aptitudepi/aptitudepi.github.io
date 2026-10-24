@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
 
+# Contact card: disallow the whole /c/ directory (page + vCard) for well-behaved
+# crawlers. The page also carries a noindex meta tag as defense in depth, for
+# crawlers that ignore robots.txt but honour meta robots.
+Disallow: /c/
+
 Sitemap: https://dvxb.io/sitemap.xml
