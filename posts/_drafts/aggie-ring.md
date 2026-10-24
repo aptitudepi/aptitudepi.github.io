@@ -7,7 +7,7 @@ image: "https://cdn.dvxb.io/media/aggie-ring/1749e0bf949a-aggie-ring-hero.jpg"
 draft: true
 ---
 
-The first Aggie Rings I knew were never mine. They were on a teacher's hand, on a neighbor's, on a family friend's across the table. I grew up in College Station, so the Ring was just a thing the adults around me wore. I knew its weight and shape long before I knew it took ninety credit hours, or what the seal stood for, or why there were dates on it. It was part of the background, like the water tower or game-day traffic.
+The first Aggie Rings I knew were never mine. They were on a teacher's hand, on a neighbor's, on a family friend's across the table. I grew up in College Station, so the Ring was just a thing the adults around me wore. I knew its weight and shape long before I knew it took ninety credit hours, or what the seal stood for, or why there were dates on it. It was part of the background.
 
 A&M was never a place I discovered on a campus tour. It was already the thing in the middle of where I was from. So ordering the Ring didn't feel like excitement so much as catching up to something that had been there all along.
 
@@ -25,7 +25,7 @@ I'd pictured putting it on as a finish line. It wasn't. It felt quieter than tha
 
 ## What it holds
 
-It would be easy to read the Ring as a trophy for the clean parts — the grade that came out right, the project that finally worked. For me it holds more of the other stuff. When I look at it I think of a night in a lab trying to get one thing to run, well past the point where it was a good use of the hours, and all the versions of that night in different buildings. Some of it went well. A lot of it was me slowing down, asking for help, and admitting my first way of doing it was wrong. That's the part the Ring actually brings back — the stubbornness underneath the results, not the results.
+To me, the Ring isn't a trophy for the clean parts — not the grade that came out right, not the project that finally worked. It holds more of the other stuff. When I look at it I think of a night in the lab chasing one bug, well past the point where it was a good use of the hours, and all the versions of that night in different buildings. Some of it went well. A lot of it was me slowing down, asking for help, and admitting my first way of doing it was wrong. That's the part the Ring actually brings back — the stubbornness, not the results.
 
 And none of it was mine alone. My family absorbed every change of plan and every stretch where I wasn't around much, and never made me feel like the schedule was a problem. My friends are why College Station stopped being just the place I was from and turned into home. People handed me work before I felt ready for it, which is its own kind of trust. When I turn my hand now and see the Ring, those are the hands I think about.
 
