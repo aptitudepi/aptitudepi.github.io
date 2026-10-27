@@ -4,35 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Card — Devkumar Banerjee</title>
-<meta name="description" content="Contact card for Devkumar Banerjee — CS Honors @ Texas A&M. Links: dvxb.io, GitHub, LinkedIn, email.">
-<link rel="canonical" href="https://dvxb.io/c">
+<meta name="description" content="Contact card for Devkumar Banerjee — CS Honors @ Texas A&M. Tap to save the vCard, or use the links.">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+<meta name="referrer" content="no-referrer">
 <link rel="icon" type="image/svg+xml" href="/favicon-bengali.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
 <link rel="shortcut icon" href="/favicon.ico">
 <link rel="apple-touch-icon" href="/favicon-32.png">
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js"
-  }
-}
-</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/components.css">
 <link rel="stylesheet" href="/css/nav.css">
 <link rel="stylesheet" href="/css/doc.css">
-<!-- Topolines UMD — must load before modules that use window.Topolines -->
-<script src="/js/topolines.global.js"></script>
 </head>
 <body>
-<canvas id="c" aria-hidden="true"></canvas>
-<div id="topo-host" aria-hidden="true"></div>
-
 <a class="skip-link" href="#main">Skip to content</a>
 
 <header class="doc-nav">
@@ -44,7 +33,7 @@
   <div class="doc-crumb">
     <a class="doc-nav-home" href="/"><canvas class="nav-orb" width="24" height="24" aria-hidden="true"></canvas>dvxb.io</a>
     <span class="doc-nav-sep" aria-hidden="true">/</span>
-    <a class="doc-nav-crumb" data-text="c" href="/c">c</a>
+    <a class="doc-nav-crumb" data-text="c" href="/c" aria-current="page">c</a>
   </div>
   <nav class="doc-nav-links" aria-label="Pages">
     <a href="/resume">resume</a>
@@ -56,37 +45,167 @@
 </header>
 
 <main id="main" class="doc-main">
-  <article class="doc-panel card">
-    <h1 class="card-name"><strong>Devkumar Banerjee</strong></h1>
-    <p class="card-role">B.S. Computer Science, Texas A&amp;M (2029) — student, researcher, builder</p>
-    <nav class="card-links" aria-label="Contact links">
-      <a href="https://dvxb.io" target="_blank" rel="noopener noreferrer"><code>dvxb.io</code></a>
-      <a href="https://github.com/aptitudepi" target="_blank" rel="noopener noreferrer"><code>github.com/aptitudepi</code></a>
-      <a href="https://linkedin.com/in/dvkb" target="_blank" rel="noopener noreferrer"><code>linkedin.com/in/dvkb</code></a>
-      <a href="mailto:dkb@tamu.edu"><code>dkb@tamu.edu</code></a>
-      <a href="/assets/gpg.asc" target="_blank" rel="noopener noreferrer"><code>gpg key</code></a>
-    </nav>
-    <p class="card-hint">or, at <a href="/">dvxb.io</a>, type <code>help</code> — try <code>neofetch</code>, <code>ai</code>, or <code>imgcat</code></p>
+  <article class="doc-panel card" aria-labelledby="card-name">
+    <div class="card-thermal" aria-hidden="true">
+      <canvas id="thermal-ascii"></canvas>
+    </div>
+
+    <div class="card-body">
+      <p class="card-kicker">~/card <span class="card-caret" aria-hidden="true">▌</span></p>
+      <h1 id="card-name" class="card-name">Devkumar Banerjee</h1>
+      <p class="card-role">B.S. Computer Science · Texas A&amp;M · 2029</p>
+      <p class="card-blurb">student, researcher, builder</p>
+
+      <div class="card-actions">
+        <a class="card-action card-action-primary" id="save-contact" href="/c/contact.vcf" type="text/vcard">
+          <span class="card-action-key" aria-hidden="true">$</span> save contact
+        </a>
+        <a class="card-action" id="sms" href="sms:" hidden>
+          <span class="card-action-key" aria-hidden="true">$</span> text me
+        </a>
+        <a class="card-action" href="mailto:dkb@tamu.edu">
+          <span class="card-action-key" aria-hidden="true">$</span> mail
+        </a>
+      </div>
+
+      <p class="card-hint card-save-hint" id="card-save-hint" hidden>On Android, tap save contact, then open the downloaded .vcf to add me.</p>
+
+      <nav class="card-links" aria-label="Profiles">
+        <a href="https://dvxb.io">dvxb.io</a>
+        <a href="https://github.com/aptitudepi" target="_blank" rel="me noopener noreferrer">github.com/aptitudepi</a>
+        <a href="https://linkedin.com/in/dvkb" target="_blank" rel="me noopener noreferrer">linkedin.com/in/dvkb</a>
+        <a href="/assets/gpg.asc" target="_blank" rel="noopener noreferrer">gpg key</a>
+      </nav>
+
+      <p class="card-hint">or, at <a href="/">dvxb.io</a>, type <code>help</code> — try <code>neofetch</code>, <code>ai</code>, or <code>imgcat</code></p>
+    </div>
   </article>
 </main>
 
 <style>
-  .card { text-align: center; }
-  .card-name { font-family: var(--font-display); font-weight: 300; margin: 0 0 var(--space-4); }
-  .card-role { color: var(--color-text-muted); margin: 0 0 var(--space-6); }
-  .card-links { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-6); }
-  .card-links a { padding: var(--space-2); }
-  .card-hint { color: var(--color-text-muted); font-size: 0.9rem; margin: 0; }
+  .card {
+    display: grid;
+    grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+    gap: clamp(var(--space-6), 4vw, var(--space-12));
+    align-items: center;
+    text-align: left;
+  }
+  .card .card-thermal { width: 100%; max-width: 280px; aspect-ratio: 1; margin-inline: auto; }
+  .card .card-thermal canvas { display: block; width: 100%; height: 100%; }
+  .card .card-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--color-text-faint);
+    margin-bottom: var(--space-2);
+  }
+  .card .card-caret { color: var(--color-primary); animation: card-blink 1.1s steps(1) infinite; }
+  @keyframes card-blink { 50% { opacity: 0; } }
+  .card .card-name {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    text-wrap: balance;
+    margin: 0 0 var(--space-3);
+  }
+  .card .card-role { color: var(--color-text); margin: 0 0 var(--space-1); }
+  .card .card-blurb { color: var(--color-text-muted); margin: 0 0 var(--space-6); }
+  .card .card-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-6); }
+  .card .card-action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--color-text);
+    text-decoration: none;
+    transition: border-color var(--transition-interactive), background var(--transition-interactive), color var(--transition-interactive);
+  }
+  .card .card-action[hidden] { display: none; }
+  .card .card-action:hover, .card .card-action:focus-visible {
+    border-color: var(--color-primary);
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+  }
+  .card .card-action-primary {
+    border-color: var(--color-primary);
+    background: var(--color-primary-dim);
+    color: var(--color-text);
+  }
+  .card .card-action-key { color: var(--color-terminal-prompt); }
+  .card .card-links {
+    display: grid;
+    gap: var(--space-1);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    margin-bottom: var(--space-6);
+  }
+  .card .card-links a { color: var(--color-text-muted); text-decoration: none; width: fit-content; }
+  .card .card-links a:hover, .card .card-links a:focus-visible { color: var(--color-primary); }
+  .card .card-hint { color: var(--color-text-faint); font-size: 0.78rem; line-height: 1.5; margin: 0; }
+  .card .card-save-hint { margin: 0 0 var(--space-6); }
+  .card .card-hint a { color: var(--color-text-muted); text-decoration: underline; text-underline-offset: 3px; }
+  .card .card-hint code { font-family: var(--font-mono); color: var(--color-text-muted); }
+  @media (max-width: 760px) {
+    .card { grid-template-columns: 1fr; text-align: center; }
+    .card .card-thermal { max-width: 220px; }
+    .card .card-actions { justify-content: center; }
+    .card .card-links { justify-items: center; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card .card-caret { animation: none; }
+  }
 </style>
-<script type="module">
-  import { initMotionPolicy } from '/js/motion.js';
-  import { initBackgrounds } from '/js/backgrounds.js';
-  initMotionPolicy();
-  initBackgrounds();
+
+<script>
+  // The public card is phone-free by default (IDEAS.md: "no phone on public
+  // card by default"). To enable the SMS action, set an E.164 number here and
+  // add a TEL line to c/contact.vcf — then update tools/assert-card.mjs.
+  const CARD = { phone: '' };
+  (function () {
+    const sms = document.getElementById('sms');
+    if (CARD.phone) {
+      sms.href = 'sms:' + CARD.phone;
+      sms.hidden = false;
+    }
+
+    const save = document.getElementById('save-contact');
+    if (!save) return;
+    const vcf = save.getAttribute('href');
+    const ua = navigator.userAgent;
+    const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
+    const android = /Android/i.test(ua);
+    const hint = document.getElementById('card-save-hint');
+
+    // Android and desktop download the file; iOS hands the bare .vcf URL to
+    // the system contact sheet. A readable filename helps after the download.
+    if (!ios) save.setAttribute('download', 'Devkumar Banerjee.vcf');
+    if (android && hint) hint.hidden = false;
+
+    // Safari and every WebKit browser on iOS can open the contact sheet from a
+    // top-level navigation. Do it once per session.
+    if (!ios || window.top !== window.self) return;
+    try {
+      if (sessionStorage.getItem('dvxb-card-vcf')) return;
+      sessionStorage.setItem('dvxb-card-vcf', '1');
+    } catch (_) {}
+    setTimeout(function () { location.href = vcf; }, 450);
+  })();
 </script>
 <script type="module">
+  import { initMotionPolicy } from '/js/motion.js';
   import { mountNavOrb } from '/js/orb.js';
+  import { initThermalAscii, RAMP_MIXED } from '/js/thermal-ascii.js';
+  import { ASCII_ART } from '/js/ascii-art.js';
+  initMotionPolicy();
   mountNavOrb();
+  const canvas = document.getElementById('thermal-ascii');
+  if (canvas) initThermalAscii(canvas, { art: ASCII_ART, ramp: RAMP_MIXED });
 </script>
 <script>
   (function () {

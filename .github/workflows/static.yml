@@ -147,6 +147,9 @@ jobs:
       - name: Assert blog RSS
         run: bun tools/assert-rss.mjs
 
+      - name: Assert card invariants
+        run: bun tools/assert-card.mjs
+
       # Pagefind search index, blog pages only (--glob scoping per E4; shell
       # chrome carries data-pagefind-ignore via build-blog post-replace so the
       # shared shell.html stays byte-identical, and draft articles carry
