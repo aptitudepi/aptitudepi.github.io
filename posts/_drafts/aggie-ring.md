@@ -1,15 +1,59 @@
 ---
 title: "I Got My Aggie Ring"
-description: "A College Station kid who grew up seeing Aggie Rings on other people's hands finally orders, waits five months for, and wears his own."
-date: "2026-10-13"
+description: "I grew up in College Station seeing Aggie Rings everywhere. This October, my twin sister gave me mine, and we celebrated with family, photos, and cookie cake."
+date: "2026-11-04"
 tags: ["aggie", "personal", "milestone"]
 image: "https://cdn.dvxb.io/media/aggie-ring/1749e0bf949a-aggie-ring-hero.jpg"
-draft: true
+draft: false
 ---
 
-The first Aggie Rings I knew were never mine. They were on a teacher's hand, on a neighbor's, on a family friend's across the table. I grew up in College Station, so the Ring was just a thing the adults around me wore. I knew its weight and shape long before I knew it took ninety credit hours, or what the seal stood for, or why there were dates on it. It was part of the background.
-
-A&M was never a place I discovered on a campus tour. It was already the thing in the middle of where I was from. So ordering the Ring didn't feel like excitement so much as catching up to something that had been there all along.
+<style>
+.ring-ascii{width:100%;max-width:720px;margin:0 auto 2rem;text-align:center}
+.ring-ascii pre{margin:0;padding:0;border:0;background:none;line-height:1;overflow:hidden;font-size:clamp(4px,1.5vw,11px)}
+.ring-ascii canvas{display:none}
+</style>
+<div id="ring-ascii" role="img" aria-label="ASCII portrait of the Texas A&M Aggie Ring">
+<pre aria-hidden="true">
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣤⣤⣤⣤⣴⣶⣶⣶⣶⣶⣶⣶⣶⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣶⣶⣶⣤⣤⣤⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⣠⣴⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣶⣦⣤⣀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠿⠿⠾⠛⠛⠛⢛⣿⠛⣿⡟⣹⣿⣤⣧⡌⣩⣭⣝⠛⡛⠛⠛⠿⠿⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⡄⠀⠀⠀⠀
+⠀⠀⠀⣠⣴⣿⣿⡿⠿⠿⠿⠟⠛⠛⣋⠉⠉⠠⠒⠖⣂⠴⢊⢡⣶⣏⣿⠏⠺⠛⠙⣫⠉⠛⠛⠛⢻⠋⠻⠿⢿⣮⣍⡛⠳⣶⠠⣤⠈⣉⡙⡛⠛⠿⠿⠿⢿⣿⣿⣿⣇⠀⠀⠀⠀
+⠀⠀⣼⣡⡞⠛⢻⠷⢶⣤⣄⣠⡀⠈⢁⣒⣀⣤⠔⢚⣥⣺⣿⠸⢛⡀⠁⠘⡟⢦⠞⣿⠀⠀⠀⠀⢸⡟⠀⡰⠚⣏⠉⣴⣶⠄⠑⠄⠀⢥⢄⡍⢈⠃⠀⢠⣤⣶⣦⣭⣯⢻⣦⠀⠀
+⠀⣼⣿⠏⡀⠚⡱⠖⢦⣄⣉⠛⢷⣴⠾⠟⡉⠀⣠⣾⡿⠉⢡⣎⡡⢴⣆⠀⠷⠀⠀⣛⡃⠀⠀⠀⠘⠧⠴⠃⡔⢻⡇⢠⠀⠾⠷⠀⠙⢶⣶⡄⣠⣴⠞⢋⣉⠉⠁⣴⣿⡿⢿⣧⠀
+⢰⣿⡿⠀⠟⢋⡡⠜⢁⠤⢘⡤⠊⢈⡀⠀⢡⣄⡟⢉⡀⠀⠀⠻⠷⠚⣡⣤⣴⠶⠾⠛⠛⠛⠷⠶⢶⣦⣄⡈⠁⢸⡷⠁⣠⡷⠜⠻⠆⠀⠘⠱⢫⡰⢾⡏⢀⣴⣾⡟⢿⠳⠾⢦⡆
+⣿⣿⣇⣤⢴⠻⡵⠚⣉⠔⠋⣠⣴⠋⠝⢠⣼⡏⢴⠛⡿⢷⠖⢀⣠⡾⠛⠉⠀⢠⣄⠀⠉⠒⠂⠀⠀⠀⠉⠻⢶⣄⠀⠺⠋⢀⡾⠖⠻⡦⠀⢢⡀⠙⠳⣌⠻⠿⠟⣿⣾⣇⢠⣿⣷
+⣿⣿⣿⣿⡄⠀⡠⠊⣡⣴⡿⠋⢀⡶⢀⣼⠏⠀⠀⢻⡀⠀⣰⡿⣋⣤⣤⡄⠀⠃⠈⠛⣶⣾⣾⠃⠀⠀⣶⣦⢄⠙⢷⣄⠀⢿⡡⠤⢆⠻⡦⠀⠤⡄⠀⢠⣼⣷⣿⡿⣿⣿⣿⣿⣿
+⣿⣿⣯⣿⣆⣠⣶⣿⠿⠋⠀⢀⣧⠀⢸⡏⠀⠀⠀⠀⠀⣼⠏⠀⢡⣿⣿⡇⠀⠀⠀⠸⣿⣿⡟⠃⠀⠀⣿⣿⡦⠠⠀⢻⣆⠀⢤⣴⠞⣦⢿⡄⠠⣆⣠⠿⠟⣿⠁⠀⣹⣿⣿⣿⠿
+⠙⣿⣿⣿⡿⢛⣩⣤⣄⣀⡄⡀⠛⠀⡟⣻⢻⡟⡆⢀⣼⠃⠎⡀⠀⠠⠿⢇⠀⠤⠀⣊⠽⢯⣁⠳⠠⣴⡏⠃⠀⠀⠐⠀⢻⣇⠘⣆⠁⠞⡠⣶⠈⢉⠉⣴⣸⡟⢠⣾⣿⣿⣿⣿⡇
+⠀⣽⣿⣿⣿⣄⢻⣿⣿⣏⡞⡴⠁⢸⠓⠧⠾⣰⠃⣼⡏⠀⠀⠛⠁⡀⢰⠒⠒⠊⣉⠀⣤⡠⢈⠉⠓⠒⢢⠀⠀⠈⠃⡀⠀⣿⡄⢰⣶⠚⡇⣬⡀⠋⢸⢟⡡⠼⢿⣿⣿⣿⣿⣿⠁
+⠀⠸⠏⠙⣿⣿⣆⠙⢿⢸⢰⡇⠀⣼⣦⣤⣤⣤⢀⣿⠀⣸⢀⣠⠀⠀⢸⠀⠿⠂⠛⠃⠋⠃⠘⠃⠸⠟⢸⠀⠀⢀⠀⠱⠀⢸⣧⠀⡾⠶⠃⣨⡁⠧⠀⠁⠀⠀⠀⠈⣿⣿⠟⠋⠀
+⠀⠀⢳⣷⡟⢿⣿⣷⡀⠛⢎⠇⠀⣳⠚⠤⣇⡀⢸⣿⠀⠓⢷⠟⢄⠀⠸⡉⢸⡇⣿⠉⡏⢹⠉⡏⢹⠉⢹⠀⠀⠀⠲⠀⠑⢸⣿⠀⡆⡖⢣⢙⠃⣼⡷⠿⣷⣿⡇⢠⣿⡟⡜⠀⠀
+⠀⠀⠈⢿⣿⣌⢻⣿⣷⡀⠀⡀⠀⢹⡱⣄⢀⣅⢸⣿⠀⠀⢰⣆⠀⢰⠆⣇⢸⠇⣿⢸⡇⢸⠀⡇⢸⢀⠇⣶⠀⢠⡀⢣⠀⢸⣿⠀⡧⠇⠎⠻⠀⡔⠁⢊⡐⣯⢻⣦⣿⡿⠁⠀⠀
+⠀⠀⠀⠈⢿⡏⣡⣿⣿⣿⡄⠺⣇⠸⡁⣶⠟⢭⠈⣿⠀⠀⠘⠿⠀⢸⡷⠈⢺⠀⣿⢸⡇⢸⠀⡇⢸⠋⠰⡛⠀⠀⠁⠈⠀⢸⡟⢰⠶⠶⠇⡶⢀⢻⠓⢾⣗⠃⣸⣟⡿⠃⠀⠀⠀
+⠀⠀⠀⠀⠈⢻⡹⣿⣿⣯⡿⣄⠠⠄⢏⢠⠄⠲⡄⢻⣇⠀⢲⣒⠄⡤⣅⠐⠆⠑⢟⢸⡇⢸⢀⠗⠁⢀⠄⣴⣔⢖⠒⠓⢀⣿⢃⣄⣐⡖⣴⠁⡋⠈⣠⠏⢽⣷⠉⡿⠃⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠻⣿⣍⡛⢷⡝⢾⡂⠈⡇⢢⠷⠿⠌⢿⡄⠀⠤⣪⠔⢠⠀⡌⠂⠀⠙⠣⠞⠁⠀⠀⠀⢦⠀⠈⠓⠀⠀⣼⠏⠈⠉⡽⢡⠍⠚⢀⣾⡻⠅⣀⣴⡞⠁⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠘⢷⣍⠓⠿⢦⡀⠒⡘⡆⢶⣀⣴⣌⢻⣄⠀⠁⠀⠁⠘⠀⡴⠒⢢⡀⣴⠒⠒⣆⠀⠀⠁⠀⠀⢀⣼⠏⢾⡶⠶⢣⠌⠜⣡⣟⣡⠔⣂⣽⠋⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣿⣦⣉⠸⣿⡇⠈⢆⠫⠄⠀⠀⠙⢦⡀⠀⠀⠀⠀⡴⠖⠛⠀⠉⠒⠚⡿⠀⠀⠀⠀⣠⡾⠃⠀⠀⠱⡶⢈⣴⡾⣯⢌⣤⣾⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⢿⣷⣿⣻⣷⠦⢑⡆⢀⣱⣦⡎⠙⠶⣄⡀⠀⠓⠒⠚⠀⠈⠒⠊⠁⢀⣠⡴⠞⢉⣶⡾⠥⣠⢎⠁⡊⠁⣸⣷⡿⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠻⣿⣿⣧⣬⣿⣓⣆⠛⠉⠀⠠⣬⠍⢛⣲⡶⠶⢶⣶⡶⠶⢟⣿⢿⣂⠀⠈⣈⠡⢂⣌⣴⣾⣶⣿⠟⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠻⢿⣿⣿⣿⣿⣥⣤⡜⠃⠀⡿⠀⣽⠀⠋⣩⡿⠃⠘⢿⠄⣯⢄⣞⣥⡶⢿⣻⡿⠟⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠛⠻⠿⣿⣿⣿⣿⣶⣾⣦⡶⣾⠴⠿⠂⠚⠛⢛⣛⣩⡭⠶⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠙⠛⠛⠛⠛⠛⠛⠛⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+</pre>
+<canvas aria-hidden="true"></canvas>
+</div>
+<script type="module">
+import { initThermalAscii } from '/js/thermal-ascii.js';
+const box = document.getElementById('ring-ascii');
+const pre = box.querySelector('pre');
+const canvas = box.querySelector('canvas');
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const art = pre.textContent.replace(/^\n+|\n+$/g, '').split('\n');
+  pre.hidden = true;
+  canvas.style.display = 'block';
+  initThermalAscii(canvas, { art });
+}
+</script>
 
 ```gallery
 ![Signing my Aggie Ring order at the Association of Former Students](https://cdn.dvxb.io/media/aggie-ring/3f58759746b6-aggie-ring-order.jpg) the signature that starts the five-month wait
@@ -17,20 +61,30 @@ A&M was never a place I discovered on a campus tour. It was already the thing in
 ![With friends at the fountain on Ring Day](https://cdn.dvxb.io/media/aggie-ring/4a9c44f74d8b-aggie-ring-friends.jpg) no dunk — just the fountain and the people I wanted there
 ```
 
-## The wait
+## My Aggie Ring Day
 
-On May 18 I signed my name at the Association of Former Students and confirmed the ninety hours were real. Then I waited. Five months is a strange amount of time to wait for a piece of metal. It's long enough to half-forget about it, so that when the small box finally showed up on October 9 it caught me off guard. The Ring was heavier than I remembered rings being. The dates and the seal were already mine, already stamped, no going back.
+The first thing I noticed when I picked up my Aggie Ring was how cold it was. The second was that it was heavier than I expected. It’s metal, so neither of those things should have been surprising, but apparently they were.
 
-I'd pictured putting it on as a finish line. It wasn't. It felt quieter than that — less like crossing something and more like being handed the thing I'd been standing next to since I was a kid. It went over my knuckle and stayed there.
+I’d been looking forward to getting it for a long time. Holding it for the first time, though, I was mostly looking at all the little details and getting used to the fact that this one was mine.
 
-## What it holds
+Growing up in College Station, I saw Aggie Rings long before I understood what it took to earn one. I’m pretty sure the first person I remember seeing wear one was an elementary school teacher, although I couldn’t tell you which teacher now. They were familiar enough that I didn’t think much about them as a kid. Becoming an A&M student gave me a different appreciation for something I’d grown up around.
 
-To me, the Ring isn't a trophy for the clean parts — not the grade that came out right, not the project that finally worked. It holds more of the other stuff. When I look at it I think of a night in the lab chasing one bug, well past the point where it was a good use of the hours, and all the versions of that night in different buildings. Some of it went well. A lot of it was me slowing down, asking for help, and admitting my first way of doing it was wrong. That's the part the Ring actually brings back — the stubbornness, not the results.
+I ordered mine about two weeks after finishing my freshman year, having reached both 90 total credit hours and 45 at Texas A&M. I’m proud of that. It took work to get there, and I was excited to reach a milestone I’d expected to be further away.
 
-And none of it was mine alone. My family absorbed every change of plan and every stretch where I wasn't around much, and never made me feel like the schedule was a problem. My friends are why College Station stopped being just the place I was from and turned into home. People handed me work before I felt ready for it, which is its own kind of trust. When I turn my hand now and see the Ring, those are the hands I think about.
+Still, once Ring Day arrived, I wasn’t thinking much about credit hours anyway. I had asked my twin sister to put my ring on. She describes having a twin as having a “built-in best friend,” which is probably the best explanation for why I chose her. She’s been with me my entire life (technically a minute longer than I’ve been with her) and has always been there when I needed her.
 
-I kept Ring Day simple on purpose. I didn't do a ring dunk. It's a real tradition and I understand why people love it, but it isn't the version of the day I wanted. I'd rather have the Ring clean from the start and keep the memory about the people around me. So I spent the day with the ones closest to me, went to the fountain, and started wearing it. That was the whole plan, and it was plenty.
+She didn’t say anything as she put it on. There wasn’t a speech or some perfectly timed piece of advice. I was just happy it was her. We’ve shared so much of our lives that having her be part of this felt right. There’s a closeness in being twins that I find difficult to explain, but I don’t really need to explain it to her.
 
-Already I value the Ring more for the ordinary days it'll see than for the one it arrived on. It'll be on my hand in class, in the lab, at work, and wherever I land after A&M — the same way it was on my teachers' hands while they taught. I'm still early in all of this and don't have much figured out. If anything, wearing it made me more aware of how much is still in front of me. The Ring I grew up watching is on my hand now, and most of what it's for hasn't happened yet.
+My parents were there too, and seeing how proud they were meant a lot. They’ve been supportive throughout my education, including all the work that happened before I ever became an A&M student. I was glad they got to enjoy this part with me.
 
-Gig 'em.
+It also happened to be my mom’s 50th birthday. That made the day especially memorable: I got my ring, and we got to celebrate her too.
+
+Afterward, we took photos and found a spot in the MSC’s Multicultural Services lounge to have cookie cake. We needed tables and somewhere that wasn’t too crowded. It was a simple way to celebrate, and I’m glad we had that time together after all the excitement.
+
+Looking back, I like that the day had room for both the milestone and the ordinary stuff: figuring out where to sit, taking pictures, eating cake with my family. Those are the details I want to remember alongside getting the ring itself.
+
+I still have a lot of college ahead of me. Getting my ring early hasn’t changed that, and I’m glad it hasn’t. There are classes I haven’t taken, people I haven’t met, and plenty more I still want to do during the rest of my time in Aggieland!
+
+For now, I’m proud to wear it. I grew up seeing Aggie Rings on other people’s hands. It’s still a little strange (and really cool) to look down and see one on mine!
+
+Gig ’em!
