@@ -181,7 +181,7 @@ function shareFooter(title, canonical) {
     '</div></footer>\n';
 }
 
-const PROGRESS_DIV = '<div class="read-progress" data-pagefind-ignore aria-hidden="true" style="position:fixed;top:0;left:0;height:2px;width:0;z-index:60;background:#7ee787"></div>\n';
+const PROGRESS_DIV = '<div class="read-progress" data-pagefind-ignore aria-hidden="true" style="position:fixed;top:calc(var(--doc-nav-height,0px) - 2px);left:0;height:2px;width:0;z-index:91"></div>\n';
 
 // Read-UX island: canonical-clean (?ref=/utm_* stripped post-attribution via
 // replaceState), ?ref=-preserving copy-link, scroll progress. Vanilla inline
@@ -210,6 +210,9 @@ function postScripts() {
     '  });\n' +
     "  var bar = document.querySelector('.read-progress');\n" +
     '  if (bar) {\n' +
+    '    // Panel backdrop-filter is the containing block for fixed children;\n' +
+    '    // re-home the bar on body so it pins to the viewport.\n' +
+    '    document.body.appendChild(bar);\n' +
     '    var onScroll = function () {\n' +
     '      var max = document.documentElement.scrollHeight - window.innerHeight;\n' +
     "      bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + '%';\n" +
@@ -508,7 +511,7 @@ const NO_JS_CSS = '<noscript><style>.gallery{display:block;overflow:visible}</st
 
 // Post-only inline sheet: share buttons copy index.html's contact circles
 // (52px, terminal bg, blueRedColor on hover) without touching css/ budgets.
-const POST_CSS = '<style>.share-footer{margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--color-border);text-align:center}.share-footer p{font-family:var(--font-mono);font-size:.8125rem;color:var(--color-text-faint);margin:0 0 .75rem}.share-buttons{display:flex;justify-content:center;gap:1rem}.doc-main .share-btn{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;padding:0;border-radius:var(--radius-full);border:1px solid var(--color-border);background:var(--color-terminal-bg);color:var(--color-text-muted);cursor:pointer;transition:border-color var(--transition-interactive),color var(--transition-interactive),background var(--transition-interactive),transform var(--transition-interactive)}.share-btn svg{width:22px;height:22px}.share-btn:hover{animation:blueRedColor 6s ease-in-out infinite;border-color:currentColor;background:color-mix(in srgb,currentColor 18%,transparent);transform:translateY(-2px)}@media (prefers-reduced-motion:reduce){.share-btn:hover{animation:none}}</style>\n';
+const POST_CSS = '<style>.share-footer{margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--color-border);text-align:center}.share-footer p{font-family:var(--font-mono);font-size:.8125rem;color:var(--color-text-faint);margin:0 0 .75rem}.share-buttons{display:flex;justify-content:center;gap:1rem}.doc-main .share-btn{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;padding:0;border-radius:var(--radius-full);border:1px solid var(--color-border);background:var(--color-terminal-bg);color:var(--color-text-muted);cursor:pointer;transition:border-color var(--transition-interactive),color var(--transition-interactive),background var(--transition-interactive),transform var(--transition-interactive)}.share-btn svg{width:22px;height:22px}.share-btn:hover{animation:blueRedColor 6s ease-in-out infinite;border-color:currentColor;background:color-mix(in srgb,currentColor 18%,transparent);transform:translateY(-2px)}.read-progress{background:currentColor;animation:blueRedColor 6s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.share-btn:hover{animation:none}.read-progress{animation:none;background:#0000FF}}</style>\n';
 
 for (const post of published) {
   const canonical = `${SITE_URL}/blog/${post.slug}/`;
