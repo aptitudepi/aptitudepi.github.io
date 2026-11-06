@@ -268,6 +268,8 @@ export function initThermalAscii(canvas, options = {}) {
     // Preview/dev flag only: false (default) keeps the base 106x55
     // parseAnsiArt grid; true restores the legacy 2x upscale for previews.
     upscaleArt = false,
+    // Blog hero art: always fit the container width, skip the height cap.
+    fitWidth = false,
   } = options;
 
   // Grapheme steps for the active ramp (see RAMP_BENGALI note above): one
@@ -326,7 +328,7 @@ export function initThermalAscii(canvas, options = {}) {
       cellH = cellW / cellWidthRatio * cellHeightRatio; // keep glyph aspect
       // If column is too tall for the space, cap by height instead.
       const maxH = canvas.parentElement?.clientHeight || (window.innerHeight * 0.7);
-      if (cellH * artGrid.rows > maxH) {
+      if (!fitWidth && cellH * artGrid.rows > maxH) {
         cellH = maxH / artGrid.rows;
         cellW = cellH / cellHeightRatio * cellWidthRatio;
       }

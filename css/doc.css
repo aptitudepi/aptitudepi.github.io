@@ -50,7 +50,6 @@ body::before {
   font-family: var(--font-mono);
 }
 .doc-footer a { color: var(--color-text-muted); }
-.doc-footer a:hover { color: var(--color-primary); }
 
 /* ── Typography / links ──────────────────── */
 .doc-panel a {
@@ -59,8 +58,10 @@ body::before {
   text-underline-offset: 3px;
   transition: color var(--transition-interactive);
 }
-.doc-panel a:hover {
-  animation: docColorCycle 6s ease-in-out infinite;
+.doc-main a:hover,
+.doc-footer a:hover,
+.gallery-nav-btn:hover {
+  animation: blueRedColor 6s ease-in-out infinite;
 }
 .doc-panel u { text-decoration-thickness: 1px; }
 .doc-panel sup,
@@ -190,7 +191,6 @@ body::before {
   line-height: 1.6;
 }
 .man .doc-panel a { color: var(--color-primary); }
-.man .doc-panel a:hover { animation: docColorCycle 6s ease-in-out infinite; }
 .man .doc-panel p { max-width: 72ch; }
 
 /* Override the global `section` rule from layout.css. */
@@ -261,11 +261,9 @@ body::before {
   color: var(--color-text);
 }
 
-/* ── Gallery — CSS-only carousel ──────────────
-   Post-image galleries are a horizontal snap scroller; prev/next are plain
-   fragment links, so no JS is involved. Progressive enhancement only: post
-   pages inject a <noscript> sheet that reverts .gallery to the stacked block,
-   which is what noscript/RSS readers get. */
+/* ── Gallery — snap carousel ──────────────────
+   Horizontal snap scroller; first/last are fragment links, prev/next scroll
+   via postScripts(). Post pages inject a <noscript> sheet that stacks it. */
 .gallery {
   display: flex;
   gap: var(--space-4);
@@ -278,10 +276,12 @@ body::before {
 }
 .gallery-item {
   flex: 0 0 auto;
+  /* Definite width: content-sized flex + %-width img can collapse to 0x0. */
+  width: min(100%, 45vh);
   margin: 0;
   scroll-snap-align: center;
 }
-.gallery-item img { max-height: 60vh; }
+.gallery-item img { max-height: 60vh; object-fit: contain; }
 .gallery-item figcaption {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
@@ -294,18 +294,23 @@ body::before {
   gap: var(--space-2);
   margin-top: var(--space-3);
 }
-.gallery-nav-btn {
+.gallery-nav .gallery-nav-btn {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   color: var(--color-text-muted);
+  text-decoration: none;
+  background: var(--color-terminal-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-3);
+  cursor: pointer;
   transition: color var(--transition-interactive), border-color var(--transition-interactive);
 }
-.gallery-nav-btn:hover { color: var(--color-primary); border-color: var(--color-primary); }
 @media (prefers-reduced-motion: reduce) {
   .gallery { scroll-behavior: auto; }
+  .doc-main a:hover,
+  .doc-footer a:hover,
+  .gallery-nav-btn:hover { animation: none; }
 }
 
 /* ── Misc inline ─────────────────────────── */
