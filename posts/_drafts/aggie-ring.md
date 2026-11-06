@@ -82,36 +82,21 @@ if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
 
 ```gallery
 ![Signing for my Ring at Ring Day](https://cdn.dvxb.io/media/aggie-ring/3f58759746b6-aggie-ring-order.jpg) the signature that made it official
-![Standing with my family after getting the Ring](https://cdn.dvxb.io/media/aggie-ring/f231a0598475-aggie-ring-family.jpg) the people who put up with the schedule that got me here
+![Standing with my family after getting the Ring](https://cdn.dvxb.io/media/aggie-ring/f231a0598475-aggie-ring-family.jpg) the people who put up with me to get me here
 ![With friends at the fountain on Ring Day](https://cdn.dvxb.io/media/aggie-ring/7793d9f62cfe-aggie-ring-crew.jpg) the fountain and the people I wanted there
 ![Holding up my Aggie Ring](https://cdn.dvxb.io/media/aggie-ring/48e9909aa9df-aggie-ring-hand.jpg) finally on my hand
-![Cookie cake at the MSC](https://cdn.dvxb.io/media/aggie-ring/f928efe0960a-aggie-ring-cake.jpg) congrats, Daniel!
+![Cookie cake at the MSC](https://cdn.dvxb.io/media/aggie-ring/f928efe0960a-aggie-ring-cake.jpg) congrats to me! :D
 ```
 
 ## My Aggie Ring Day
 
-The first thing I noticed when I picked up my Aggie Ring was how cold it was. The second was that it was heavier than I expected. It’s metal, so neither of those things should have been surprising, but apparently they were.
-
-I’d been looking forward to getting it for a long time. Holding it for the first time, though, I was mostly looking at all the little details and getting used to the fact that this one was mine.
-
-Growing up in College Station, I saw Aggie Rings long before I understood what it took to earn one. I’m pretty sure the first person I remember seeing wear one was an elementary school teacher, although I couldn’t tell you which teacher now. They were familiar enough that I didn’t think much about them as a kid. Becoming an A&M student gave me a different appreciation for something I’d grown up around.
-
-I ordered mine about two weeks after finishing my freshman year, having reached both 90 total credit hours and 45 at Texas A&M. I’m proud of that. It took work to get there, and I was excited to reach a milestone I’d expected to be further away.
-
-Still, once Ring Day arrived, I wasn’t thinking much about credit hours anyway. I had asked my twin sister to put my ring on. She describes having a twin as having a “built-in best friend,” which is probably the best explanation for why I chose her. She’s been with me my entire life (technically a minute longer than I’ve been with her) and has always been there when I needed her.
-
-She didn’t say anything as she put it on. There wasn’t a speech or some perfectly timed piece of advice. I was just happy it was her. We’ve shared so much of our lives that having her be part of this felt right. There’s a closeness in being twins that I find difficult to explain, but I don’t really need to explain it to her.
-
-My parents were there too, and seeing how proud they were meant a lot. They’ve been supportive throughout my education, including all the work that happened before I ever became an A&M student. I was glad they got to enjoy this part with me.
-
-It also happened to be my mom’s 50th birthday. That made the day especially memorable: I got my ring, and we got to celebrate her too.
-
-Afterward, we took photos and found a spot in the MSC’s Multicultural Services lounge to have cookie cake. We needed tables and somewhere that wasn’t too crowded. It was a simple way to celebrate, and I’m glad we had that time together after all the excitement.
-
-Looking back, I like that the day had room for both the milestone and the ordinary stuff: figuring out where to sit, taking pictures, eating cake with my family. Those are the details I want to remember alongside getting the ring itself.
-
-I still have a lot of college ahead of me. Getting my ring early hasn’t changed that, and I’m glad it hasn’t. There are classes I haven’t taken, people I haven’t met, and plenty more I still want to do during the rest of my time in Aggieland!
-
-For now, I’m proud to wear it. I grew up seeing Aggie Rings on other people’s hands. It’s still a little strange (and really cool) to look down and see one on mine!
-
-Gig ’em!
+Growing up in College Station, I saw Aggie Rings everywhere.  On teachers, on people around town, and eventually on students who didn't seem all that much older than me.  I remember one of my elementary school teachers talking about it, although I can't remember which teacher now.  For a long time, getting one felt pretty far away.  So imagine my surprise when, about two weeks after finishing my freshman year, I found myself ordering my very own Aggie Ring!  I had reached 90 total credit hours, including 45 at Texas A&M. There was a lot of work behind those hours, and it was exciting to reach something I had expected to take longer.  Of course, I still had to wait about 5 months for the actual ring, which is plenty of time to look forward to something!
+When I finally opened the box, I noticed how cold it was, and how much heavier it felt than I expected.  You would think I had never held a piece of metal before.  But after seeing so many Aggie Rings over the years, it was different to hold one with my class year under the shield and with my name inside.
+I asked my twin sister to put it on for me.  She describes having a twin as having a "built-in best friend," and I think that explains my choice better than anything else could.  She's one minute older than me (a very small difference, but one that apparently still qualifies her as the older sibling).
+She has been there for my entire life.  We've grown up together, shared so many experiences, and always had each other to turn to.  There are things we understand about each other without much explanation.  Having her put on my ring was one of those things.  I was happy she was there, and happy it was her.
+My parents were there too, along with friends.  They were so proud, and seeing that made me appreciate the day even more.  My parents have supported me through years of school, last-minute projects, plans, and everything I've decided to take on.  I'm grateful they got to share this part with me.  It also happened to be my mom's 50th birthday!  So there was another reason to celebrate, and a very good reason to have cookie cake.
+After taking photos, we found some tables in the MSC.  We wanted somewhere we could sit together without too much of a crowd.  It wasn't very elaborate; we just had cake, conversation, and a chance to enjoy the afternoon with family and friends.
+I think that is what I appreciated most about the day.  I had spent months looking forward to receiving my ring, but when I think back on it now, I also think about my sister presenting it to me, my parents smiling for pictures, and all of us sitting around eating cake.  I'm glad those memories come with it.
+Getting my ring early also means I have a lot of my time at A&M still ahead of me.  Traditionally, Aggies wear their rings with the class year facing inward to show they are still growing as students, only turning them around to face the world at graduation.  Since I earned mine so early, I get to keep it facing toward me for three full years instead of the usual one.  There are classes to take, people to meet, and plenty of things I haven't figured out yet.  I'm proud of what I've done so far, but I'm looking forward to what comes next, too.  There are classes to take, people to meet, and plenty of things I haven't figured out yet.  I'm proud of what I've done so far, but I'm looking forward to what comes next, too.
+For now, I'm still getting used to seeing it on my hand.  Every so often, I look down at it and remember being a kid in College Station, and looking forward to getting my own.  It feels great to be here, and even nicer to have shared the day with the people who helped me get here.
+Gig 'em!
