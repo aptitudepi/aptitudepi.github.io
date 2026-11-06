@@ -92,7 +92,10 @@ const BUDGET_TABLE = [
   // 2,000,000 — 500k fits zero real photos (one 3024px hero ≈ 5.5 MB raw,
   // images barely gzip); 2 MB fits 1–2 photos + OG card while still gating
   // a 24-photo repeat of App P (gallery stays under the 1-hero rule).
-  { label: 'blog/ per-post HTML (max gzip per file)', kind: 'max-per-file', relativePath: 'blog', extension: '.html', maxGzipBytes: 15000 },
+  // Ring-art density (2026-11-05): 15,000→16,000 — the Aggie Ring post
+  // re-encoded its braille portrait at 2x density (65x25 → 130x50 chars,
+  // 4x cells ≈ +4.4 KB gzip). Content the post explicitly wants, not bloat.
+  { label: 'blog/ per-post HTML (max gzip per file)', kind: 'max-per-file', relativePath: 'blog', extension: '.html', maxGzipBytes: 16000 },
   { label: 'blog images total', kind: 'image-total', relativePath: 'assets/blog,images/blog,blog', extension: null, maxGzipBytes: 2000000 },
 ];
 

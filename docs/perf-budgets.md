@@ -123,7 +123,7 @@ unlisted.
 
 | Asset | Budget gzip | Notes |
 |---|---|---|
-| `blog/` per-post HTML (max per file) | ≤ 15,000 B | Worst-file ceiling over `blog/**/*.html` (shell + `__META__` + body); missing dir = 0, passes |
+| `blog/` per-post HTML (max per file) | ≤ 16,000 B | Worst-file ceiling over `blog/**/*.html` (shell + `__META__` + body); missing dir = 0, passes |
 | blog images total (`assets/blog/` + `images/blog/`) | ≤ 2,000,000 B | Sum over AVIF/WebP/JPEG/PNG/GIF/SVG; post images belong in those dirs so base budgets stay unaffected |
 | `blog/` generated images (step 5–6, 2026-10-12) | included in blog images total | `check-budgets.mjs` image-total also scans `blog/` for image extensions (responsive `<picture>` variants under `blog/<slug>/img/` + OG cards; HTML/RSS/JSON untouched). `.gitignore` artifact rule re-scoped to root `/blog/` so `assets/blog/` + `images/blog/` stay committable. Read-UX island JS rides inline `__SCRIPTS__` (same island-exclusion as player/search). |
 
@@ -138,6 +138,13 @@ dinner shot; WebP dropped as redundant between AVIF and JPEG). Measured
 aggie-ring 5-photo total 2.43 MB (1280w) → 1.60 MB gzip, so the 2,000,000
 ceiling holds unchanged with ~20% headroom. sizes already capped at 960
 CSS px, so 960w is exact-fit at 1x, soft at 2x retina (accepted tradeoff).
+
+Budget history: ring-art density (2026-11-05): per-post HTML 15,000→16,000
+— the Aggie Ring post's braille portrait was re-encoded from the real product
+photo at 2x point density (65x25 → 130x50 characters, 4x cells). That art is
+inline `<pre>` content the post explicitly wants, so the ceiling moves rather
+than trimming prose or art. Worst file measures 15,185 B gzip; 16,000 keeps
+~800 B of headroom for shell changes.
 
 Island-exclusion rule: blog islands (asciinema player, Pagefind search UI)
 ship via shell.html `__SCRIPTS__` as CDN/vendor payloads inside generated blog
