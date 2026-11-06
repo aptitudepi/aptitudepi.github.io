@@ -8,11 +8,11 @@ draft: false
 ---
 
 <style>
-.ring-ascii{width:100%;max-width:720px;margin:0 auto 2rem;text-align:center}
+.ring-ascii{width:100%;margin:0 auto 2rem;text-align:center}
 .ring-ascii pre{margin:0;padding:0;border:0;background:none;line-height:1;overflow:hidden;font-size:clamp(4px,1.5vw,11px)}
-.ring-ascii canvas{display:none}
+.ring-ascii canvas{display:none;height:0}
 </style>
-<div id="ring-ascii" role="img" aria-label="ASCII portrait of the Texas A&M Aggie Ring">
+<div class="ring-ascii" id="ring-ascii" role="img" aria-label="ASCII portrait of the Texas A&M Aggie Ring">
 <pre aria-hidden="true">
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣤⣤⣤⣤⣴⣶⣶⣶⣶⣶⣶⣶⣶⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣶⣶⣶⣤⣤⣤⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⣠⣴⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣶⣦⣤⣀⠀⠀⠀⠀⠀⠀⠀
@@ -51,14 +51,16 @@ if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
   const art = pre.textContent.replace(/^\n+|\n+$/g, '').split('\n');
   pre.hidden = true;
   canvas.style.display = 'block';
-  initThermalAscii(canvas, { art });
+  initThermalAscii(canvas, { art, fitWidth: true, upscaleArt: true });
 }
 </script>
 
 ```gallery
-![Signing my Aggie Ring order at the Association of Former Students](https://cdn.dvxb.io/media/aggie-ring/3f58759746b6-aggie-ring-order.jpg) the signature that starts the five-month wait
+![Signing for my Ring at Ring Day](https://cdn.dvxb.io/media/aggie-ring/3f58759746b6-aggie-ring-order.jpg) the signature that made it official
 ![Standing with my family after getting the Ring](https://cdn.dvxb.io/media/aggie-ring/f231a0598475-aggie-ring-family.jpg) the people who put up with the schedule that got me here
-![With friends at the fountain on Ring Day](https://cdn.dvxb.io/media/aggie-ring/4a9c44f74d8b-aggie-ring-friends.jpg) no dunk — just the fountain and the people I wanted there
+![With friends at the fountain on Ring Day](https://cdn.dvxb.io/media/aggie-ring/7793d9f62cfe-aggie-ring-crew.jpg) the fountain and the people I wanted there
+![Holding up my Aggie Ring](https://cdn.dvxb.io/media/aggie-ring/48e9909aa9df-aggie-ring-hand.jpg) finally on my hand
+![Cookie cake at the MSC](https://cdn.dvxb.io/media/aggie-ring/f928efe0960a-aggie-ring-cake.jpg) congrats, Daniel!
 ```
 
 ## My Aggie Ring Day

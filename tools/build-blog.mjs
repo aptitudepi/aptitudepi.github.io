@@ -170,12 +170,15 @@ function shareFooter(title, canonical) {
   const subj = encodeURIComponent(title);
   const url = encodeURIComponent(canonical);
   const text = encodeURIComponent(`${title} ${canonical}`);
-  return '<footer class="share-footer" data-pagefind-ignore><p>share this post: ' +
-    `<button type="button" id="copy-link" data-canonical="${canonical}">copy link</button> ` +
-    `<a href="mailto:?subject=${subj}&amp;body=${url}">email</a> ` +
-    `<a href="https://twitter.com/intent/tweet?text=${subj}&amp;url=${url}" target="_blank" rel="noopener">x</a> ` +
-    `<a href="https://bsky.app/intent/compose?text=${text}" target="_blank" rel="noopener">bluesky</a> ` +
-    `<a href="https://mastodon.social/share?text=${text}" target="_blank" rel="noopener">mastodon</a></p></footer>\n`;
+  // Icon buttons mirror index.html's .social-link circles; POST_CSS ships the
+  // look per post so the shared css/ budget is untouched.
+  return '<footer class="share-footer" data-pagefind-ignore><p>share this post</p><div class="share-buttons">' +
+    `<button type="button" class="share-btn" id="copy-link" data-canonical="${canonical}" aria-label="Copy link" title="copy link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg></button>` +
+    `<a class="share-btn" href="mailto:?subject=${subj}&amp;body=${url}" aria-label="Share by email" title="email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 6 10 7 10-7"/></svg></a>` +
+    `<a class="share-btn" href="https://twitter.com/intent/tweet?text=${subj}&amp;url=${url}" target="_blank" rel="noopener" aria-label="Share on X" title="x"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7 8L23.2 22h-6.5l-5.1-6.6L5.8 22H2.7l7.5-8.6L1 2h6.7l4.6 6.1L18.9 2Zm-1.1 18h1.7L7.3 3.9H5.5L17.8 20Z"/></svg></a>` +
+    `<a class="share-btn" href="https://bsky.app/intent/compose?text=${text}" target="_blank" rel="noopener" aria-label="Share on Bluesky" title="bluesky"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.624 6.479.815 2.736 3.713 3.66 6.383 3.364.136-.02.275-.039.415-.056-.138.022-.276.04-.415.056-3.912.58-7.387 2.005-2.83 7.078 5.013 5.19 6.87-1.113 7.823-4.308.953 3.195 2.05 9.271 7.733 4.308 4.267-4.308 1.172-6.498-2.74-7.078a8.741 8.741 0 0 1-.415-.056c.14.017.279.036.415.056 2.67.297 5.568-.628 6.383-3.364.246-.828.624-5.79.624-6.478 0-.69-.139-1.861-.902-2.206-.659-.298-1.664-.62-4.3 1.24C16.046 4.748 13.087 8.687 12 10.8Z"/></svg></a>` +
+    `<a class="share-btn" href="https://mastodon.social/share?text=${text}" target="_blank" rel="noopener" aria-label="Share on Mastodon" title="mastodon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.268 5.313c-.35-2.578-2.617-4.61-5.304-5.004C17.51.242 15.792 0 11.813 0h-.03c-3.98 0-4.835.242-5.288.309C3.882.692 1.496 2.518.917 5.127.64 6.412.61 7.837.661 9.143c.074 1.874.088 3.745.26 5.611.118 1.24.325 2.47.62 3.68.55 2.237 2.777 4.098 4.96 4.857 2.336.792 4.849.923 7.256.38.265-.061.527-.132.786-.213.585-.184 1.27-.39 1.774-.753a.057.057 0 0 0 .023-.043v-1.809a.052.052 0 0 0-.02-.041.053.053 0 0 0-.046-.01 20.282 20.282 0 0 1-4.709.545c-2.73 0-3.463-1.284-3.674-1.818a5.593 5.593 0 0 1-.319-1.433.053.053 0 0 1 .066-.054c1.517.363 3.072.546 4.632.546.376 0 .75 0 1.125-.01 1.57-.044 3.224-.124 4.768-.422.038-.008.077-.015.11-.024 2.435-.464 4.753-1.92 4.989-5.604.008-.145.03-1.52.03-1.67.002-.512.167-3.63-.024-5.545zm-3.748 9.195h-2.561V8.29c0-1.309-.55-1.976-1.67-1.976-1.23 0-1.846.79-1.846 2.35v3.403h-2.546V8.663c0-1.56-.617-2.35-1.848-2.35-1.112 0-1.668.668-1.67 1.977v6.218H4.822V8.102c0-1.31.337-2.35 1.011-3.12.696-.77 1.608-1.164 2.74-1.164 1.311 0 2.302.5 2.962 1.498l.638 1.06.638-1.06c.66-.999 1.65-1.498 2.96-1.498 1.13 0 2.043.395 2.74 1.164.675.77 1.012 1.81 1.012 3.12z"/></svg></a>` +
+    '</div></footer>\n';
 }
 
 const PROGRESS_DIV = '<div class="read-progress" data-pagefind-ignore aria-hidden="true" style="position:fixed;top:0;left:0;height:2px;width:0;z-index:60;background:#7ee787"></div>\n';
@@ -194,7 +197,16 @@ function postScripts() {
     '  } catch (e) {}\n' +
     "  var btn = document.getElementById('copy-link');\n" +
     "  if (btn && navigator.clipboard) btn.addEventListener('click', function () {\n" +
-    "    navigator.clipboard.writeText(window.location.href).then(function () { btn.textContent = 'copied'; });\n" +
+    "    navigator.clipboard.writeText(window.location.href).then(function () { btn.innerHTML = '&#10003;'; btn.setAttribute('aria-label', 'Link copied'); });\n" +
+    '  });\n' +
+    "  document.querySelectorAll('.gallery-nav-btn[data-dir]').forEach(function (b) {\n" +
+    "    b.addEventListener('click', function () {\n" +
+    "      var g = b.closest('.gallery-nav').previousElementSibling;\n" +
+    "      var item = g && g.querySelector('.gallery-item');\n" +
+    '      if (!item) return;\n' +
+    "      var gap = parseFloat(getComputedStyle(g).columnGap) || 0;\n" +
+    "      g.scrollBy({ left: Number(b.getAttribute('data-dir')) * (item.getBoundingClientRect().width + gap), behavior: 'smooth' });\n" +
+    '    });\n' +
     '  });\n' +
     "  var bar = document.querySelector('.read-progress');\n" +
     '  if (bar) {\n' +
@@ -233,10 +245,16 @@ export function expandGalleryFences(markdown, file) {
     // post with two fences must not emit duplicate ids.
     const prefix = `g${++galleryIndex}-`;
     const figures = items.map((item, position) =>
-      `<figure class="gallery-item" id="${prefix}${position + 1}"><img src="${item[2]}" alt="${escapeHtml(item[1])}"><figcaption>${escapeHtml(item[3].trim())}</figcaption></figure>`);
+      `<figure class="gallery-item" id="${prefix}${position + 1}"><img src="${item[2]}" alt="${escapeHtml(item[1])}" referrerpolicy="no-referrer"><figcaption>${escapeHtml(item[3].trim())}</figcaption></figure>`);
     const count = figures.length;
+    // first/last stay fragment links (work with no JS); prev/next are buttons
+    // that scroll one card at a time in postScripts().
     const nav = count > 1
-      ? `\n<nav class="gallery-nav" aria-label="Gallery photos">\n<a class="gallery-nav-btn" href="#${prefix}1" aria-label="Show first photo">&#8249;&nbsp;first</a>\n<a class="gallery-nav-btn" href="#${prefix}${count}" aria-label="Show last photo">last&nbsp;&#8250;</a>\n</nav>`
+      ? `\n<nav class="gallery-nav" aria-label="Gallery photos">\n` +
+        `<a class="gallery-nav-btn" href="#${prefix}1" aria-label="Show first photo">&#8249;&nbsp;first</a>\n` +
+        `<button type="button" class="gallery-nav-btn" data-dir="-1" aria-label="Previous photo">&#8249;&nbsp;prev</button>\n` +
+        `<button type="button" class="gallery-nav-btn" data-dir="1" aria-label="Next photo">next&nbsp;&#8250;</button>\n` +
+        `<a class="gallery-nav-btn" href="#${prefix}${count}" aria-label="Show last photo">last&nbsp;&#8250;</a>\n</nav>`
       : '';
     return `<div class="gallery" role="group" aria-label="Photo gallery">\n${figures.join('\n')}\n</div>${nav}`;
   });
@@ -423,6 +441,62 @@ rmSync(OUT_DIR, { recursive: true, force: true });
 mkdirSync(OUT_DIR, { recursive: true });
 
 const NOINDEX = '<meta name="robots" content="noindex, nofollow">';
+
+// Inline theme for /blog/ + /blog/tag/* — list pages only. Kept out of css/
+// so the css/ budget is untouched (the budget scans css/ only).
+const BLOG_INDEX_CSS = `<style>
+.blog-head{margin-bottom:var(--space-8)}
+.blog-kicker{font-family:var(--font-mono);font-size:.6875rem;text-transform:uppercase;letter-spacing:.12em;color:var(--color-text-faint);margin:0 0 var(--space-3)}
+.blog-title{font-family:var(--font-display);font-size:clamp(2rem,5vw,2.75rem);font-weight:600;line-height:1.1;letter-spacing:-.02em;margin:0 0 var(--space-3);color:var(--color-text)}
+.blog-sub{color:var(--color-text-muted);max-width:60ch;margin:0}
+.blog-bar{display:flex;justify-content:space-between;align-items:center;gap:var(--space-4);padding:var(--space-3) 0;border-top:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);margin-bottom:var(--space-2)}
+.blog-search{display:flex;align-items:center;gap:var(--space-2);font-family:var(--font-mono);font-size:.8125rem;color:var(--color-primary);min-width:0}
+.blog-search input{flex:1;min-width:0;background:none;border:0;color:var(--color-text);font:inherit;padding:var(--space-1) 0}
+.blog-search input::placeholder{color:var(--color-text-faint)}
+.blog-count{font-family:var(--font-mono);font-size:.6875rem;text-transform:uppercase;letter-spacing:.12em;color:var(--color-text-faint);white-space:nowrap}
+.blog-results{list-style:none;margin:0 0 var(--space-4);padding:0}
+.blog-results:empty{display:none}
+.blog-results a{display:block;padding:var(--space-2) var(--space-3);text-decoration:none;border-radius:var(--radius-md)}
+.blog-results a:hover{background:var(--color-surface)}
+.post-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--color-divider)}
+.post-card{border-bottom:1px solid var(--color-divider)}
+.post-list .post-card-link{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:var(--space-4);padding:var(--space-5) var(--space-4);text-decoration:none;color:var(--color-text);border-radius:var(--radius-md);transition:background var(--transition-interactive),color var(--transition-interactive)}
+.post-list .post-card-link:hover{background:var(--color-surface)}
+.post-card-body{min-width:0}
+.post-card-top{display:flex;flex-wrap:wrap;gap:var(--space-3);font-family:var(--font-mono);font-size:.6875rem;text-transform:uppercase;letter-spacing:.12em;color:var(--color-text-faint);margin-bottom:var(--space-2)}
+.post-card-title{font-family:var(--font-display);font-size:clamp(1.25rem,2.5vw,1.5rem);font-weight:600;line-height:1.25;letter-spacing:-.01em;margin:0 0 var(--space-2);color:inherit}
+.post-card-desc{color:var(--color-text-muted);max-width:65ch;margin:0}
+.post-card-tags{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-3)}
+.post-card-tag{font-family:var(--font-mono);font-size:.6875rem;color:var(--color-text-muted);border:1px solid var(--color-border);border-radius:var(--radius-full);padding:0 var(--space-2)}
+.post-card-arrow{color:inherit;opacity:.55;font-size:1.25rem;line-height:1.4;transition:opacity var(--transition-interactive),transform var(--transition-interactive)}
+.post-list .post-card-link:hover .post-card-arrow{opacity:1;transform:translateX(4px)}
+@media (max-width:560px){.post-card-link{padding:var(--space-4) var(--space-2);gap:var(--space-2)}.post-card-arrow{display:none}.post-card-title{font-size:1.125rem}.blog-count{display:none}}
+@media (prefers-reduced-motion:reduce){.post-card-link,.post-card-arrow{transition:none}.post-list .post-card-link:hover .post-card-arrow{transform:none}}
+</style>`;
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// UTC parts: no locale/TZ drift between CI and a laptop.
+function fmtDate(date) {
+  return `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
+}
+
+function postCard(post, index) {
+  const number = String(index + 1).padStart(2, '0');
+  const desc = post.description ? `\n      <p class="post-card-desc">${escapeHtml(post.description)}</p>` : '';
+  const tagList = post.tags.length
+    ? `\n      <div class="post-card-tags">${post.tags.map((tag) => `<span class="post-card-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
+    : '';
+  return `<li class="post-card">
+  <a class="post-card-link" href="/blog/${post.slug}/">
+    <div class="post-card-body">
+      <div class="post-card-top"><span class="post-card-num">${number}</span><time datetime="${post.date.toISOString()}">${fmtDate(post.date)}</time><span>${post.minutes} min read</span></div>
+      <h2 class="post-card-title">${escapeHtml(post.title)}</h2>${desc}${tagList}
+    </div>
+    <span class="post-card-arrow" aria-hidden="true">→</span>
+  </a>
+</li>`;
+}
 const RSS_LINK = '<link rel="alternate" type="application/rss+xml" title="dvxb.io blog" href="/blog/rss.xml">\n';
 // No-script half of the gallery carousel: the linked sheets make .gallery a
 // horizontal scroller, so a noscript UA needs them reverted to the stacked
@@ -431,6 +505,10 @@ const RSS_LINK = '<link rel="alternate" type="application/rss+xml" title="dvxb.i
 // specificity. Parsed as a stylesheet only when scripting is off, which is
 // exactly the UA that must not get the carousel.
 const NO_JS_CSS = '<noscript><style>.gallery{display:block;overflow:visible}</style></noscript>\n';
+
+// Post-only inline sheet: share buttons copy index.html's contact circles
+// (52px, terminal bg, blueRedColor on hover) without touching css/ budgets.
+const POST_CSS = '<style>.share-footer{margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--color-border);text-align:center}.share-footer p{font-family:var(--font-mono);font-size:.8125rem;color:var(--color-text-faint);margin:0 0 .75rem}.share-buttons{display:flex;justify-content:center;gap:1rem}.doc-main .share-btn{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;padding:0;border-radius:var(--radius-full);border:1px solid var(--color-border);background:var(--color-terminal-bg);color:var(--color-text-muted);cursor:pointer;transition:border-color var(--transition-interactive),color var(--transition-interactive),background var(--transition-interactive),transform var(--transition-interactive)}.share-btn svg{width:22px;height:22px}.share-btn:hover{animation:blueRedColor 6s ease-in-out infinite;border-color:currentColor;background:color-mix(in srgb,currentColor 18%,transparent);transform:translateY(-2px)}@media (prefers-reduced-motion:reduce){.share-btn:hover{animation:none}}</style>\n';
 
 for (const post of published) {
   const canonical = `${SITE_URL}/blog/${post.slug}/`;
@@ -446,7 +524,7 @@ for (const post of published) {
     DOWNLOAD: '',
     BODY: `${PROGRESS_DIV}${article}${shareFooter(post.title, canonical)}`,
     META: metaHtml(post),
-    HEAD_EXTRA: `${NO_JS_CSS}${RSS_LINK}${post.cast ? `<link rel="stylesheet" href="${CAST_CSS}">\n` : ''}${ogHead({ ...post, canonical })}`,
+    HEAD_EXTRA: `${NO_JS_CSS}${POST_CSS}${RSS_LINK}${post.cast ? `<link rel="stylesheet" href="${CAST_CSS}">\n` : ''}${ogHead({ ...post, canonical })}`,
     SCRIPTS: `${postScripts()}${post.cast ? castScripts() : ''}`,
   })));
   process.stdout.write(`wrote blog/${post.slug}/index.html\n`);
@@ -492,7 +570,7 @@ function searchScripts() {
 }
 
 // Index page (published only — drafts never listed).
-const items = published.map((post) => `  <li><a href="/blog/${post.slug}/">${escapeHtml(post.title)}</a> — ${post.date.toISOString().slice(0, 10)}</li>`).join('\n');
+const blogCount = `${published.length} ${published.length === 1 ? 'post' : 'posts'}`;
 const INDEX_OG = ogHead({ type: 'website', title: 'Blog — dvxb.io', description: 'Posts on systems, reliability, and tooling.', canonical: `${SITE_URL}/blog/` });
 writeFileSync(join(OUT_DIR, 'index.html'), ignoreChrome(renderTemplate('shell.html', {
   TITLE: 'Blog — dvxb.io',
@@ -501,8 +579,21 @@ writeFileSync(join(OUT_DIR, 'index.html'), ignoreChrome(renderTemplate('shell.ht
   CRUMB_HREF: '/blog/',
   CRUMB_TEXT: 'blog',
   DOWNLOAD: '',
-  BODY: published.length ? `<p class="blog-search"><input id="blog-search" type="search" placeholder="search posts" aria-label="Search posts" autocomplete="off"><ul id="blog-search-results" aria-live="polite"></ul></p>\n<ul class="post-index">\n${items}\n</ul>\n` : '<p>No posts yet.</p>\n',
-  HEAD_EXTRA: RSS_LINK + INDEX_OG,
+  BODY: published.length ? `<header class="blog-head">
+  <p class="blog-kicker">~/blog</p>
+  <h1 class="blog-title">Writing</h1>
+  <p class="blog-sub">Long-form notes on systems, reliability, and tooling — with the occasional personal milestone.</p>
+</header>
+<div class="blog-bar">
+  <label class="blog-search" for="blog-search"><span aria-hidden="true">&gt;</span><input id="blog-search" type="search" placeholder="filter posts" aria-label="Search posts" autocomplete="off"></label>
+  <span class="blog-count">${blogCount}</span>
+</div>
+<ul id="blog-search-results" class="blog-results" aria-live="polite"></ul>
+<ol class="post-list">
+${published.map(postCard).join('\n')}
+</ol>
+` : '<p>No posts yet.</p>\n',
+  HEAD_EXTRA: BLOG_INDEX_CSS + RSS_LINK + INDEX_OG,
   SCRIPTS: published.length ? searchScripts() : '',
 })));
 
@@ -510,7 +601,6 @@ writeFileSync(join(OUT_DIR, 'index.html'), ignoreChrome(renderTemplate('shell.ht
 const tags = [...new Set(published.flatMap((post) => post.tags))].sort();
 for (const tag of tags) {
   const tagged = getFilteredByTag(published, tag);
-  const lis = tagged.map((post) => `  <li><a href="/blog/${post.slug}/">${escapeHtml(post.title)}</a></li>`).join('\n');
   const dir = join(OUT_DIR, 'tag', tag);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'index.html'), ignoreChrome(renderTemplate('shell.html', {
@@ -520,8 +610,16 @@ for (const tag of tags) {
     CRUMB_HREF: '/blog/',
     CRUMB_TEXT: 'blog',
     DOWNLOAD: '',
-    BODY: `<ul class="post-index">\n${lis}\n</ul>\n`,
-    HEAD_EXTRA: RSS_LINK + ogHead({ type: 'website', title: `#${tag} — dvxb.io blog`, description: `Posts tagged ${tag}.`, canonical: `${SITE_URL}/blog/tag/${tag}/` }),
+    BODY: `<header class="blog-head">
+  <p class="blog-kicker">~/blog/tag</p>
+  <h1 class="blog-title">#${escapeHtml(tag)}</h1>
+  <p class="blog-sub">${tagged.length} ${tagged.length === 1 ? 'post' : 'posts'} tagged #${escapeHtml(tag)}.</p>
+</header>
+<ol class="post-list">
+${tagged.map(postCard).join('\n')}
+</ol>
+`,
+    HEAD_EXTRA: BLOG_INDEX_CSS + RSS_LINK + ogHead({ type: 'website', title: `#${tag} — dvxb.io blog`, description: `Posts tagged ${tag}.`, canonical: `${SITE_URL}/blog/tag/${tag}/` }),
   })));
 }
 
@@ -573,7 +671,7 @@ if (BUILD_DRAFTS) {
       DOWNLOAD: '',
       BODY: `<p class="draft-banner">draft preview — not published</p>\n${PROGRESS_DIV}${article}${shareFooter(post.title, canonical)}`,
       META: metaHtml(post),
-      HEAD_EXTRA: `${NOINDEX}\n${NO_JS_CSS}${post.cast ? `<link rel="stylesheet" href="${CAST_CSS}">\n` : ''}${ogHead({ ...post, canonical })}`,
+      HEAD_EXTRA: `${NOINDEX}\n${NO_JS_CSS}${POST_CSS}${post.cast ? `<link rel="stylesheet" href="${CAST_CSS}">\n` : ''}${ogHead({ ...post, canonical })}`,
       SCRIPTS: `${postScripts()}${post.cast ? castScripts() : ''}`,
       // Drafts are unlisted previews: exclude the whole article from Pagefind
       // (G5.2) on top of the noindex/RSS/sitemap exclusions. ignoreChrome runs
