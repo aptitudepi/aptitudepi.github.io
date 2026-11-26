@@ -281,7 +281,14 @@ body::before {
   margin: 0;
   scroll-snap-align: center;
 }
-.gallery-item img { max-height: 60vh; object-fit: contain; }
+.gallery-item img {
+  /* Uniform tiles: mixed portrait/landscape sources get one frame. */
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
 .gallery-item figcaption {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
