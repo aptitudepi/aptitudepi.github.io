@@ -107,7 +107,7 @@ inside the Pages artifact.
 ### Networking
 
 - The VM uses the v86 `fetch` network backend, which proxies HTTP/HTTPS through the browser's `fetch()` API.
-- A Cloudflare Worker (`cors-proxy-worker.js`) deployed at `0.supernovadkb.workers.dev` acts as a CORS proxy, restricted by origin allowlist (`dvxb.io`, `*.dvxb.io`, `localhost:*`).
+- A Cloudflare Worker (`cors-proxy-worker.js`) deployed at `0.supernovadkb.workers.dev` acts as a CORS proxy, restricted to an origin allowlist (`dvxb.io`, `www.dvxb.io`, `aptitudepi.github.io`, and `localhost:*`/`127.0.0.1:*` for local dev); every browser route requires an allowlisted `Origin`, `/ai` is KV rate-limited (20/min), `/wall` POSTs are limited to 5/min, `/search` and the `?url=` relay get best-effort in-memory dampers (20/min and 120/min), and `?url=` rejects credentials, non-standard ports, non-HTTP(S) schemes, and literal private/loopback/metadata hosts.
 - Only HTTP/HTTPS is supported — raw TCP (telnet, SSH) is not available due to browser `fetch()` limitations.
 
 ### 3D Particles (`js/three-particles.js`)

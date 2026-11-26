@@ -144,11 +144,23 @@ jobs:
       - name: Build blog
         run: bun tools/build-blog.mjs
 
+      # Budgets + registry are now CI gates (they were local-only). The budget
+      # check needs the generated blog/ for the per-post HTML ceiling, so it
+      # sits after the blog build. Both scripts print their own FAIL lines.
+      - name: Check perf budgets
+        run: bun tools/check-budgets.mjs
+
+      - name: Assert command registry
+        run: bun tools/assert-registry.mjs
+
       - name: Assert blog RSS
         run: bun tools/assert-rss.mjs
 
       - name: Assert card invariants
         run: bun tools/assert-card.mjs
+
+      - name: Assert worker hardening
+        run: bun tools/assert-worker.mjs
 
       # Pagefind search index, blog pages only (--glob scoping per E4; shell
       # chrome carries data-pagefind-ignore via build-blog post-replace so the
@@ -193,12 +205,53 @@ jobs:
         # draft bodies would ship as static files. Must run AFTER build-blog.
         run: rm -rf posts
 
+      - name: Stage deploy artifact
+        # Copy only servable files into _site/. Whole-workspace uploads shipped
+        # node_modules (119 MB) plus internals, and the 101 MB artifact failed
+        # to register on run 45905803679 ("Found 0 artifact(s)" 16 ms after a
+        # successful upload). Explicit excludes keep future top-level files
+        # deploying while internals stay home.
+        run: |
+          rm -rf _site
+          mkdir -p _site
+          rsync -a --exclude-from=.github/pages-excludes.txt ./ _site/
+
+      - name: Guard deploy artifact
+        # Fail before upload when an internal path leaked in or a required
+        # deployable is absent. Extend both lists when top-level paths change.
+        run: |
+          set -eu
+          forbidden_paths=".git .github node_modules full-cv posts tools docs templates logs log biothings_output .cache .codegraph .opencode .vscode .wrangler .deepsource.toml .hintrc .gitattributes dvxb.io.7 IDEAS.md DONE.md README.md PLAN-BLOG.md CONVENTIONAL-COMMIT.md package.json package-lock.json bun.lock wrangler.jsonc .gitignore favicon-preview.html"
+          for forbidden_path in $forbidden_paths; do
+            if [ -e "_site/$forbidden_path" ]; then
+              echo "FORBIDDEN in artifact: $forbidden_path"
+              exit 1
+            fi
+          done
+          if find _site -name '*.bak' | grep -q .; then
+            echo "FORBIDDEN in artifact: *.bak"
+            find _site -name '*.bak'
+            exit 1
+          fi
+          if find _site -maxdepth 1 -name 'particle-background*.html' | grep -q .; then
+            echo "FORBIDDEN in artifact: particle-background*.html"
+            exit 1
+          fi
+          required_paths="index.html blog assets css js man resume.html cv.html sitemap.xml robots.txt CNAME build-info.json c"
+          for required_path in $required_paths; do
+            if [ ! -e "_site/$required_path" ]; then
+              echo "MISSING from artifact: $required_path"
+              exit 1
+            fi
+          done
+          echo "artifact size: $(du -sh _site | cut -f1)"
+          echo "artifact files: $(find _site -type f | wc -l)"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          # Upload the whole workspace — includes the generated
-          # resume.html/cv.html/man/ and assets/*.pdf on disk.
-          path: '.'
+          # Staged copy only — see "Stage deploy artifact" above.
+          path: '_site'
 
       - name: Deploy to GitHub Pages
         id: deployment

@@ -1,17 +1,19 @@
 # Performance budgets (Phase 5)
 
-Measured 2026-10-23 on `feat/blog-dx` (prior measurement 2026-09-09 on `dev-20260907`).
+Measured 2026-11-26 on `main` at 71ee494 (prior measurement 2026-09-09 on `dev-20260907`).
 Sizes are gzip (level 6, Node zlib default) over the working-tree files.
-Enforced locally by `npm run check:budgets` (`tools/check-budgets.mjs`);
-no CI gate — run it before pushing a wave that touches `js/` or `css/`.
+Enforced in CI by `.github/workflows/static.yml`: `tools/check-budgets.mjs`
+runs after the blog build (the per-post ceiling needs generated `blog/`), and
+`tools/assert-registry.mjs` runs alongside it. Run `npm run check:budgets`
+locally before pushing a wave that touches `js/`, `css/`, or `index.html`.
 
 ## Bundle budgets (enforced)
 
 | Asset | Measured gzip | Budget gzip | Headroom |
 |---|---|---|---|
-| `js/` total (37 modules) | 231,474 B (~226 KiB) | ≤ 233,000 B | ~0.7% |
-| `js/commands.js` (largest single module) | 68,634 B | ≤ 69,000 B | ~0.5% |
-| `css/` total (12 sheets) | 24,023 B (~23 KiB) | ≤ 24,100 B | ~0.3% |
+| `js/` total (37 modules) | 230,501 B (~225 KiB) | ≤ 233,000 B | ~1.1% |
+| `js/commands.js` (largest single module) | 43,962 B | ≤ 69,000 B | ~36% |
+| `css/` total (11 sheets) | 24,105 B (~24 KiB) | ≤ 24,300 B | ~0.8% |
 | `index.html` | 9,928 B | ≤ 10,000 B | ~0.7% |
 
 Budget history: raised 2026-10-04 for the playground wave — `js/` gained the
@@ -123,7 +125,7 @@ unlisted.
 
 | Asset | Budget gzip | Notes |
 |---|---|---|
-| `blog/` per-post HTML (max per file) | ≤ 16,000 B | Worst-file ceiling over `blog/**/*.html` (shell + `__META__` + body); missing dir = 0, passes |
+| `blog/` per-post HTML (max per file) | ≤ 16,700 B | Worst-file ceiling over `blog/**/*.html` (shell + `__META__` + body); missing dir = 0, passes |
 | blog images total (`assets/blog/` + `images/blog/`) | ≤ 2,000,000 B | Sum over AVIF/WebP/JPEG/PNG/GIF/SVG; post images belong in those dirs so base budgets stay unaffected |
 | `blog/` generated images (step 5–6, 2026-10-12) | included in blog images total | `check-budgets.mjs` image-total also scans `blog/` for image extensions (responsive `<picture>` variants under `blog/<slug>/img/` + OG cards; HTML/RSS/JSON untouched). `.gitignore` artifact rule re-scoped to root `/blog/` so `assets/blog/` + `images/blog/` stay committable. Read-UX island JS rides inline `__SCRIPTS__` (same island-exclusion as player/search). |
 
@@ -145,6 +147,16 @@ photo at 2x point density (65x25 → 130x50 characters, 4x cells). That art is
 inline `<pre>` content the post explicitly wants, so the ceiling moves rather
 than trimming prose or art. Worst file measures 15,185 B gzip; 16,000 keeps
 ~800 B of headroom for shell changes.
+
+Budget history: share-icon motion (2026-11-06): per-post HTML 16,000→16,500
+(measured 16,224) — per-button keyframes in `POST_CSS` (chains connect,
+envelope flap lifts, butterfly flutters, X pops, Mastodon bobs); rest-heavy
+6 s loops, all disabled under `prefers-reduced-motion`.
+
+Budget history: share icons from itshover / pqoqubbw (2026-11-06): per-post
+HTML 16,500→16,700 (measured 16,572) — link/parcel geometry now comes from
+itshover's Tabler set and X draws in via `pathLength`; the mail icon adds a
+clipped paper-peek group so hover reads as opening.
 
 Island-exclusion rule: blog islands (asciinema player, Pagefind search UI)
 ship via shell.html `__SCRIPTS__` as CDN/vendor payloads inside generated blog

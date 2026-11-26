@@ -1,19 +1,47 @@
 // Cloudflare Worker — CORS proxy + Groq AI Gateway
 // Deploy: wrangler deploy cors-proxy-worker.js --name 0
 
-const ALLOWED_ORIGINS = [
-  /^https:\/\/([a-z0-9-]+\.)*dvxb\.io$/,
-  /^https:\/\/aptitudepi\.github\.io$/,
-  /^http:\/\/localhost:\d+$/,
-  /^http:\/\/127\.0\.0\.1:\d+$/,
-];
+// Browser routes require an allowlisted Origin (unconditionally — no
+// "only when the header is present" bypass). localhost/127.0.0.1 ports are
+// for local dev; production is the bare dvxb.io / www.dvxb.io / Pages pair.
+const ALLOWED_ORIGIN_EXACT = new Set([
+  'https://dvxb.io',
+  'https://www.dvxb.io',
+  'https://aptitudepi.github.io',
+]);
+const ALLOWED_ORIGIN_LOCAL = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+const BROWSER_ROUTE_PATHS = new Set(['/ai', '/wall', '/api/guestbook', '/ip', '/search', '/weather']);
 
-const CORS_HEADERS = {
-  'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS',
-  'access-control-allow-headers': '*',
-  'access-control-max-age': '86400',
-};
+function isAllowedOrigin(origin) {
+  if (typeof origin !== 'string' || origin.length === 0) {
+    return false;
+  }
+  return ALLOWED_ORIGIN_EXACT.has(origin) || ALLOWED_ORIGIN_LOCAL.test(origin);
+}
+
+// Echo only an allowlisted Origin, never `*`. Browser calls always arrive
+// cross-origin from the site itself, so a wildcard buys nothing and only
+// widens abuse. Header-less clients (curl, cron) simply carry no ACAO.
+function corsHeadersFor(request) {
+  const origin = request.headers.get('Origin');
+  const corsHeaders = {
+    'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS',
+    'access-control-allow-headers': request.headers.get('access-control-request-headers') || 'content-type',
+    'access-control-max-age': '86400',
+  };
+  if (isAllowedOrigin(origin)) {
+    corsHeaders['access-control-allow-origin'] = origin;
+    corsHeaders['vary'] = 'Origin';
+  }
+  return corsHeaders;
+}
+
+function forbiddenOriginResponse() {
+  return new Response(JSON.stringify({ error: 'Origin not allowed' }), {
+    status: 403,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
 
 // WAVE 9a guestbook foundation: server-side name sanitize plus slug helpers.
 // WAVE 9b: the moniker is assembled server-side at POST as
@@ -159,6 +187,129 @@ async function wallRateLimitExceeded(observedIp, requestAgent, env) {
   return false;
 }
 
+// Fixed-window minute limiter for the KV-backed routes (/ai and wall POST):
+// one KV bucket per salted IP hash + route + minute. Reads are awaited (the
+// verdict has to be synchronous with the response); the increment rides
+// ctx.waitUntil so the hot path never waits on the KV write. Fixed windows
+// allow a small burst at the boundary — this is an abuse damper, not a
+// billing meter.
+const MINUTE_RATE_LIMITS = { ai: 20, wall: 5 };
+const MINUTE_RATE_LIMIT_TTL_SECONDS = 120;
+
+function rateLimitSecret(env) {
+  return typeof env?.RATE_LIMIT_SECRET === 'string' && env.RATE_LIMIT_SECRET.length > 0
+    ? env.RATE_LIMIT_SECRET
+    : 'dvxb-wall-fallback-salt';
+}
+
+async function minuteRateLimit(routeKey, request, env, ctx) {
+  if (env === null || env === undefined || env.WALL_KV === undefined) {
+    return 'unavailable';
+  }
+  const observedIp = request.headers.get('cf-connecting-ip') || '';
+  const minuteString = new Date().toISOString().slice(0, 16);
+  const digestHex = await wallHmacHex(rateLimitSecret(env), `${minuteString}|${observedIp}`);
+  const counterKey = `rl:${routeKey}:${minuteString}:${digestHex.slice(0, 32)}`;
+  const storedCount = await env.WALL_KV.get(counterKey);
+  const currentCount = Number(storedCount ?? 0);
+  if (Number.isFinite(currentCount) && currentCount >= MINUTE_RATE_LIMITS[routeKey]) {
+    return 'limited';
+  }
+  const incrementTask = env.WALL_KV.put(counterKey, String(Number.isFinite(currentCount) ? currentCount + 1 : 1), {
+    expirationTtl: MINUTE_RATE_LIMIT_TTL_SECONDS,
+  }).catch((incrementError) => {
+    console.warn('rate limit: increment failed', incrementError);
+  });
+  if (ctx !== null && ctx !== undefined && typeof ctx.waitUntil === 'function') {
+    ctx.waitUntil(incrementTask);
+  } else {
+    incrementTask.catch(() => {});
+  }
+  return 'ok';
+}
+
+function minuteRateLimitRetryAfter() {
+  return String(60 - new Date().getUTCSeconds());
+}
+
+// Best-effort per-isolate minute limiter for the high-volume routes (?url= and
+// /search). No cross-isolate coordination and deliberately no KV writes: the
+// free plan's ~1k writes/day cannot fund a counter per proxied request, and a
+// guest page load fans out dozens of ?url= requests. Buckets reset when the
+// isolate recycles — this damps one abusive client, it is not a billing meter.
+const PROXY_MEMORY_RATE_LIMIT_MAX = 120;
+const SEARCH_MEMORY_RATE_LIMIT_MAX = 20;
+const MEMORY_RATE_PRUNE_AT = 1000;
+const MEMORY_RATE_WINDOWS = new Map();
+
+async function memoryRateLimit(routeKey, request, env, maxPerMinute) {
+  const observedIp = request.headers.get('cf-connecting-ip') || '';
+  const minuteString = new Date().toISOString().slice(0, 16);
+  const digestHex = await wallHmacHex(rateLimitSecret(env), `${minuteString}|${observedIp}`);
+  const windowKey = `mem:${routeKey}:${minuteString}:${digestHex.slice(0, 32)}`;
+  // Opportunistic prune keeps the map bounded without a scheduled job.
+  if (MEMORY_RATE_WINDOWS.size > MEMORY_RATE_PRUNE_AT) {
+    for (const existingKey of MEMORY_RATE_WINDOWS.keys()) {
+      if (existingKey.includes(minuteString) === false) {
+        MEMORY_RATE_WINDOWS.delete(existingKey);
+      }
+    }
+  }
+  const currentCount = MEMORY_RATE_WINDOWS.get(windowKey) ?? 0;
+  if (currentCount >= maxPerMinute) {
+    return false;
+  }
+  MEMORY_RATE_WINDOWS.set(windowKey, currentCount + 1);
+  return true;
+}
+
+// Literal host checks only — nothing is resolved here, so a public hostname
+// that resolves to a private address is out of scope by design. The URL parse
+// also rejects credentials, non-default ports, and non-http(s) schemes.
+function isPrivateProxyHost(hostname) {
+  if (hostname === 'localhost' || hostname === '0.0.0.0' || hostname === '::1' || hostname === '[::1]') {
+    return true;
+  }
+  if (hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+    return true;
+  }
+  if (hostname.startsWith('127.') || hostname.startsWith('10.') || hostname.startsWith('192.168.') || hostname.startsWith('169.254.')) {
+    return true;
+  }
+  const private172 = hostname.match(/^172\.(\d{1,2})\./);
+  if (private172 !== null) {
+    const secondOctet = Number(private172[1]);
+    if (secondOctet >= 16 && secondOctet <= 31) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function parseProxyTarget(rawTarget) {
+  let targetUrl;
+  try {
+    targetUrl = new URL(rawTarget);
+  } catch (parseError) {
+    return null;
+  }
+  if (targetUrl.protocol !== 'http:' && targetUrl.protocol !== 'https:') {
+    return null;
+  }
+  if (targetUrl.username !== '' || targetUrl.password !== '') {
+    return null;
+  }
+  // new URL() normalizes default ports to '', so any remaining port is
+  // non-standard for the scheme.
+  if (targetUrl.port !== '') {
+    return null;
+  }
+  if (isPrivateProxyHost(targetUrl.hostname.toLowerCase())) {
+    return null;
+  }
+  return targetUrl;
+}
+
 function wallRandomHandle() {
   const pickBytes = new Uint8Array(3);
   crypto.getRandomValues(pickBytes);
@@ -295,30 +446,67 @@ function maskWallIp(observedIp) {
 }
 
 async function handleRequest(request, env, ctx) {
-  // Block unauthorized origins
-  const origin = request.headers.get('Origin');
-  if (origin && !ALLOWED_ORIGINS.some(r => r.test(origin))) {
-    return new Response('Forbidden', { status: 403 });
-  }
-
-  // Handle CORS preflight
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers: CORS_HEADERS });
-  }
-
   const url = new URL(request.url);
+  const origin = request.headers.get('Origin');
+  const originAllowed = isAllowedOrigin(origin);
+  const corsHeaders = corsHeadersFor(request);
+
+  // Any browser request that names a disallowed origin is refused outright;
+  // the browser routes below additionally require an allowlisted Origin even
+  // when the header is absent (curl-style callers must not reach /ai or the
+  // open ?url= relay).
+  if (origin !== null && originAllowed === false) {
+    return forbiddenOriginResponse();
+  }
+
+  const requiresOrigin =
+    BROWSER_ROUTE_PATHS.has(url.pathname) ||
+    url.pathname.startsWith('/api/guestbook/') ||
+    (url.pathname === '/' && request.method === 'POST') ||
+    url.searchParams.has('url');
+  if (requiresOrigin && originAllowed === false) {
+    return forbiddenOriginResponse();
+  }
+
+  // Handle CORS preflight; only an allowlisted Origin gets an echo.
+  if (request.method === 'OPTIONS') {
+    if (originAllowed === false) {
+      return forbiddenOriginResponse();
+    }
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
 
   // ── 1. Groq AI Gateway Handler (/ai or POST to worker) ──
   // WAVE 9a: the bare-POST fallback is scoped to the root path so POST /wall
   // reaches the guestbook handler below (it was previously swallowed here).
   if (url.pathname === '/ai' || (url.pathname === '/' && request.method === 'POST' && !url.searchParams.get('url'))) {
+    // Fail closed when KV is unavailable: /ai spends the owner's Groq quota.
+    let aiLimitVerdict = 'unavailable';
+    try {
+      aiLimitVerdict = await minuteRateLimit('ai', request, env, ctx);
+    } catch (limitError) {
+      console.warn('ai: rate-limit check failed closed', limitError);
+      aiLimitVerdict = 'unavailable';
+    }
+    if (aiLimitVerdict === 'unavailable') {
+      return new Response(JSON.stringify({ error: 'Rate limit store unavailable — try again shortly' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (aiLimitVerdict === 'limited') {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded — try again shortly' }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': minuteRateLimitRetryAfter() },
+      });
+    }
     try {
       const body = await request.json();
       const apiKey = (env?.GROQ_API_KEY) || (typeof GROQ_API_KEY !== 'undefined' ? GROQ_API_KEY : '');
       if (!apiKey) {
         return new Response(JSON.stringify({ error: 'GROQ_API_KEY secret missing in Cloudflare worker configuration' }), {
           status: 500,
-          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -340,7 +528,7 @@ async function handleRequest(request, env, ctx) {
       return new Response(groqResp.body, {
         status: groqResp.status,
         headers: {
-          ...CORS_HEADERS,
+          ...corsHeaders,
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
         },
@@ -348,18 +536,32 @@ async function handleRequest(request, env, ctx) {
     } catch (err) {
       return new Response(JSON.stringify({ error: err.message }), {
         status: 500,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
   }
 
   // ── 2. Web Search API Endpoint (/search?q=query) ──
   if (url.pathname === '/search') {
+    // 20/min in memory (best-effort, zero KV writes): this fans out to an
+    // external search API, so damp per-IP bursts without a KV write/search.
+    let searchAllowed = true;
+    try {
+      searchAllowed = await memoryRateLimit('search', request, env, SEARCH_MEMORY_RATE_LIMIT_MAX);
+    } catch (limitError) {
+      console.warn('search: in-memory rate-limit check failed open', limitError);
+    }
+    if (searchAllowed === false) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded — try again shortly' }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': minuteRateLimitRetryAfter() },
+      });
+    }
     const query = url.searchParams.get('q');
     if (!query) {
       return new Response(JSON.stringify({ error: 'Missing ?q= search query' }), {
         status: 400,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -397,30 +599,32 @@ async function handleRequest(request, env, ctx) {
 
       return new Response(JSON.stringify({ query, count: results.length, results }), {
         status: 200,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } catch (err) {
       return new Response(JSON.stringify({ error: `Search failed: ${err.message}` }), {
         status: 500,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
   }
 
   // ── 3. Weather API Endpoint (/weather?city=city) ──
   if (url.pathname === '/weather') {
+    // Origin-gated above and left unthrottled on purpose: one small wttr.in
+    // request per command, and the gate already removes drive-by use.
     const city = url.searchParams.get('city') || 'auto';
     try {
       const weatherRes = await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`);
       const data = await weatherRes.json();
       return new Response(JSON.stringify(data), {
         status: 200,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } catch (err) {
       return new Response(JSON.stringify({ error: `Weather fetch failed: ${err.message}` }), {
         status: 500,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
   }
@@ -435,6 +639,8 @@ async function handleRequest(request, env, ctx) {
   // ── 5. Global Guestbook Endpoint (/wall) ──
   if (url.pathname === '/wall') {
     if (request.method === 'GET') {
+      // Reads stay unthrottled (and therefore fail open): this endpoint is
+      // public, read-only, and cheap — a KV outage must not blank the wall.
       let posts = WALL_POSTS;
       if (env?.WALL_KV) {
         try {
@@ -446,11 +652,25 @@ async function handleRequest(request, env, ctx) {
       }
       return new Response(JSON.stringify({ posts }), {
         status: 200,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     if (request.method === 'POST') {
+      // 5/min per visitor hash on top of the legacy 10/hour wall counter.
+      // Fail open here (unlike /ai) so a KV blip never blocks guestbook posts.
+      let wallMinuteVerdict = 'unavailable';
+      try {
+        wallMinuteVerdict = await minuteRateLimit('wall', request, env, ctx);
+      } catch (limitError) {
+        console.warn('wall: minute rate-limit check failed open', limitError);
+      }
+      if (wallMinuteVerdict === 'limited') {
+        return new Response(JSON.stringify({ error: 'The guestbook is catching its breath — please try again in a little while.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': minuteRateLimitRetryAfter() },
+        });
+      }
       try {
         const body = await request.json();
         // WAVE 9b guestbook: no AI replies, no approval queue
@@ -472,14 +692,14 @@ async function handleRequest(request, env, ctx) {
           limitedVisitor = false;
         }
         if (limitedVisitor) {
-          return new Response(JSON.stringify({ error: 'The guestbook is catching its breath — please try again in a little while.' }), { status: 429, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+          return new Response(JSON.stringify({ error: 'The guestbook is catching its breath — please try again in a little while.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         const rawMessage = typeof body.message === 'string' ? body.message : '';
         const cleanMessage = wallStripAnsi(wallStripHtml(rawMessage)).trim().slice(0, 280);
         const spamError = wallSpamVerdict(cleanMessage);
         if (spamError) {
-          return new Response(JSON.stringify({ error: spamError }), { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+          return new Response(JSON.stringify({ error: spamError }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         const cloudCity = request.cf && typeof request.cf.city === 'string' ? request.cf.city : '';
@@ -548,10 +768,10 @@ async function handleRequest(request, env, ctx) {
 
         return new Response(JSON.stringify({ success: true, post: newPost, deleteToken, telemetry: telemetrySkip === null ? 'stored' : `skipped:${telemetrySkip}` }), {
           status: 201,
-          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       } catch (err) {
-        return new Response(JSON.stringify({ error: `Wall post failed: ${err.message}` }), { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: `Wall post failed: ${err.message}` }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
   }
@@ -572,7 +792,7 @@ async function handleRequest(request, env, ctx) {
     }
     return new Response(JSON.stringify({ posts: apiPosts }), {
       status: 200,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 
@@ -590,7 +810,7 @@ async function handleRequest(request, env, ctx) {
         console.warn('wall: delete body unreadable, trying query token', bodyError);
       }
       if (!suppliedToken) {
-        return new Response(JSON.stringify({ error: 'Delete token required — contact the site owner for manual review if it was lost.' }), { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'Delete token required — contact the site owner for manual review if it was lost.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
       const tokenKey = `wall:deltoken:${targetId}`;
       let storedRecord = null;
@@ -608,11 +828,11 @@ async function handleRequest(request, env, ctx) {
         }
       }
       if (storedRecord === null || storedRecord === undefined || typeof storedRecord.salt !== 'string' || typeof storedRecord.hash !== 'string') {
-        return new Response(JSON.stringify({ error: 'Unknown or expired delete token — contact the site owner for manual review.' }), { status: 404, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'Unknown or expired delete token — contact the site owner for manual review.' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
       const candidateHash = await wallSha256Hex(`${storedRecord.salt}:${suppliedToken}`);
       if (wallTimingEqual(candidateHash, storedRecord.hash) === false) {
-        return new Response(JSON.stringify({ error: 'Unknown or expired delete token — contact the site owner for manual review.' }), { status: 404, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'Unknown or expired delete token — contact the site owner for manual review.' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
       let currentPosts = WALL_POSTS;
       if (env?.WALL_KV) {
@@ -649,10 +869,10 @@ async function handleRequest(request, env, ctx) {
       }
       return new Response(JSON.stringify({ success: true }), {
         status: 200,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } catch (err) {
-      return new Response(JSON.stringify({ error: `Wall delete failed: ${err.message}` }), { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: `Wall delete failed: ${err.message}` }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
   }
 
@@ -676,7 +896,7 @@ async function handleRequest(request, env, ctx) {
     };
     return new Response(JSON.stringify(ipPayload), {
       status: 200,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
@@ -685,7 +905,31 @@ async function handleRequest(request, env, ctx) {
   if (!target) {
     return new Response('Missing ?url= parameter or /ai endpoint', {
       status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'text/plain' },
+      headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
+    });
+  }
+
+  // 120/min per visitor hash, in memory (best-effort, zero KV writes): guest
+  // browsing fans out dozens of subrequests per page, so 20/min would break
+  // v86, and a KV write per proxied request would exhaust the free daily quota.
+  let proxyAllowed = true;
+  try {
+    proxyAllowed = await memoryRateLimit('proxy', request, env, PROXY_MEMORY_RATE_LIMIT_MAX);
+  } catch (limitError) {
+    console.warn('proxy: in-memory rate-limit check failed open', limitError);
+  }
+  if (proxyAllowed === false) {
+    return new Response(JSON.stringify({ error: 'Rate limit exceeded — try again shortly' }), {
+      status: 429,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': minuteRateLimitRetryAfter() },
+    });
+  }
+
+  const proxyTarget = parseProxyTarget(target);
+  if (proxyTarget === null) {
+    return new Response(JSON.stringify({ error: 'Blocked proxy target' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
@@ -696,7 +940,7 @@ async function handleRequest(request, env, ctx) {
   headers.delete('cf-ray');
   headers.delete('cf-visitor');
 
-  const proxyRequest = new Request(target, {
+  const proxyRequest = new Request(proxyTarget.href, {
     method: request.method,
     headers,
     body: ['GET', 'HEAD', 'OPTIONS'].includes(request.method) ? null : request.body,
@@ -711,7 +955,7 @@ async function handleRequest(request, env, ctx) {
   }
 
   const responseHeaders = new Headers(response.headers);
-  Object.entries(CORS_HEADERS).forEach(([k, v]) => responseHeaders.set(k, v));
+  Object.entries(corsHeaders).forEach(([k, v]) => responseHeaders.set(k, v));
   responseHeaders.delete('content-encoding');
   responseHeaders.delete('content-length');
   responseHeaders.delete('transfer-encoding');

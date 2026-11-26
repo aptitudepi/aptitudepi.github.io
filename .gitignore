@@ -29,6 +29,9 @@ build-info.json
 # Full-CV content checkout used by the CI build
 full-cv/
 
+# GitHub Pages artifact staging (rsync of deployable files only)
+/_site/
+
 # Local-only artifacts — never committed (bun.lock is canonical; npm is not
 # the toolchain, session tooling dirs and stray dumps stay out of the tree)
 node_modules/
