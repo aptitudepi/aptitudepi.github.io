@@ -76,7 +76,11 @@ const BUDGET_TABLE = [
   // 23,963): the delta is the .gallery/.gallery-nav block in doc.css (flex +
   // scroll-snap + thin themed scrollbar + reduced-motion opt-out) — the
   // carousel is CSS-only, no new sheets, no JS.
-  { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 24100 },
+  // Aggie Ring gallery tiles (2026-11-06): 24,100→24,300 — mixed
+  // portrait/landscape CDN photos (no build-time dimensions) get one
+  // square frame (aspect-ratio 1/1 + object-fit cover) so the carousel
+  // strip runs at a constant height instead of 60vh vs 34vh.
+  { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 24300 },
   { label: 'index.html', kind: 'file', relativePath: 'index.html', extension: null, maxGzipBytes: 10000 },
   // Blog extension (append-only, 2026-10-11): per-post HTML gzip ceiling +
   // blog image-total ceiling. Island-exclusion rule: blog islands (asciinema
@@ -95,7 +99,15 @@ const BUDGET_TABLE = [
   // Ring-art density (2026-11-05): 15,000→16,000 — the Aggie Ring post
   // re-encoded its braille portrait at 2x density (65x25 → 130x50 chars,
   // 4x cells ≈ +4.4 KB gzip). Content the post explicitly wants, not bloat.
-  { label: 'blog/ per-post HTML (max gzip per file)', kind: 'max-per-file', relativePath: 'blog', extension: '.html', maxGzipBytes: 16000 },
+  // Share-icon motion (2026-11-06): 16,000→16,500 (measured 16,224) —
+  // per-button keyframes in POST_CSS (chains connect, envelope flap lifts,
+  // butterfly flutters, X pops, Mastodon bobs); rest-heavy 6s loops so the
+  // footer stays calm, all disabled under prefers-reduced-motion.
+  // Share icons from itshover / pqoqubbw (2026-11-06): 16,500→16,700
+  // (measured 16,572) — link/parcel geometry now comes from itshover's
+  // Tabler set and X draws in via pathLength; the mail icon adds a
+  // clipped paper-peek group (animateicons) so hover reads as opening.
+  { label: 'blog/ per-post HTML (max gzip per file)', kind: 'max-per-file', relativePath: 'blog', extension: '.html', maxGzipBytes: 16700 },
   { label: 'blog images total', kind: 'image-total', relativePath: 'assets/blog,images/blog,blog', extension: null, maxGzipBytes: 2000000 },
 ];
 
