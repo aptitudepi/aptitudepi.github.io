@@ -247,8 +247,16 @@ export function expandGalleryFences(markdown, file) {
     // Figures are fragment-link targets, so ids are per-gallery prefixed: a
     // post with two fences must not emit duplicate ids.
     const prefix = `g${++galleryIndex}-`;
-    const figures = items.map((item, position) =>
-      `<figure class="gallery-item" id="${prefix}${position + 1}"><img src="${item[2]}" alt="${escapeHtml(item[1])}" referrerpolicy="no-referrer"><figcaption>${escapeHtml(item[3].trim())}</figcaption></figure>`);
+    const figures = items.map((item, position) => {
+      // Remote gallery photos have no build-time dimensions (no fetch in the
+      // build), so width/height are omitted rather than guessed; the square
+      // frame in css/doc.css keeps the strip from shifting. First photo stays
+      // eager (it is the visible one); the rest defer their network cost.
+      const mediaAttrs = position === 0
+        ? ' decoding="async"'
+        : ' loading="lazy" decoding="async" fetchpriority="low"';
+      return `<figure class="gallery-item" id="${prefix}${position + 1}"><img src="${item[2]}" alt="${escapeHtml(item[1])}" referrerpolicy="no-referrer"${mediaAttrs}><figcaption>${escapeHtml(item[3].trim())}</figcaption></figure>`;
+    });
     const count = figures.length;
     // first/last stay fragment links (work with no JS); prev/next are buttons
     // that scroll one card at a time in postScripts().
@@ -635,13 +643,16 @@ writeFileSync(join(OUT_DIR, 'posts.json'), `${JSON.stringify(published.map((post
 // fields, guid permalink, content:encoded full text, RFC-822 dates).
 const rfc822 = (date) => date.toUTCString();
 const cdata = (html) => html.replace(/]]>/g, ']]&gt;');
+// Readers render content:encoded as a document body, not as this site's page:
+// style/script blocks belong to the page shell, so they never ship in the feed.
+const stripPageAssets = (html) => html.replace(/<style\b[\s\S]*?<\/style>/gi, '').replace(/<script\b[\s\S]*?<\/script>/gi, '');
 const feedItems = published.map((post) => `  <item>
     <title>${escapeHtml(post.title)}</title>
     <link>${SITE_URL}/blog/${post.slug}/</link>
     <guid isPermaLink="true">${SITE_URL}/blog/${post.slug}/</guid>
     <pubDate>${rfc822(post.date)}</pubDate>
     <description>${escapeHtml(post.description)}</description>
-    <content:encoded><![CDATA[${cdata(post.html)}]]></content:encoded>
+    <content:encoded><![CDATA[${cdata(stripPageAssets(post.html))}]]></content:encoded>
   </item>`).join('\n');
 writeFileSync(join(OUT_DIR, 'rss.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">

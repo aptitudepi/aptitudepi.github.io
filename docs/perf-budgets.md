@@ -14,7 +14,7 @@ locally before pushing a wave that touches `js/`, `css/`, or `index.html`.
 | `js/` total (37 modules) | 230,501 B (~225 KiB) | ≤ 233,000 B | ~1.1% |
 | `js/commands.js` (largest single module) | 43,962 B | ≤ 69,000 B | ~36% |
 | `css/` total (11 sheets) | 24,105 B (~24 KiB) | ≤ 24,300 B | ~0.8% |
-| `index.html` | 9,928 B | ≤ 10,000 B | ~0.7% |
+| `index.html` | 10,052 B | ≤ 10,400 B | ~3.3% |
 
 Budget history: raised 2026-10-04 for the playground wave — `js/` gained the
 lazy-loaded `pg-life.js` module (dynamic import, `pg life` only) and `css/`

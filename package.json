@@ -15,7 +15,8 @@
     "media:push": "node tools/media-push.mjs",
     "media:watch": "bash tools/media-watch.sh",
     "assert:card": "node tools/assert-card.mjs",
-    "assert:worker": "node tools/assert-worker.mjs"
+    "assert:worker": "node tools/assert-worker.mjs",
+    "assert:contrast": "node tools/assert-contrast.mjs"
   },
   "dependencies": {
     "marked": "15.0.12",

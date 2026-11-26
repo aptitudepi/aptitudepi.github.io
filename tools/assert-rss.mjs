@@ -36,6 +36,8 @@ for (const item of items) {
   check(/^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/.test(pubDate) && !Number.isNaN(Date.parse(pubDate)), `item pubDate RFC-822 + parseable (${pubDate || 'missing'})`);
 }
 check(!/<link>(?!https:\/\/)[^<]*<\/link>/.test(xml.replace(/<\?xml[\s\S]*?\?>/, '')), 'all URLs absolute');
+check(!/<script\b/i.test(xml), 'feed has no <script> blocks');
+check(!/<style\b/i.test(xml), 'feed has no <style> blocks');
 
 if (failures > 0) {
   process.stderr.write(`assert-rss: ${failures} failure(s)\n`);

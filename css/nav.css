@@ -9,10 +9,10 @@
 @property --nav-cycle {
   syntax: '<color>';
   inherits: true;
-  initial-value: #0000ff;
+  initial-value: #2a4dff;
 }
 @keyframes navCycle {
-  0%, 100% { --nav-cycle: #0000ff; }
+  0%, 100% { --nav-cycle: #2a4dff; }
   50% { --nav-cycle: #ff0000; }
 }
 
