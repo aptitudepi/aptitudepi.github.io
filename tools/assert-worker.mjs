@@ -29,7 +29,7 @@ check(/if \(isAllowedOrigin\(origin\)\) \{/.test(source), 'CORS echo is gated on
 check(/if \(requiresOrigin && originAllowed === false\) \{/.test(source), 'browser routes require an allowlisted Origin unconditionally');
 check(!/if \(origin && /.test(source), 'no "origin header present" bypass remains');
 const routeSetLine = (source.match(/BROWSER_ROUTE_PATHS = new Set\(\[(.*?)\]\)/) || [null, ''])[1];
-for (const route of ['/ai', '/wall', '/api/guestbook', '/ip']) {
+for (const route of ['/ai', '/wall', '/api/guestbook', '/ip', '/search', '/weather']) {
   check(routeSetLine.includes(`'${route}'`), `${route} is in the required-origin set`);
 }
 
@@ -50,11 +50,24 @@ check(parseTarget.includes('targetUrl.username') && parseTarget.includes('target
 check(parseTarget.includes("targetUrl.port !== ''"), 'proxy targets with non-standard ports are rejected');
 check(/Resolve nothing|nothing is resolved/i.test(source), 'comment states literal-host checks only');
 
-// KV-backed minute limiter on /ai, ?url=, and wall POSTs.
+// KV-backed minute limiter only on /ai and wall POST; the high-volume
+// ?url= relay and /search use the per-isolate in-memory damper instead
+// (a KV write per proxied request would exhaust the free daily quota).
 check(source.includes('async function minuteRateLimit('), 'minuteRateLimit helper exists');
 check(/minuteRateLimit\('ai'/.test(source), 'minuteRateLimit applies to /ai');
-check(/minuteRateLimit\('proxy'/.test(source), 'minuteRateLimit applies to ?url=');
 check(/minuteRateLimit\('wall'/.test(source), 'minuteRateLimit applies to /wall POST');
+check(!source.includes("minuteRateLimit('proxy'"), '?url= does not call the KV limiter');
+check(!source.includes("minuteRateLimit('search'"), '/search does not call the KV limiter');
+
+check(source.includes('async function memoryRateLimit('), 'memoryRateLimit helper exists');
+check(/memoryRateLimit\('proxy'/.test(source), 'memoryRateLimit applies to ?url=');
+check(/memoryRateLimit\('search'/.test(source), 'memoryRateLimit applies to /search');
+check(/PROXY_MEMORY_RATE_LIMIT_MAX = 120/.test(source), '?url= in-memory limit is 120/min');
+check(/SEARCH_MEMORY_RATE_LIMIT_MAX = 20/.test(source), '/search in-memory limit is 20/min');
+const memoryLimiter = bodyOf('memoryRateLimit');
+check(source.includes('MEMORY_RATE_WINDOWS = new Map(') && memoryLimiter.includes('MEMORY_RATE_WINDOWS'), 'in-memory limiter uses a module-level Map');
+check(memoryLimiter.includes('MEMORY_RATE_PRUNE_AT'), 'in-memory limiter prunes old minute buckets');
+check(!memoryLimiter.includes('WALL_KV') && !memoryLimiter.includes('.put('), 'in-memory limiter performs no KV writes');
 check(/status: 429[\s\S]{0,400}Retry-After/.test(source), 'rate-limit 429 responses carry Retry-After');
 check(/status: 503/.test(source) && source.includes('Rate limit store unavailable'), 'missing KV fails closed with 503');
 

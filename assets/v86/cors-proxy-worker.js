@@ -10,7 +10,7 @@ const ALLOWED_ORIGIN_EXACT = new Set([
   'https://aptitudepi.github.io',
 ]);
 const ALLOWED_ORIGIN_LOCAL = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
-const BROWSER_ROUTE_PATHS = new Set(['/ai', '/wall', '/api/guestbook', '/ip']);
+const BROWSER_ROUTE_PATHS = new Set(['/ai', '/wall', '/api/guestbook', '/ip', '/search', '/weather']);
 
 function isAllowedOrigin(origin) {
   if (typeof origin !== 'string' || origin.length === 0) {
@@ -187,13 +187,20 @@ async function wallRateLimitExceeded(observedIp, requestAgent, env) {
   return false;
 }
 
-// Fixed-window minute limiter shared by the expensive browser routes: one KV
-// bucket per salted IP hash + route + minute. Reads are awaited (the verdict
-// has to be synchronous with the response); the increment rides ctx.waitUntil
-// so the hot path never waits on the KV write. Fixed windows allow a small
-// burst at the boundary — this is an abuse damper, not a billing meter.
-const MINUTE_RATE_LIMITS = { ai: 20, proxy: 20, wall: 5 };
+// Fixed-window minute limiter for the KV-backed routes (/ai and wall POST):
+// one KV bucket per salted IP hash + route + minute. Reads are awaited (the
+// verdict has to be synchronous with the response); the increment rides
+// ctx.waitUntil so the hot path never waits on the KV write. Fixed windows
+// allow a small burst at the boundary — this is an abuse damper, not a
+// billing meter.
+const MINUTE_RATE_LIMITS = { ai: 20, wall: 5 };
 const MINUTE_RATE_LIMIT_TTL_SECONDS = 120;
+
+function rateLimitSecret(env) {
+  return typeof env?.RATE_LIMIT_SECRET === 'string' && env.RATE_LIMIT_SECRET.length > 0
+    ? env.RATE_LIMIT_SECRET
+    : 'dvxb-wall-fallback-salt';
+}
 
 async function minuteRateLimit(routeKey, request, env, ctx) {
   if (env === null || env === undefined || env.WALL_KV === undefined) {
@@ -201,11 +208,7 @@ async function minuteRateLimit(routeKey, request, env, ctx) {
   }
   const observedIp = request.headers.get('cf-connecting-ip') || '';
   const minuteString = new Date().toISOString().slice(0, 16);
-  const rateSecret =
-    typeof env.RATE_LIMIT_SECRET === 'string' && env.RATE_LIMIT_SECRET.length > 0
-      ? env.RATE_LIMIT_SECRET
-      : 'dvxb-wall-fallback-salt';
-  const digestHex = await wallHmacHex(rateSecret, `${minuteString}|${observedIp}`);
+  const digestHex = await wallHmacHex(rateLimitSecret(env), `${minuteString}|${observedIp}`);
   const counterKey = `rl:${routeKey}:${minuteString}:${digestHex.slice(0, 32)}`;
   const storedCount = await env.WALL_KV.get(counterKey);
   const currentCount = Number(storedCount ?? 0);
@@ -227,6 +230,37 @@ async function minuteRateLimit(routeKey, request, env, ctx) {
 
 function minuteRateLimitRetryAfter() {
   return String(60 - new Date().getUTCSeconds());
+}
+
+// Best-effort per-isolate minute limiter for the high-volume routes (?url= and
+// /search). No cross-isolate coordination and deliberately no KV writes: the
+// free plan's ~1k writes/day cannot fund a counter per proxied request, and a
+// guest page load fans out dozens of ?url= requests. Buckets reset when the
+// isolate recycles — this damps one abusive client, it is not a billing meter.
+const PROXY_MEMORY_RATE_LIMIT_MAX = 120;
+const SEARCH_MEMORY_RATE_LIMIT_MAX = 20;
+const MEMORY_RATE_PRUNE_AT = 1000;
+const MEMORY_RATE_WINDOWS = new Map();
+
+async function memoryRateLimit(routeKey, request, env, maxPerMinute) {
+  const observedIp = request.headers.get('cf-connecting-ip') || '';
+  const minuteString = new Date().toISOString().slice(0, 16);
+  const digestHex = await wallHmacHex(rateLimitSecret(env), `${minuteString}|${observedIp}`);
+  const windowKey = `mem:${routeKey}:${minuteString}:${digestHex.slice(0, 32)}`;
+  // Opportunistic prune keeps the map bounded without a scheduled job.
+  if (MEMORY_RATE_WINDOWS.size > MEMORY_RATE_PRUNE_AT) {
+    for (const existingKey of MEMORY_RATE_WINDOWS.keys()) {
+      if (existingKey.includes(minuteString) === false) {
+        MEMORY_RATE_WINDOWS.delete(existingKey);
+      }
+    }
+  }
+  const currentCount = MEMORY_RATE_WINDOWS.get(windowKey) ?? 0;
+  if (currentCount >= maxPerMinute) {
+    return false;
+  }
+  MEMORY_RATE_WINDOWS.set(windowKey, currentCount + 1);
+  return true;
 }
 
 // Literal host checks only — nothing is resolved here, so a public hostname
@@ -509,6 +543,20 @@ async function handleRequest(request, env, ctx) {
 
   // ── 2. Web Search API Endpoint (/search?q=query) ──
   if (url.pathname === '/search') {
+    // 20/min in memory (best-effort, zero KV writes): this fans out to an
+    // external search API, so damp per-IP bursts without a KV write/search.
+    let searchAllowed = true;
+    try {
+      searchAllowed = await memoryRateLimit('search', request, env, SEARCH_MEMORY_RATE_LIMIT_MAX);
+    } catch (limitError) {
+      console.warn('search: in-memory rate-limit check failed open', limitError);
+    }
+    if (searchAllowed === false) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded — try again shortly' }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': minuteRateLimitRetryAfter() },
+      });
+    }
     const query = url.searchParams.get('q');
     if (!query) {
       return new Response(JSON.stringify({ error: 'Missing ?q= search query' }), {
@@ -563,6 +611,8 @@ async function handleRequest(request, env, ctx) {
 
   // ── 3. Weather API Endpoint (/weather?city=city) ──
   if (url.pathname === '/weather') {
+    // Origin-gated above and left unthrottled on purpose: one small wttr.in
+    // request per command, and the gate already removes drive-by use.
     const city = url.searchParams.get('city') || 'auto';
     try {
       const weatherRes = await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`);
@@ -859,21 +909,16 @@ async function handleRequest(request, env, ctx) {
     });
   }
 
-  // Fail closed when KV is unavailable: this relay is the SSRF/abuse surface.
-  let proxyLimitVerdict = 'unavailable';
+  // 120/min per visitor hash, in memory (best-effort, zero KV writes): guest
+  // browsing fans out dozens of subrequests per page, so 20/min would break
+  // v86, and a KV write per proxied request would exhaust the free daily quota.
+  let proxyAllowed = true;
   try {
-    proxyLimitVerdict = await minuteRateLimit('proxy', request, env, ctx);
+    proxyAllowed = await memoryRateLimit('proxy', request, env, PROXY_MEMORY_RATE_LIMIT_MAX);
   } catch (limitError) {
-    console.warn('proxy: rate-limit check failed closed', limitError);
-    proxyLimitVerdict = 'unavailable';
+    console.warn('proxy: in-memory rate-limit check failed open', limitError);
   }
-  if (proxyLimitVerdict === 'unavailable') {
-    return new Response(JSON.stringify({ error: 'Rate limit store unavailable — try again shortly' }), {
-      status: 503,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-  if (proxyLimitVerdict === 'limited') {
+  if (proxyAllowed === false) {
     return new Response(JSON.stringify({ error: 'Rate limit exceeded — try again shortly' }), {
       status: 429,
       headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': minuteRateLimitRetryAfter() },
