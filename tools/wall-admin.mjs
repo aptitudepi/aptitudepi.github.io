@@ -52,7 +52,9 @@ function printUsage() {
 
 async function listPublicPosts(listArgs) {
   const endpointText = readFlagValue(listArgs, '--endpoint') ?? DEFAULT_ENDPOINT;
-  const listResp = await fetch(endpointText);
+  // The worker requires an allowlisted Origin on /wall (no header-less curl
+  // bypass); Node's fetch permits setting it explicitly.
+  const listResp = await fetch(endpointText, { headers: { Origin: 'https://dvxb.io' } });
   if (listResp.ok === false) {
     throw new Error(`list failed: HTTP ${listResp.status}`);
   }
@@ -208,7 +210,7 @@ async function auditTelemetryBlobs(auditArgs) {
   const endpointText = readFlagValue(auditArgs, '--endpoint') ?? DEFAULT_ENDPOINT;
   const wallTimestamps = {};
   try {
-    const listResp = await fetch(endpointText);
+    const listResp = await fetch(endpointText, { headers: { Origin: 'https://dvxb.io' } });
     if (listResp.ok) {
       const listData = await listResp.json();
       const postList = Array.isArray(listData.posts) ? listData.posts : [];

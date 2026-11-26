@@ -1,0 +1,39 @@
+# rsync --exclude-from for the GitHub Pages artifact staging step.
+#
+# Explicit excludes (not an include list) so a new top-level deployable still
+# ships by default. Keep in sync with the forbidden list in the
+# "Guard deploy artifact" step in .github/workflows/static.yml.
+.git
+.gitattributes
+.github
+.gitignore
+.cache
+.codegraph
+.deepsource.toml
+.hintrc
+.opencode
+.vscode
+.wrangler
+_site
+node_modules
+full-cv
+posts
+tools
+docs
+templates
+logs
+log
+biothings_output
+dvxb.io.7
+*.bak
+IDEAS.md
+DONE.md
+README.md
+PLAN-BLOG.md
+CONVENTIONAL-COMMIT.md
+package.json
+package-lock.json
+bun.lock
+wrangler.jsonc
+favicon-preview.html
+particle-background*.html
