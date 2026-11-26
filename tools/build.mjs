@@ -61,6 +61,31 @@ function downloadButton(label, href) {
   </div>`;
 }
 
+const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+// Resume/CV/man share sheet: OG + Twitter tags and one WebPage node that
+// points at the site. Blog pages ship their own ogHead; these pages had none.
+function seoHead({ title, desc, canonical }) {
+  const page = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: title,
+    url: canonical,
+    description: desc,
+    isPartOf: { '@type': 'WebSite', name: 'dvxb.io', url: 'https://dvxb.io/' },
+  };
+  return [
+    '<meta property="og:type" content="website">',
+    `<meta property="og:title" content="${escapeAttr(title)}">`,
+    `<meta property="og:description" content="${escapeAttr(desc)}">`,
+    `<meta property="og:url" content="${canonical}">`,
+    '<meta name="twitter:card" content="summary">',
+    `<meta name="twitter:title" content="${escapeAttr(title)}">`,
+    `<meta name="twitter:description" content="${escapeAttr(desc)}">`,
+    `<script type="application/ld+json">${JSON.stringify(page)}</script>`,
+  ].join('\n');
+}
+
 const pages = [
   {
     template: 'shell.html',
@@ -132,7 +157,7 @@ for (const page of pages) {
     BODY: page.body,
     NAV: page.nav ?? DEFAULT_NAV,
     META: page.meta ?? '',
-    HEAD_EXTRA: page.headExtra ?? '',
+    HEAD_EXTRA: page.headExtra ?? seoHead(page),
     SCRIPTS: page.scripts ?? '',
   });
   writeFileSync(join(SITE, page.out), html);

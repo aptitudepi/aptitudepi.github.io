@@ -6,8 +6,8 @@
   --color-divider: oklch(0.15 0.01 260);
   --color-text: oklch(0.93 0.01 260);
   --color-text-muted: oklch(0.65 0.03 260);
-  --color-text-faint: oklch(0.45 0.03 260);
-  --color-primary: oklch(0.45 0.31 264);
+  --color-text-faint: oklch(0.57 0.03 260);
+  --color-primary: oklch(0.58 0.23 264);
   --color-primary-hover: oklch(0.52 0.31 264);
   --color-primary-glow: oklch(0.45 0.31 264 / 0.35);
   --color-primary-dim: oklch(0.45 0.31 264 / 0.08);

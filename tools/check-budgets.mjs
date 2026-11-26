@@ -81,7 +81,10 @@ const BUDGET_TABLE = [
   // square frame (aspect-ratio 1/1 + object-fit cover) so the carousel
   // strip runs at a constant height instead of 60vh vs 34vh.
   { label: 'css/ total', kind: 'directory', relativePath: 'css', extension: '.css', maxGzipBytes: 24300 },
-  { label: 'index.html', kind: 'file', relativePath: 'index.html', extension: null, maxGzipBytes: 10000 },
+  // fix/a11y-seo-content raises index.html 10,000→10,400 (measured 10,052):
+  // the delta is SEO metadata only — canonical + OG/Twitter tags, no new
+  // script/style bytes.
+  { label: 'index.html', kind: 'file', relativePath: 'index.html', extension: null, maxGzipBytes: 10400 },
   // Blog extension (append-only, 2026-10-11): per-post HTML gzip ceiling +
   // blog image-total ceiling. Island-exclusion rule: blog islands (asciinema
   // player, Pagefind search UI) ship via shell.html __SCRIPTS__ as CDN/vendor

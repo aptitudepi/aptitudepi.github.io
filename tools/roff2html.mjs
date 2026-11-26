@@ -33,15 +33,22 @@ function restoreAnchors(s) {
 const renderText = (line) => restoreAnchors(escapeHtml(line));
 
 // A header/footer line looks like:  DVXB.IO(7)  Personal Website Manual  DVXB.IO(7)
-function renderHeaderLine(line) {
+function splitHeader(line) {
   const parts = line.split(/\s{2,}/).map((p) => p.trim()).filter(Boolean);
   if (parts.length >= 2 && parts[0] === parts[parts.length - 1]) {
-    const center = parts.slice(1, -1).join(' ');
+    return { side: parts[0], center: parts.slice(1, -1).join(' ') };
+  }
+  return null;
+}
+
+function renderHeaderLine(line) {
+  const parsed = splitHeader(line);
+  if (parsed) {
     return (
       `<div class="man-bar">` +
-      `<span class="man-bar-side">${renderText(parts[0])}</span>` +
-      `<span class="man-bar-center">${renderText(center)}</span>` +
-      `<span class="man-bar-side">${renderText(parts[parts.length - 1])}</span>` +
+      `<span class="man-bar-side">${renderText(parsed.side)}</span>` +
+      `<span class="man-bar-center">${renderText(parsed.center)}</span>` +
+      `<span class="man-bar-side">${renderText(parsed.side)}</span>` +
       `</div>`
     );
   }
@@ -139,9 +146,13 @@ export function roffToHtml(src) {
 
   const content = body.join('\n');
   const footerHtml = footer ? renderHeaderLine(footer) : '';
+  const parsedHeader = header ? splitHeader(header) : null;
+  const pageTitle = parsedHeader ? `${parsedHeader.side} — ${parsedHeader.center}` : header;
   return {
     header,
     footer,
-    html: `<header class="man-page-header">${header ? renderHeaderLine(header) : ''}</header>\n${content}\n<footer class="man-page-footer">${footerHtml}</footer>`,
+    // Document outline: the man body starts at <h2> sections, so the page
+    // title is the single <h1> (sr-only keeps the terminal-bar look).
+    html: `${pageTitle ? `<h1 class="sr-only">${renderText(pageTitle)}</h1>\n` : ''}<header class="man-page-header">${header ? renderHeaderLine(header) : ''}</header>\n${content}\n<footer class="man-page-footer">${footerHtml}</footer>`,
   };
 }
