@@ -16,6 +16,7 @@
     "media:watch": "bash tools/media-watch.sh",
     "assert:card": "node tools/assert-card.mjs",
     "assert:worker": "node tools/assert-worker.mjs",
+    "assert:a11y": "node tools/assert-accessibility.mjs",
     "assert:contrast": "node tools/assert-contrast.mjs"
   },
   "dependencies": {

@@ -56,9 +56,20 @@ Format: **what** — where it lives · commit(s) / notes
 - **Projects spotlight cards** — tilt / shimmer (kokonutui-inspired)
 - **CI Full-CV → HTML/PDF** — `tools/tex2html.mjs`, `roff2html.mjs`, `build.mjs`, `build-pdf.mjs`; `/resume`, `/cv`, `/man/`
 - **Unified glass / terminal nav** — `templates/shell.html`, `templates/man.html`, `css/nav.css`
-- **Contact + GPG** — Keybase proof file, `assets/gpg.asc`
+- **Contact + GPG** — minimal phone-free `/c/` vCard and contact links; Keybase proof file, `assets/gpg.asc` · expanded card ideas remain in `IDEAS.md`
 - **v86 CORS Worker** — `assets/v86/cors-proxy-worker.js`
 - **Responsive token design system** — `css/tokens.css` et al.
+
+## Host honesty (2026-11-26)
+
+- **Host identity kept** — the shell still resolves the visitor city for `db@<city>` and reuses the geo lookup for `weather`.
+- **Homepage counters kept** — the about-section stat row and number ticker stay.
+- **Canonical and social tags** on `/`.
+- **On-device model** loads when `ai` runs. The homepage does not modulepreload Transformers.js.
+- **`whatis` and `apropos`** — one-line descriptions and a manual search, unlisted so `help` goldens stay put. `man` already rendered every registry entry.
+- **`llms.txt`, `humans.txt`, `/.well-known/security.txt`**
+- **`404.html` as `panic(8)`**
+- **Blog index blurb** matches the published note (personal milestones and how the site is built).
 
 ---
 

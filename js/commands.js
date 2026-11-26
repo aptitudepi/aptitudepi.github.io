@@ -3070,6 +3070,42 @@ const COMMAND_REGISTRY = [
     aiQueue: false,
     run: runRingCommand,
   },
+  {
+    name: "whatis",
+    aliases: [],
+    aliasOf: null,
+    plain: "Print a one-line description of a command",
+    category: "CORE",
+    argsSpec: "<command>",
+    examples: ["whatis ai", "whatis vm"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runWhatisCommand,
+  },
+  {
+    name: "apropos",
+    aliases: [],
+    aliasOf: null,
+    plain: "Search manual names and descriptions",
+    category: "CORE",
+    argsSpec: "[keyword]",
+    examples: ["apropos", "apropos weather"],
+    helpDisplay: null,
+    helpDesc: null,
+    helpPos: null,
+    extraHelpRows: [],
+    listed: false,
+    allow: false,
+    bareOnly: false,
+    aiQueue: false,
+    run: runAproposCommand,
+  },
 ];
 
 // gh-CLI style manual renderer: NAME / CATEGORY / USAGE / EXAMPLES.
@@ -3077,7 +3113,7 @@ function renderMan(term, target) {
   const query = String(target ?? '').trim();
   if (!query) {
     term.writeln(`${SITE_ERR}man: missing command${ANSI_RESET}`);
-    term.writeln(`${SITE_MUTED}Next: run \`man <command>\`, e.g. \`man ai\`${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: run \`man <command>\`, e.g. \`man ai\`, or \`apropos\` for the index${ANSI_RESET}`);
     return;
   }
   const entry = resolveCommand(query);
@@ -3110,6 +3146,42 @@ function renderMan(term, target) {
 
 function runManCommand(term, args) {
   renderMan(term, args[0] ?? '');
+}
+
+function runWhatisCommand(term, args) {
+  const query = String(args[0] ?? '').trim();
+  if (!query) {
+    term.writeln(`${SITE_ERR}whatis: missing command${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: \`whatis <command>\`, or \`apropos\` for every entry${ANSI_RESET}`);
+    return;
+  }
+  const entry = resolveCommand(query);
+  if (!entry) {
+    const suggestion = suggestCommand(query.toLowerCase());
+    term.writeln(`${SITE_ERR}whatis: ${query} not found${ANSI_RESET}`);
+    if (suggestion) {
+      term.writeln(`${SITE_MUTED}Did you mean \`${SITE_WHITE}${suggestion}${SITE_MUTED}\`?${ANSI_RESET}`);
+    }
+    return;
+  }
+  term.writeln(`${SITE_GREEN}${entry.name}${ANSI_RESET}${SITE_MUTED} — ${ANSI_RESET}${SITE_WHITE}${entry.plain}${ANSI_RESET}`);
+}
+
+function runAproposCommand(term, args) {
+  const query = args.join(' ').trim().toLowerCase();
+  const matches = COMMAND_REGISTRY.filter((entry) => {
+    if (query.length === 0) return true;
+    const haystack = `${entry.name} ${entry.plain} ${entry.category} ${entry.aliases.join(' ')}`.toLowerCase();
+    return haystack.includes(query);
+  });
+  if (matches.length === 0) {
+    term.writeln(`${SITE_ERR}apropos: nothing appropriate${ANSI_RESET}`);
+    term.writeln(`${SITE_MUTED}Next: \`apropos\` lists every manual entry${ANSI_RESET}`);
+    return;
+  }
+  for (const entry of matches) {
+    term.writeln(`${SITE_GREEN}${entry.name.padEnd(14)}${ANSI_RESET}${SITE_WHITE}${entry.plain}${ANSI_RESET}`);
+  }
 }
 
 const COMMANDS = COMMAND_REGISTRY.filter((entry) => entry.listed).map((entry) => entry.name);

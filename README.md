@@ -1,10 +1,10 @@
 # [dvxb.io](https://dvxb.io) — Devkumar Banerjee
 
-Personal portfolio featuring a browser-based x86 virtual machine, retro terminal UI, and interactive shell with 36 commands.
+Personal portfolio featuring a browser-based x86 virtual machine, retro terminal UI, and an interactive shell. `help` lists the core commands. `man`, `whatis`, and `apropos` cover the full registry in `js/commands.js`.
 
 ## Features
 
-- **Interactive terminal** — Built with [xterm.js](https://xtermjs.org/). Supports 36 commands (whoami, neofetch, cat, ls, vm, echo, clear, history, crt, noise, weather, hn, md, about, fortune, cowsay, matrix, ai, etc.) with ANSI truecolor output, tab completion, command auto-correction, and a virtual filesystem.
+- **Interactive terminal** — Built with [xterm.js](https://xtermjs.org/). Guided and Shell modes, an Explore palette (`⌘K`), ANSI truecolor, tab completion, command correction, pipes (`fortune | cowsay`), and a virtual filesystem. On startup the prompt becomes `db@<city>` from a coarse IP lookup (`ident.me`, then ipapi). The on-device model still loads only when you run `ai`.
 - **x86 VM in browser** — Uses the [v86](https://github.com/copy/v86) WebAssembly emulator to boot a Buildroot Linux image. Runs in the terminal with full serial console. Type `vm` to start.
 - **Neofetch-style dashboard** — Displays ASCII art (pixel portrait), system info, resume highlights (education, research, work, skills, certs), and a 16-color block palette on boot and via `neofetch` / `cv`.
 - **Portfolio AI assistant** — Type `ai <prompt>` to query the assistant via a Cloudflare Worker proxy to a Groq-hosted cloud model (default), with optional local ONNX models switchable through `ai-model`. Network access is required in both modes. `ai-models` lists available models.
@@ -21,6 +21,9 @@ Personal portfolio featuring a browser-based x86 virtual machine, retro terminal
 - **Generated resume pages** — `/resume`, `/cv`, and `/man/` (a man-page styled resume plus the `dvxb.io(7)` site manual) are built in CI from the private [Full-CV](https://github.com/aptitudepi/Full-CV) TeX source via a custom LaTeX→HTML parser. `assets/resume.pdf` and `assets/cv.pdf` are compiled with Tectonic — nothing resume-related is committed.
 - **Contact section** — GitHub, LinkedIn, Keybase, resume/CV (HTML + PDF), and GPG public key download.
 - **Responsive design** — CSS token-based design system with mobile breakpoints.
+- **Blog** — Markdown posts built to static HTML, with RSS and Pagefind. The index is notes and personal milestones.
+- **Contact card** — `/c` is a noindex vCard page, kept out of the main nav.
+- **Agent map** — `/llms.txt`, `/humans.txt`, and `/.well-known/security.txt`. Unknown paths serve `panic(8)` (`404.html`).
 
 ## Architecture
 
@@ -90,7 +93,7 @@ inside the Pages artifact.
 ### Terminal Shell (`js/shell.js`)
 
 - **Virtual filesystem** — A `Map` of paths to content strings (e.g., `/home/db/about.txt`). Supports `cat` and `ls`.
-- **Commands (36)**: whoami, hostname, date, uptime, pwd, uname, cat, ls, echo, clear, neofetch, resfetch, about, fortune, cowsay, help, history, crt, noise, weather, hn, md, cv, matrix, vm, ai, ai-models
+- **Commands** — `js/commands.js` is the registry. `help` prints the listed core set and stays byte-stable for the terminal goldens. Unlisted commands (`man`, `apropos`, `whatis`, `host`, `wall`, `imgcat`, and the rest) still run, tab-complete, and appear in the palette.
 - **Neofetch** — Renders ASCII art alongside system and resume info lines. The art is a 52-row pixel portrait with per-pixel ANSI true color.
 - **Boot sequence** — On page load, prints simulated kernel messages, then runs neofetch and shows the prompt.
 - **Auto-correction** — Mistyped commands are caught with Levenshtein distance ≤ 2 and suggest the closest match.

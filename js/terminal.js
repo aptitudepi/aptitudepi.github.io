@@ -508,6 +508,7 @@ function createTerminal(container) {
   term = new window.Terminal({
     cursorBlink: true,
     cursorStyle: 'block',
+    screenReaderMode: true,
     // OSC-8 hyperlink clicks (projects/cv/gh output wraps repository URLs
     // in OSC-8 sequences): open in a new tab,noopener. Plain-text fallbacks
     // keep working where OSC-8 is unsupported.
