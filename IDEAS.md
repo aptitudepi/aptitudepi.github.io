@@ -669,7 +669,7 @@ Surface portfolio content directly through the terminal — not just links to it
 
 ## Top ideas by Impact/Effort (open only)
 
-Shipped rows (`weather`, tab completion, `hn`, `md`, CRT/noise, tilt cards, boot, auto-correct, …) live in [`DONE.md`](./DONE.md).
+Shipped rows (`weather`, tab completion, `hn`, `md`, CRT/noise, tilt cards, boot, auto-correct, guestbook, the command palette, the CI performance budget, …) live in [`DONE.md`](./DONE.md). Piping (`fortune | cowsay`) already runs in `js/shell.js`. Shell variables are still open.
 
 | # | Idea | Effort | Impact |
 |---|------|--------|--------|
@@ -678,23 +678,20 @@ Shipped rows (`weather`, tab completion, `hn`, `md`, CRT/noise, tilt cards, boot
 | 3 | `figlet` command | Low | Medium |
 | 4 | `◔` command | Low | High |
 | 5 | Multiple color themes / site light-dark | Medium | High |
-| 6 | Shell variables + piping | High | Very High |
-| 7 | Guestbook + live visitor counter | Medium | High |
-| 8 | Resume `cat resume.md` in VFS | Low | Medium |
-| 9 | CRT static transition (VHS noise) beyond toggle | Low | Medium |
-| 10 | Performance budget + CI | Low | Medium |
-| 11 | Accessibility pass (a11y) | Medium | High |
-| 12 | Secret 2048 game | Medium | Medium |
-| 13 | Easter egg commands | Low | Medium |
-| 14 | Command palette (`⌘K`) | Medium | Very High |
-| 15 | PWA + service worker | Medium | High |
-| 16 | Particle text playground | Medium | High |
-| 17 | Data saver mode | Low | Medium |
-| 18 | Hero WebGL displacement shader | High | Very High |
-| 19 | Interactive adventure game | High | Very High |
-| 20 | Animated SVG blobs | Medium | High |
-| 21 | Ghost cursor trails | Low | Medium |
-| 22 | `/now` live activity page | Medium | Medium |
+| 6 | Shell variables (pipes already run) | High | Very High |
+| 7 | Resume `cat resume.md` in VFS | Low | Medium |
+| 8 | CRT static transition (VHS noise) beyond toggle | Low | Medium |
+| 9 | Accessibility pass (a11y) | Medium | High |
+| 10 | Secret 2048 game | Medium | Medium |
+| 11 | Easter egg commands | Low | Medium |
+| 12 | PWA + service worker | Medium | High |
+| 13 | Particle text playground | Medium | High |
+| 14 | Data saver mode | Low | Medium |
+| 15 | Hero WebGL displacement shader | High | Very High |
+| 16 | Interactive adventure game | High | Very High |
+| 17 | Animated SVG blobs | Medium | High |
+| 18 | Ghost cursor trails | Low | Medium |
+| 19 | `/now` live activity page | Medium | Medium |
 
 ---
 
@@ -3887,6 +3884,8 @@ Read of `Full-CV` resume/cv (Aug 2026): identity is not “generic CS student si
 | **AMP… no. `View Transitions` yes** | Already ideated |
 
 ### Pillar AQ — Card × host × CV combos
+
+The current `/c/` route is a minimal, phone-free contact card with a vCard download and contact links. The richer card ideas below are not shipped yet.
 
 21. **`/c` + GPG QR + Keybase proof** — trust pack for security-minded recruiters.  
 22. **`/c` light mode default at noon?** — no; respect `prefers-color-scheme` + toggle.  

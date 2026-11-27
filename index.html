@@ -130,7 +130,7 @@
 </head>
 <body>
 
-<a href="#hero-target" class="skip-link">Skip to content</a>
+<a href="#main-content" class="skip-link">Skip to content</a>
 
 <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden" focusable="false">
   <defs>
@@ -206,6 +206,7 @@
 </nav>
 
 <!-- ── Hero / Terminal (full width) ────── -->
+<main id="main-content" tabindex="-1">
 <h1 class="sr-only">Devkumar Banerjee — CS Student, Builder, Researcher</h1>
 <section id="hero-target">
   <div class="hero-shell terminal-window">
@@ -223,7 +224,8 @@
           <button id="exit-vm-button" type="button" hidden>Exit Linux</button>
         </div>
         <div id="guided-panel" hidden></div>
-        <div id="terminal-container" aria-busy="false"></div>
+        <p id="terminal-help" class="sr-only">Choose Guided or Shell input mode. In Shell mode, type a command and press Enter. Use Explore to browse available commands.</p>
+        <div id="terminal-container" role="region" aria-label="Interactive terminal" aria-describedby="terminal-help" aria-busy="false"></div>
       </div>
     </div>
     <div class="hero-explore-row">
@@ -364,10 +366,6 @@
         <img src="images/certs/github.webp" alt="GitHub Foundations" width="72" height="72" loading="lazy" decoding="async">
         <span class="cert-name">GitHub Foundations</span>
       </a>
-      <a href="https://www.linkedin.com/learning/certificates/528ec66f6e7175fe3a9dbaa18fa84617f9508ba780893d42197acba731294eff?u=74650722" class="cert-badge" target="_blank" rel="noopener noreferrer">
-        <img src="images/certs/microsoft.webp" alt="Microsoft Certification" width="72" height="72" loading="lazy" decoding="async">
-        <span class="cert-name">Microsoft</span>
-      </a>
       <a href="https://certification.testout.com/verifycert/6-1C6-VG5V7R" class="cert-badge" target="_blank" rel="noopener noreferrer">
         <img src="images/certs/testout-linux-pro.webp" alt="TestOut Linux Pro" width="72" height="72" loading="lazy" decoding="async">
         <span class="cert-name">TestOut Linux Pro</span>
@@ -420,6 +418,8 @@
 </footer>
 
 </div>
+
+</main>
 
 <dialog id="command-palette" aria-label="Command palette">
   <div class="palette-input-wrap">

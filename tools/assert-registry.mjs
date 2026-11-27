@@ -44,7 +44,7 @@ const LEGACY_ALLOWLIST = new Set([
 ]);
 
 const NEVER_ALLOWED = ['clear', 'vm', 'ai', 'llm', 'ai-model', 'md', 'devmode', 'guestbook', 'man'];
-const UNLISTED_EXECUTABLE = ['llm', 'guestbook', 'man', 'projects', 'case', 'skills', 'timeline', 'export', 'background', 'host', 'changelog', 'dmesg', 'imgcat', 'sparkline', 'pg', 'spark', 'ring'];
+const UNLISTED_EXECUTABLE = ['llm', 'guestbook', 'man', 'projects', 'case', 'skills', 'timeline', 'export', 'background', 'host', 'changelog', 'dmesg', 'imgcat', 'sparkline', 'pg', 'spark', 'ring', 'whatis', 'apropos'];
 
 let failureCount = 0;
 
@@ -214,6 +214,15 @@ check(unknownTerm.lines.join('').includes('help'), 'man <unknown> suggests the n
 const bareTerm = makeTerm();
 renderMan(bareTerm, '');
 check(bareTerm.lines.join('').includes('man <command>'), 'bare man prints usage');
+const whatisTerm = makeTerm();
+renderMan(whatisTerm, 'whatis');
+check(whatisTerm.lines.join('').includes('USAGE'), 'man whatis renders a page');
+const aproposDirect = makeTerm();
+resolveCommand('apropos').run(aproposDirect, ['weather']);
+check(aproposDirect.lines.join('').includes('weather'), 'apropos weather matches the weather entry');
+const whatisDirect = makeTerm();
+resolveCommand('whatis').run(whatisDirect, ['ai']);
+check(whatisDirect.lines.join('').includes('ai'), 'whatis ai names the command');
 
 // 10. Tokenizer, ai-queue routing, golden-relevant suggestions.
 check(JSON.stringify(tokenizeCommandLine('search "foo bar"')) === JSON.stringify(['search', '"foo bar"']), 'tokenizer keeps quoted args together');

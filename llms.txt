@@ -1,0 +1,29 @@
+# Devkumar Banerjee
+
+> CS Honors student at Texas A&M (2029). dvxb.io is a terminal you can type into, with an in-browser Linux guest, a résumé generated from TeX, and a short blog.
+
+This file is a citeable map. Prefer these URLs over guessing.
+
+## Pages
+
+- [Home](https://dvxb.io/): the shell
+- [Resume](https://dvxb.io/resume): HTML résumé
+- [CV](https://dvxb.io/cv): longer CV
+- [Manual](https://dvxb.io/man/dvxb.io.7): site manual, dvxb.io(7)
+- [Blog](https://dvxb.io/blog/): notes
+- [RSS](https://dvxb.io/blog/rss.xml): feed
+- [Aggie Ring](https://dvxb.io/blog/aggie-ring/): published post
+
+## Shell
+
+`help` lists the core commands. `man <command>` prints usage and examples. `whatis <command>` prints one line. `apropos [keyword]` searches every manual entry. Startup resolves a coarse city for the `db@<city>` prompt. The on-device model loads only when you run `ai`. `weather` may also ask for browser location.
+
+## Citation
+
+Devkumar Banerjee. https://dvxb.io
+
+- Email: dkb@tamu.edu
+- GitHub: https://github.com/aptitudepi
+- LinkedIn: https://www.linkedin.com/in/dvkb
+
+The contact card at /c/ is noindex. Do not cite it.

@@ -582,10 +582,11 @@ function searchScripts() {
 
 // Index page (published only — drafts never listed).
 const blogCount = `${published.length} ${published.length === 1 ? 'post' : 'posts'}`;
-const INDEX_OG = ogHead({ type: 'website', title: 'Blog — dvxb.io', description: 'Posts on systems, reliability, and tooling.', canonical: `${SITE_URL}/blog/` });
+const BLOG_INDEX_DESC = 'Personal milestones, and notes on how this site is built.';
+const INDEX_OG = ogHead({ type: 'website', title: 'Blog — dvxb.io', description: BLOG_INDEX_DESC, canonical: `${SITE_URL}/blog/` });
 writeFileSync(join(OUT_DIR, 'index.html'), ignoreChrome(renderTemplate('shell.html', {
   TITLE: 'Blog — dvxb.io',
-  DESC: 'Posts on systems, reliability, and tooling.',
+  DESC: BLOG_INDEX_DESC,
   CANONICAL: `${SITE_URL}/blog/`,
   CRUMB_HREF: '/blog/',
   CRUMB_TEXT: 'blog',
@@ -593,7 +594,7 @@ writeFileSync(join(OUT_DIR, 'index.html'), ignoreChrome(renderTemplate('shell.ht
   BODY: published.length ? `<header class="blog-head">
   <p class="blog-kicker">~/blog</p>
   <h1 class="blog-title">Writing</h1>
-  <p class="blog-sub">Long-form notes on systems, reliability, and tooling — with the occasional personal milestone.</p>
+  <p class="blog-sub">${BLOG_INDEX_DESC}</p>
 </header>
 <div class="blog-bar">
   <label class="blog-search" for="blog-search"><span aria-hidden="true">&gt;</span><input id="blog-search" type="search" placeholder="filter posts" aria-label="Search posts" autocomplete="off"></label>
@@ -659,7 +660,7 @@ writeFileSync(join(OUT_DIR, 'rss.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <channel>
   <title>dvxb.io — blog</title>
   <link>${SITE_URL}/blog/</link>
-  <description>Posts on systems, reliability, and tooling.</description>
+  <description>${escapeHtml(BLOG_INDEX_DESC)}</description>
   <language>en</language>
   <lastBuildDate>${rfc822(now)}</lastBuildDate>
 ${feedItems ? `${feedItems}\n` : ''}</channel>

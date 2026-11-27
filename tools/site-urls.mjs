@@ -20,6 +20,8 @@ export const SITE_URLS = [
   { loc: `https://${HOST}/man/dvxb.io.7`, changefreq: 'monthly', priority: '0.6' },
   { loc: `https://${HOST}/assets/resume.pdf`, changefreq: 'weekly', priority: '0.5' },
   { loc: `https://${HOST}/assets/cv.pdf`, changefreq: 'weekly', priority: '0.5' },
+  { loc: `https://${HOST}/llms.txt`, changefreq: 'monthly', priority: '0.3' },
+  { loc: `https://${HOST}/humans.txt`, changefreq: 'yearly', priority: '0.2' },
 ];
 
 export const URL_LIST = SITE_URLS.map((u) => u.loc);

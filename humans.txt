@@ -1,0 +1,11 @@
+/* TEAM */
+Name: Devkumar Banerjee
+Site: https://dvxb.io
+Contact: dkb@tamu.edu
+Location: College Station, TX
+
+/* SITE */
+Language: English
+Standards: HTML, CSS
+Software: xterm.js, Three.js, v86, thinking-orbs (MIT, Jakub Antalik)
+Last update: 2026-11-26
