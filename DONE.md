@@ -67,7 +67,7 @@ Format: **what** — where it lives · commit(s) / notes
 - **Canonical and social tags** on `/`.
 - **On-device model** loads when `ai` runs. The homepage does not modulepreload Transformers.js.
 - **`whatis` and `apropos`** — one-line descriptions and a manual search, unlisted so `help` goldens stay put. `man` already rendered every registry entry.
-- **`llms.txt`, `humans.txt`, `/.well-known/security.txt`**
+- **`llms.txt`, `humans.txt`, `/security.txt` (the `.well-known` copy is source-only)**
 - **`404.html` as `panic(8)`**
 - **Blog index blurb** matches the published note (personal milestones and how the site is built).
 

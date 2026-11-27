@@ -237,7 +237,7 @@ jobs:
             echo "FORBIDDEN in artifact: particle-background*.html"
             exit 1
           fi
-          required_paths="index.html blog assets css js man resume.html cv.html sitemap.xml robots.txt CNAME build-info.json c"
+          required_paths="index.html blog assets css js man resume.html cv.html sitemap.xml robots.txt CNAME build-info.json security.txt c"
           for required_path in $required_paths; do
             if [ ! -e "_site/$required_path" ]; then
               echo "MISSING from artifact: $required_path"

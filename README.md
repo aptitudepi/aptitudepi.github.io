@@ -23,7 +23,7 @@ Personal portfolio featuring a browser-based x86 virtual machine, retro terminal
 - **Responsive design** — CSS token-based design system with mobile breakpoints.
 - **Blog** — Markdown posts built to static HTML, with RSS and Pagefind. The index is notes and personal milestones.
 - **Contact card** — `/c` is a noindex vCard page, kept out of the main nav.
-- **Agent map** — `/llms.txt`, `/humans.txt`, and `/.well-known/security.txt`. Unknown paths serve `panic(8)` (`404.html`).
+- **Agent map** — `/llms.txt`, `/humans.txt`, and `/security.txt`. Unknown paths serve `panic(8)` (`404.html`).
 
 ## Architecture
 

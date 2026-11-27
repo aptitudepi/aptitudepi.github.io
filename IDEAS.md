@@ -619,7 +619,7 @@ Surface portfolio content directly through the terminal — not just links to it
 ### Sitemap & Robots
 
 - `humans.txt` — standard "built by" file. Trivial. (`sitemap.xml` / origin `robots.txt` / IndexNow → [`DONE.md`](./DONE.md))
-- `security.txt` — `/.well-known/security.txt` with contact + GPG. Trivial, on-brand for a systems person.
+- `security.txt` — `/security.txt` with contact + GPG (GitHub Pages strips top-level dot-dirs, so `.well-known/` is source-only). Trivial, on-brand for a systems person.
 
 ### RSS Feed
 

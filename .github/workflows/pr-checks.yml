@@ -1,0 +1,64 @@
+# Cheap gates for pull requests: build the blog and run every assertion that
+# does not need the private Full-CV checkout, Tectonic, or Pages permissions.
+# Same-repo PRs run on the self-hosted runner; fork PRs are skipped on purpose
+# — never execute untrusted code on the runner that can reach deploy secrets.
+name: PR checks
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: self-hosted
+    steps:
+      - name: Checkout site
+        uses: actions/checkout@v5
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache bun store
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install build deps
+        run: bun install
+
+      - name: Build blog
+        run: bun tools/build-blog.mjs
+
+      - name: Check perf budgets
+        run: bun tools/check-budgets.mjs
+
+      - name: Assert command registry
+        run: bun tools/assert-registry.mjs
+
+      - name: Assert blog RSS
+        run: bun tools/assert-rss.mjs
+
+      - name: Assert card invariants
+        run: bun tools/assert-card.mjs
+
+      - name: Assert worker hardening
+        run: bun tools/assert-worker.mjs
+
+      - name: Assert contrast
+        run: bun tools/assert-contrast.mjs
+
+      - name: Assert accessibility contract
+        run: bun tools/assert-accessibility.mjs
